@@ -104,6 +104,10 @@ kbd { font: 10px var(--mono); color: var(--faint); border: 1px solid var(--line-
 .inspector { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
 .insp-section { border-bottom: 1px solid var(--line); padding: 6px 10px 8px; }
 .pm-btns { display: flex; gap: 3px; }
+.grp { display: inline-block; padding: 0 4px; height: 16px; line-height: 16px; font-size: 10px; font-weight: bold; color: #16171a; cursor: default; }
+.strip-grp { margin: 2px -7px 0; text-align: center; font-size: 10px; font-weight: bold; color: #16171a; line-height: 14px; }
+.strip.wide .strip-grp { margin: 2px -10px 0; }
+.dlg-input { width: 100%; margin: 4px 0 10px; }
 .trk.frozen { background: rgba(110,170,230,0.10); }
 .ms.fz.on { background: #6fa9e6; border-color: #6fa9e6; color: #0f1620; }
 .ms.fz.stale { background: #e6b56f; border-color: #e6b56f; color: #1b140b; }

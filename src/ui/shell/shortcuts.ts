@@ -1,3 +1,4 @@
+import { groupTracks, ungroup } from "../../edit/groups";
 import { isProjectFile, openProjectFile, saveProjectToDisk } from "../../io/projectFile";
 import { useEffect } from "react";
 import { importAudio } from "../../assist/import";
@@ -108,6 +109,16 @@ export function useShortcuts(openFile: () => void) {
           if (mod) runTask(saveProjectToDisk);
           else handled = false;
           break;
+        case "KeyG": {
+          if (!mod) { handled = false; break; }
+          const sel = store.ui.selectedTrackIds.length ? store.ui.selectedTrackIds : [];
+          if (e.shiftKey) {
+            const t = store.project.tracks.find((x) => x.id === store.ui.selectedTrackId);
+            if (t?.group) ungroup(t.group);
+          } else if (sel.length >= 2) groupTracks(sel);
+          else store.log("Select two or more tracks (⇧/⌘-click their headers), then ⌘G to group them");
+          break;
+        }
         case "KeyB":
           if (mod) runTask(exportWav);
           else handled = false;

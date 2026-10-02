@@ -48,6 +48,8 @@ export type EditorTab = "mixer" | "eq" | "plugin" | "piano" | "drums" | "parts" 
 
 export interface UiState {
   selectedTrackId: string | null;
+  /** Multi-selection of tracks (⇧/⌘-click headers): grouping, bulk actions. Includes selectedTrackId. */
+  selectedTrackIds: string[];
   selectedClipId: string | null;
   /** Multi-region selection on the arrangement; only valid while it contains selectedClipId (see edit/ops selectedClips). */
   selectedClipIds: string[];
@@ -84,6 +86,7 @@ class Store {
   project: Project = emptyProject();
   ui: UiState = {
     selectedTrackId: null,
+    selectedTrackIds: [],
     selectedClipId: null,
     selectedClipIds: [],
     showInspector: true,

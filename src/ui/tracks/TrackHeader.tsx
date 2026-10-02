@@ -1,4 +1,5 @@
-import { clearLane, controlChanged } from "../../edit/automation";
+import { clearLane } from "../../edit/automation";
+import { changeChannel, groupOf, selectTrack } from "../../edit/groups";
 import { canFreeze, freezeSig, freezeTrack, unfreezeTrack } from "../../edit/freeze";
 import { runTask } from "../common/runTask";
 import { useMemo } from "react";
@@ -14,6 +15,7 @@ import type { Track } from "../../model/types";
 const s_count = (busId: string) => store.project.tracks.filter((x) => x.ch.sends?.some((sd) => sd.bus === busId)).length;
 
 export default function TrackHeader({ t, index, selected, height }: { t: Track; index: number; selected: boolean; height: number }) {
+  const grp = groupOf(store.project, t);
   // Frozen but edited since? (signature compare; recomputed only when the project changes)
   const stale = useMemo(() => !!t.frozen && freezeSig(store.project, t) !== t.frozen.sig, [t, store.projectVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const [editing, setEditing] = useState(false);
@@ -24,7 +26,7 @@ export default function TrackHeader({ t, index, selected, height }: { t: Track; 
     <div
       className={`trk ${selected ? "sel" : ""} ${t.kind === "aux" ? "aux" : ""} ${t.frozen ? "frozen" : ""}`}
       style={{ height }}
-      onMouseDown={() => store.setUi({ selectedTrackId: t.id })}
+      onMouseDown={(e) => selectTrack(t.id, e)}
       onDoubleClick={() => t.kind === "midi" && store.setUi({ showLibrary: true })}
     >
       <div className="num">{index + 1}</div>
@@ -59,8 +61,11 @@ export default function TrackHeader({ t, index, selected, height }: { t: Track; 
               ❄{stale ? "!" : ""}
             </button>
           )}
-          <button className={`ms m ${t.ch.mute ? "on" : ""}`} data-tip="mute" onClick={() => set((x) => (x.ch.mute = !x.ch.mute))}>m</button>
-          <button className={`ms s ${t.ch.solo ? "on" : ""}`} data-tip="solo" onClick={() => set((x) => (x.ch.solo = !x.ch.solo))}>s</button>
+          {grp && (
+            <span className="grp" style={{ background: grp.color }} data-tip={`group ${grp.name}: ${["volume", "mute", "solo", "pan"].filter((k) => grp.link[k as keyof typeof grp.link]).join(" · ")} linked · ⌥ moves one track · right-click for group options`}>{grp.name}</span>
+          )}
+          <button className={`ms m ${t.ch.mute ? "on" : ""}`} data-tip="mute" onClick={() => changeChannel(t.id, { mute: !t.ch.mute })}>m</button>
+          <button className={`ms s ${t.ch.solo ? "on" : ""}`} data-tip="solo" onClick={() => changeChannel(t.id, { solo: !t.ch.solo })}>s</button>
         </div>
         {height >= 44 && store.ui.showAutomation && (
           <div className="row auto-row" onMouseDown={(e) => e.stopPropagation()}>
@@ -79,7 +84,7 @@ export default function TrackHeader({ t, index, selected, height }: { t: Track; 
         {height >= 44 && !store.ui.showAutomation && (
           <div className="row">
             <span className="src" data-tip={t.kind === "midi" ? "double-click header to open the library" : undefined}>{source}</span>
-            <input type="range" className="mini" min={-40} max={12} step={0.5} value={t.ch.volumeDb} data-tip={`${t.ch.volumeDb} dB`} onChange={(e) => { const v = +e.target.value; set((x) => (x.ch.volumeDb = v)); controlChanged(t.id, "volume", v); }} onDoubleClick={() => set((x) => (x.ch.volumeDb = 0))} />
+            <input type="range" className="mini" min={-40} max={12} step={0.5} value={t.ch.volumeDb} data-tip={`${t.ch.volumeDb} dB`} onChange={(e) => changeChannel(t.id, { volumeDb: +e.target.value })} onDoubleClick={() => set((x) => (x.ch.volumeDb = 0))} />
           </div>
         )}
       </div>

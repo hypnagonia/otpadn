@@ -1,5 +1,6 @@
 import { engine } from "../../engine/transport";
 import { controlChanged } from "../../edit/automation";
+import { changeChannel, groupOf, selectTrack } from "../../edit/groups";
 import { INSTRUMENTS } from "../../instruments/catalog";
 import { store } from "../../model/store";
 import type { ChannelSettings, Track } from "../../model/types";
@@ -21,15 +22,17 @@ function Param({ label, value, min, max, step, reset = 0, fmt, onChange }: { lab
 /** One channel: insert/EQ section, sends, pan, fader + meter, M/S/C. Used in Mixer and Inspector. */
 export default function ChannelStrip({ t, selected, wide }: { t: Track; selected?: boolean; wide?: boolean }) {
   const set = (patch: Partial<ChannelSettings>) => {
-    store.update((p) => Object.assign(p.tracks.find((x) => x.id === t.id)!.ch, patch));
-    if (patch.volumeDb !== undefined) controlChanged(t.id, "volume", patch.volumeDb);
-    if (patch.pan !== undefined) controlChanged(t.id, "pan", patch.pan);
+    // volume / pan / mute / solo go through the channel group (members follow; ⌥ = this one only)
+    const { volumeDb, pan, mute, solo, ...rest } = patch;
+    if (volumeDb !== undefined || pan !== undefined || mute !== undefined || solo !== undefined) changeChannel(t.id, { volumeDb, pan, mute, solo });
+    if (Object.keys(rest).length) store.update((p) => Object.assign(p.tracks.find((x) => x.id === t.id)!.ch, rest));
     if (patch.reverbSend !== undefined) controlChanged(t.id, "verb", patch.reverbSend);
   };
+  const grp = groupOf(store.project, t);
   const ch = t.ch;
   const inst = t.kind === "midi" ? INSTRUMENTS.find((i) => i.id === t.instrument)?.name : t.kind === "aux" ? `${t.auxOut} mic → bus` : t.kind === "bus" ? "bus (return)" : "audio";
   return (
-    <div className={`strip ${selected ? "sel" : ""} ${wide ? "wide" : ""}`} onMouseDown={() => store.ui.selectedTrackId !== t.id && store.setUi({ selectedTrackId: t.id })}>
+    <div className={`strip ${selected ? "sel" : ""} ${wide ? "wide" : ""}`} onMouseDown={(e) => (e.shiftKey || e.metaKey || e.ctrlKey || store.ui.selectedTrackId !== t.id) && selectTrack(t.id, e)}>
       <div className="slot" data-tip={inst}>{inst}</div>
       <EqThumb t={t} />
       <InsertSlots owner={t.id} inserts={t.inserts ?? []} />
@@ -48,6 +51,7 @@ export default function ChannelStrip({ t, selected, wide }: { t: Track; selected
         <button className={`ms m ${ch.mute ? "on" : ""}`} onClick={() => set({ mute: !ch.mute })}>m</button>
         <button className={`ms s ${ch.solo ? "on" : ""}`} onClick={() => set({ solo: !ch.solo })}>s</button>
       </div>
+      {grp && <div className="strip-grp" style={{ background: grp.color }} data-tip={`group ${grp.name} · ⌥ moves this channel alone`}>{grp.name}</div>}
       <div className="name" style={{ borderTopColor: t.color }} data-tip={t.name}>{t.name}</div>
     </div>
   );

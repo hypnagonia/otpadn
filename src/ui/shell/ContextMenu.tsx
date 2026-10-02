@@ -12,6 +12,7 @@ import { MIX_STYLE_LABEL } from "../../model/mixStyles";
 import { addHarmonyTracks, HARMONY_PRESETS } from "../../assist/harmony";
 import { canFreeze, freezeTrack, unfreezeTrack } from "../../edit/freeze";
 import { addNaturalSlides, removeSlides } from "../../assist/slides";
+import { groupMembers, groupOf, groupTracks, removeFromGroup, renameGroupDialog, ungroup, updateGroup } from "../../edit/groups";
 
 /** Right-click menu for regions and tracks (Logic / Ableton conventions). */
 export default function ContextMenu() {
@@ -91,6 +92,28 @@ export default function ContextMenu() {
               <div className="menu-sep" />
             </>
           )}
+          {(() => {
+            const sel = s.ui.selectedTrackIds.includes(track.id) ? s.ui.selectedTrackIds : [track.id];
+            const g = groupOf(s.project, track);
+            return (
+              <>
+                {sel.length >= 2 && <button onClick={act(() => groupTracks(sel))}>group {sel.length} selected tracks <kbd>⌘G</kbd></button>}
+                {g && (
+                  <>
+                    <div className="menu-title"><span className="grp" style={{ background: g.color }}>{g.name}</span> group · {groupMembers(s.project, g).length} tracks</div>
+                    {(["volume", "mute", "solo", "pan"] as const).map((k) => (
+                      <button key={k} onClick={act(() => updateGroup(g.id, (x) => (x.link[k] = !x.link[k])))}>{g.link[k] ? "✓ " : "\u2003"}link {k}</button>
+                    ))}
+                    <button onClick={act(() => store.setUi({ selectedTrackIds: groupMembers(s.project, g).map((m) => m.id), selectedTrackId: track.id }))}>select group members</button>
+                    <button onClick={act(() => void renameGroupDialog(g.id, g.name))}>rename group…</button>
+                    <button onClick={act(() => removeFromGroup(track.id))}>remove “{track.name}” from {g.name}</button>
+                    <button onClick={act(() => ungroup(g.id))}>ungroup {g.name} <kbd>⇧⌘G</kbd></button>
+                    <div className="menu-sep" />
+                  </>
+                )}
+              </>
+            );
+          })()}
           {track.kind === "midi" && <button onClick={act(() => store.setUi({ showLibrary: true }))}>choose instrument… <kbd>Y</kbd></button>}
           {canProMix(s.project, track) && (
             <>

@@ -96,6 +96,15 @@ export interface AutoPoint { beat: number; value: number }
  */
 export interface AutoLane { param: string; points: AutoPoint[] }
 
+/** A channel group (Logic / Pro Tools style): members' linked controls move together. */
+export interface ChannelGroup {
+  id: string;
+  name: string;
+  color: string;
+  /** What moves together: volume is relative (dB offsets kept), mute / solo absolute, pan relative. */
+  link: { volume: boolean; mute: boolean; solo: boolean; pan: boolean };
+}
+
 export interface Track {
   id: string;
   name: string;
@@ -131,6 +140,8 @@ export interface Track {
    * track plays that buffer from beat 0 straight into its fader. `sig` detects later edits.
    */
   frozen?: { bufferId: string; sig: string };
+  /** Channel group id (project.groups). */
+  group?: string;
   /** Automation lanes (engine/automation.ts). */
   automation?: AutoLane[];
   /** Which lane the arrange view shows/edits in automation view. */
@@ -163,6 +174,8 @@ export interface Project {
   sections: Section[];
   chords: ChordSpan[];
   tracks: Track[];
+  /** Channel groups (edit/groups.ts). */
+  groups?: ChannelGroup[];
   masterDb: number;
   /** Master bus inserts (before glue comp + limiter). */
   masterInserts: Insert[];
