@@ -27,6 +27,7 @@ export default function ChannelStrip({ t, selected, wide }: { t: Track; selected
     if (volumeDb !== undefined || pan !== undefined || mute !== undefined || solo !== undefined) changeChannel(t.id, { volumeDb, pan, mute, solo });
     if (Object.keys(rest).length) store.update((p) => Object.assign(p.tracks.find((x) => x.id === t.id)!.ch, rest));
     if (patch.reverbSend !== undefined) controlChanged(t.id, "verb", patch.reverbSend);
+    if (patch.delaySend !== undefined) controlChanged(t.id, "dly", patch.delaySend);
   };
   const grp = groupOf(store.project, t);
   const ch = t.ch;
@@ -38,6 +39,7 @@ export default function ChannelStrip({ t, selected, wide }: { t: Track; selected
       <InsertSlots owner={t.id} inserts={t.inserts ?? []} />
       <SendSlots t={t} />
       <Param label="verb" value={ch.reverbSend} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set({ reverbSend: v })} />
+      {t.kind !== "bus" && <Param label="dly" value={ch.delaySend ?? 0} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}% → Delay`} onChange={(v) => set({ delaySend: v })} />}
       <Param label="pan" value={ch.pan} min={-1} max={1} step={0.01} fmt={fmtPan} onChange={(v) => set({ pan: v })} />
       <div className="readout">
         <span>{fmtDb(ch.volumeDb)}</span>

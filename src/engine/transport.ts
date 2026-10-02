@@ -169,6 +169,9 @@ export class Engine {
     const rr = all.find((t) => t.reverbReturn);
     const rrIn = rr ? this.strips.get(rr.id)?.input : undefined;
     for (const [id, s] of this.strips) s.setReverbTarget(rrIn && id !== rr!.id ? rrIn : this.master.reverbIn);
+    const dr = all.find((t) => t.delayReturn);
+    const drIn = dr ? this.strips.get(dr.id)?.input : undefined;
+    for (const [id, s] of this.strips) s.setDelayTarget(drIn && id !== dr!.id ? drIn : null);
     // Multi-out instruments → their aux tracks' strips.
     for (const t of all) {
       const inst = this.insts.get(t.id)?.p;

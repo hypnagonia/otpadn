@@ -82,6 +82,7 @@ export interface ChannelSettings {
   compThreshold: number; // dB
   compRatio: number;
   reverbSend: number; // 0..1
+  delaySend: number; // 0..1 → the delay return channel
   /** Sends to bus (return) tracks. */
   sends?: Send[];
 }
@@ -144,6 +145,8 @@ export interface Track {
   group?: string;
   /** The project's reverb return (a bus): every channel's "verb" knob sends here. */
   reverbReturn?: boolean;
+  /** The project's delay return (a bus): every channel's "dly" knob sends here. */
+  delayReturn?: boolean;
   /** Automation lanes (engine/automation.ts). */
   automation?: AutoLane[];
   /** Which lane the arrange view shows/edits in automation view. */
@@ -178,6 +181,8 @@ export interface Project {
   tracks: Track[];
   /** The user deleted the reverb return: don't recreate it (verb knobs use the built-in reverb). */
   noReverbReturn?: boolean;
+  /** Same for the delay return. */
+  noDelayReturn?: boolean;
   /** Channel groups (edit/groups.ts). */
   groups?: ChannelGroup[];
   masterDb: number;
@@ -212,6 +217,7 @@ export const defaultChannel = (): ChannelSettings => ({
   compThreshold: -18,
   compRatio: 3,
   reverbSend: 0,
+  delaySend: 0,
 });
 
 /** Track colours: mid-light, softly saturated (regions draw dark ink on them), distinct on charcoal. */

@@ -43,7 +43,7 @@ import type { Tool } from "../edit/ops";
 import { memory } from "../system/memory";
 import { syncAuxTracks } from "./auxTracks";
 import { syncChains } from "./chains";
-import { syncReverbReturn } from "./reverbReturn";
+import { syncDelayReturn, syncReverbReturn } from "./reverbReturn";
 
 export type EditorTab = "mixer" | "eq" | "plugin" | "piano" | "drums" | "parts" | "console";
 
@@ -211,6 +211,7 @@ class Store {
     syncAuxTracks(this.project);
     syncChains(this.project);
     syncReverbReturn(this.project);
+    syncDelayReturn(this.project);
     this.project.lengthBeats = computeLength(this.project);
     this.projectVersion++;
     gcBuffers(this.project, this.historyBuffers());

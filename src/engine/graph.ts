@@ -25,6 +25,8 @@ export interface Strip {
   setFrozen(on: boolean): void;
   /** Where the verb knob sends (the reverb return channel, or the built-in reverb). */
   setReverbTarget(node: AudioNode): void;
+  /** Where the dly knob sends (the delay return channel), or nowhere. */
+  setDelayTarget(node: AudioNode | null): void;
   dispose(): void;
 }
 
@@ -108,6 +110,10 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
   pan.connect(meter);
   autoVol.connect(send).connect(reverbIn); // post-fader taps sit after the volume automation
   let verbTarget: AudioNode = reverbIn;
+  const dsend = ctx.createGain(); // post-fader tap → delay return
+  dsend.gain.value = 0;
+  autoVol.connect(dsend);
+  let delayTarget: AudioNode | null = null;
 
   const set = (p: AudioParam, v: number) => {
     if (ctx instanceof AudioContext) p.setTargetAtTime(v, ctx.currentTime, 0.015);
@@ -155,6 +161,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
         set(panR.gain, Math.SQRT2 * Math.sin(th));
       }
       if (!automated.has("verb")) set(send.gain, ch.reverbSend);
+      if (!automated.has("dly")) set(dsend.gain, ch.delaySend ?? 0);
     },
     inserts: chain,
     setInserts: (ins, bpm, sc) => chain.apply(ins, bpm, sc),
@@ -188,6 +195,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
       if (param === "volume") return [{ param: autoVol.gain, map: (v) => dbToGain(v) }];
       if (param === "pan") return [{ param: panL.gain, map: (p) => Math.SQRT2 * Math.cos(th(p)) }, { param: panR.gain, map: (p) => Math.SQRT2 * Math.sin(th(p)) }];
       if (param === "verb") return [{ param: send.gain, map: (v) => Math.max(0, v) }];
+      if (param === "dly") return [{ param: dsend.gain, map: (v) => Math.max(0, v) }];
       if (param.startsWith("send:")) {
         const s = sends.get(param.slice(5));
         return s ? [{ param: s.gain.gain, map: (v) => Math.pow(10, v / 20) }] : [];
@@ -196,6 +204,12 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     },
     setAutomated(params) {
       automated = params;
+    },
+    setDelayTarget(node) {
+      if (node === delayTarget) return;
+      dsend.disconnect();
+      if (node) dsend.connect(node);
+      delayTarget = node;
     },
     setReverbTarget(node) {
       if (node === verbTarget) return;
@@ -212,6 +226,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
       input.disconnect();
       pan.disconnect();
       autoVol.disconnect();
+      dsend.disconnect();
       send.disconnect();
       fader.disconnect();
       sends.forEach((sd) => sd.gain.disconnect());

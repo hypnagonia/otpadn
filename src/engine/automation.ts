@@ -89,6 +89,7 @@ export function automatableParams(t: Track, busName: (id: string) => string): Au
   ];
   if (t.kind !== "bus") {
     out.push({ param: "verb", label: "reverb send", min: 0, max: 1, unit: "", def: t.ch.reverbSend });
+    out.push({ param: "dly", label: "delay send", min: 0, max: 1, unit: "", def: t.ch.delaySend ?? 0 });
     for (const sd of t.ch.sends ?? []) out.push({ param: `send:${sd.id}`, label: `send · ${busName(sd.bus)}`, min: -60, max: 6, unit: "dB", def: sd.level });
   }
   for (const ins of t.inserts ?? []) {

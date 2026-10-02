@@ -213,6 +213,7 @@ export function deleteTrack(id: string) {
   }
   store.update((p) => {
     if (t?.reverbReturn) p.noReverbReturn = true; // deleted on purpose: verb knobs use the built-in reverb
+    if (t?.delayReturn) p.noDelayReturn = true; // dly knobs then send nowhere
     p.tracks = p.tracks.filter((x) => x.id !== id);
   });
   if (store.ui.selectedTrackId === id) store.setUi({ selectedTrackId: null, selectedClipId: null });
