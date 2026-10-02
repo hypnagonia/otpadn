@@ -141,7 +141,6 @@
     {
      "power": 0.332614,
      "files": {
-      "kick": "Snare_1_kick.m4a",
       "snare": "Snare_1_snare.m4a",
       "hihat": "Snare_1_hihat.m4a",
       "ride": "Snare_1_ride.m4a",
@@ -152,7 +151,6 @@
     {
      "power": 0.618736,
      "files": {
-      "kick": "Snare_2_kick.m4a",
       "snare": "Snare_2_snare.m4a",
       "hihat": "Snare_2_hihat.m4a",
       "ride": "Snare_2_ride.m4a",
@@ -163,7 +161,6 @@
     {
      "power": 0.967574,
      "files": {
-      "kick": "Snare_3_kick.m4a",
       "snare": "Snare_3_snare.m4a",
       "hihat": "Snare_3_hihat.m4a",
       "ride": "Snare_3_ride.m4a",
@@ -174,7 +171,6 @@
     {
      "power": 1.14384,
      "files": {
-      "kick": "Snare_4_kick.m4a",
       "snare": "Snare_4_snare.m4a",
       "hihat": "Snare_4_hihat.m4a",
       "ride": "Snare_4_ride.m4a",
@@ -185,7 +181,6 @@
     {
      "power": 1.66366,
      "files": {
-      "kick": "Snare_5_kick.m4a",
       "snare": "Snare_5_snare.m4a",
       "hihat": "Snare_5_hihat.m4a",
       "ride": "Snare_5_ride.m4a",
@@ -196,7 +191,6 @@
     {
      "power": 2.10815,
      "files": {
-      "kick": "Snare_6_kick.m4a",
       "snare": "Snare_6_snare.m4a",
       "hihat": "Snare_6_hihat.m4a",
       "ride": "Snare_6_ride.m4a",
@@ -207,7 +201,6 @@
     {
      "power": 3.03418,
      "files": {
-      "kick": "Snare_7_kick.m4a",
       "snare": "Snare_7_snare.m4a",
       "hihat": "Snare_7_hihat.m4a",
       "ride": "Snare_7_ride.m4a",
@@ -236,8 +229,6 @@
     {
      "power": 0.639363,
      "files": {
-      "kick": "Tom1_1_kick.m4a",
-      "snare": "Tom1_1_snare.m4a",
       "toms": "Tom1_1_toms.m4a",
       "hihat": "Tom1_1_hihat.m4a",
       "ride": "Tom1_1_ride.m4a",
@@ -248,8 +239,6 @@
     {
      "power": 1.24085,
      "files": {
-      "kick": "Tom1_2_kick.m4a",
-      "snare": "Tom1_2_snare.m4a",
       "toms": "Tom1_2_toms.m4a",
       "hihat": "Tom1_2_hihat.m4a",
       "ride": "Tom1_2_ride.m4a",
@@ -260,8 +249,6 @@
     {
      "power": 1.92656,
      "files": {
-      "kick": "Tom1_3_kick.m4a",
-      "snare": "Tom1_3_snare.m4a",
       "toms": "Tom1_3_toms.m4a",
       "hihat": "Tom1_3_hihat.m4a",
       "ride": "Tom1_3_ride.m4a",
@@ -272,8 +259,6 @@
     {
      "power": 2.47295,
      "files": {
-      "kick": "Tom1_4_kick.m4a",
-      "snare": "Tom1_4_snare.m4a",
       "toms": "Tom1_4_toms.m4a",
       "hihat": "Tom1_4_hihat.m4a",
       "ride": "Tom1_4_ride.m4a",
@@ -284,8 +269,6 @@
     {
      "power": 3.37619,
      "files": {
-      "kick": "Tom1_5_kick.m4a",
-      "snare": "Tom1_5_snare.m4a",
       "toms": "Tom1_5_toms.m4a",
       "hihat": "Tom1_5_hihat.m4a",
       "ride": "Tom1_5_ride.m4a",
@@ -296,8 +279,6 @@
     {
      "power": 3.99882,
      "files": {
-      "kick": "Tom1_6_kick.m4a",
-      "snare": "Tom1_6_snare.m4a",
       "toms": "Tom1_6_toms.m4a",
       "hihat": "Tom1_6_hihat.m4a",
       "ride": "Tom1_6_ride.m4a",
@@ -308,8 +289,6 @@
     {
      "power": 5.37378,
      "files": {
-      "kick": "Tom1_7_kick.m4a",
-      "snare": "Tom1_7_snare.m4a",
       "toms": "Tom1_7_toms.m4a",
       "hihat": "Tom1_7_hihat.m4a",
       "ride": "Tom1_7_ride.m4a",
@@ -338,8 +317,6 @@
     {
      "power": 0.204162,
      "files": {
-      "kick": "Tom2_1_kick.m4a",
-      "snare": "Tom2_1_snare.m4a",
       "toms": "Tom2_1_toms.m4a",
       "hihat": "Tom2_1_hihat.m4a",
       "ride": "Tom2_1_ride.m4a",
@@ -350,8 +327,6 @@
     {
      "power": 0.670448,
      "files": {
-      "kick": "Tom2_2_kick.m4a",
-      "snare": "Tom2_2_snare.m4a",
       "toms": "Tom2_2_toms.m4a",
       "hihat": "Tom2_2_hihat.m4a",
       "ride": "Tom2_2_ride.m4a",
@@ -362,8 +337,6 @@
     {
      "power": 1.09052,
      "files": {
-      "kick": "Tom2_3_kick.m4a",
-      "snare": "Tom2_3_snare.m4a",
       "toms": "Tom2_3_toms.m4a",
       "hihat": "Tom2_3_hihat.m4a",
       "ride": "Tom2_3_ride.m4a",
@@ -374,8 +347,6 @@
     {
      "power": 1.82434,
      "files": {
-      "kick": "Tom2_4_kick.m4a",
-      "snare": "Tom2_4_snare.m4a",
       "toms": "Tom2_4_toms.m4a",
       "hihat": "Tom2_4_hihat.m4a",
       "ride": "Tom2_4_ride.m4a",
@@ -386,8 +357,6 @@
     {
      "power": 2.25762,
      "files": {
-      "kick": "Tom2_5_kick.m4a",
-      "snare": "Tom2_5_snare.m4a",
       "toms": "Tom2_5_toms.m4a",
       "hihat": "Tom2_5_hihat.m4a",
       "ride": "Tom2_5_ride.m4a",
@@ -398,8 +367,6 @@
     {
      "power": 2.5454,
      "files": {
-      "kick": "Tom2_6_kick.m4a",
-      "snare": "Tom2_6_snare.m4a",
       "toms": "Tom2_6_toms.m4a",
       "hihat": "Tom2_6_hihat.m4a",
       "ride": "Tom2_6_ride.m4a",
@@ -410,8 +377,6 @@
     {
      "power": 3.70421,
      "files": {
-      "kick": "Tom2_7_kick.m4a",
-      "snare": "Tom2_7_snare.m4a",
       "toms": "Tom2_7_toms.m4a",
       "hihat": "Tom2_7_hihat.m4a",
       "ride": "Tom2_7_ride.m4a",
@@ -439,8 +404,6 @@
     {
      "power": 0.0657158,
      "files": {
-      "kick": "FTom1_1_kick.m4a",
-      "snare": "FTom1_1_snare.m4a",
       "toms": "FTom1_1_toms.m4a",
       "hihat": "FTom1_1_hihat.m4a",
       "ride": "FTom1_1_ride.m4a",
@@ -451,8 +414,6 @@
     {
      "power": 0.16129,
      "files": {
-      "kick": "FTom1_2_kick.m4a",
-      "snare": "FTom1_2_snare.m4a",
       "toms": "FTom1_2_toms.m4a",
       "hihat": "FTom1_2_hihat.m4a",
       "ride": "FTom1_2_ride.m4a",
@@ -463,8 +424,6 @@
     {
      "power": 0.291009,
      "files": {
-      "kick": "FTom1_3_kick.m4a",
-      "snare": "FTom1_3_snare.m4a",
       "toms": "FTom1_3_toms.m4a",
       "hihat": "FTom1_3_hihat.m4a",
       "ride": "FTom1_3_ride.m4a",
@@ -475,8 +434,6 @@
     {
      "power": 0.512053,
      "files": {
-      "kick": "FTom1_4_kick.m4a",
-      "snare": "FTom1_4_snare.m4a",
       "toms": "FTom1_4_toms.m4a",
       "hihat": "FTom1_4_hihat.m4a",
       "ride": "FTom1_4_ride.m4a",
@@ -487,8 +444,6 @@
     {
      "power": 0.799002,
      "files": {
-      "kick": "FTom1_5_kick.m4a",
-      "snare": "FTom1_5_snare.m4a",
       "toms": "FTom1_5_toms.m4a",
       "hihat": "FTom1_5_hihat.m4a",
       "ride": "FTom1_5_ride.m4a",
@@ -499,8 +454,6 @@
     {
      "power": 1.14736,
      "files": {
-      "kick": "FTom1_6_kick.m4a",
-      "snare": "FTom1_6_snare.m4a",
       "toms": "FTom1_6_toms.m4a",
       "hihat": "FTom1_6_hihat.m4a",
       "ride": "FTom1_6_ride.m4a",
@@ -511,8 +464,6 @@
     {
      "power": 1.82642,
      "files": {
-      "kick": "FTom1_7_kick.m4a",
-      "snare": "FTom1_7_snare.m4a",
       "toms": "FTom1_7_toms.m4a",
       "hihat": "FTom1_7_hihat.m4a",
       "ride": "FTom1_7_ride.m4a",
@@ -802,7 +753,6 @@
     {
      "power": 0.0282476,
      "files": {
-      "snare": "CrashL_2_snare.m4a",
       "hihat": "CrashL_2_hihat.m4a",
       "ride": "CrashL_2_ride.m4a",
       "overheads": "CrashL_2_overheads.m4a",
@@ -812,7 +762,6 @@
     {
      "power": 0.0414128,
      "files": {
-      "snare": "CrashL_3_snare.m4a",
       "hihat": "CrashL_3_hihat.m4a",
       "ride": "CrashL_3_ride.m4a",
       "overheads": "CrashL_3_overheads.m4a",
@@ -822,7 +771,6 @@
     {
      "power": 0.0626806,
      "files": {
-      "snare": "CrashL_4_snare.m4a",
       "hihat": "CrashL_4_hihat.m4a",
       "ride": "CrashL_4_ride.m4a",
       "overheads": "CrashL_4_overheads.m4a",
@@ -832,7 +780,6 @@
     {
      "power": 0.124218,
      "files": {
-      "snare": "CrashL_5_snare.m4a",
       "hihat": "CrashL_5_hihat.m4a",
       "ride": "CrashL_5_ride.m4a",
       "overheads": "CrashL_5_overheads.m4a",
@@ -840,9 +787,8 @@
      }
     },
     {
-     "power": 0.173179,
+     "power": 0.261799,
      "files": {
-      "snare": "CrashL_6_snare.m4a",
       "hihat": "CrashL_6_hihat.m4a",
       "ride": "CrashL_6_ride.m4a",
       "overheads": "CrashL_6_overheads.m4a",
@@ -850,10 +796,8 @@
      }
     },
     {
-     "power": 0.330539,
+     "power": 0.44145,
      "files": {
-      "kick": "CrashL_7_kick.m4a",
-      "snare": "CrashL_7_snare.m4a",
       "hihat": "CrashL_7_hihat.m4a",
       "ride": "CrashL_7_ride.m4a",
       "overheads": "CrashL_7_overheads.m4a",
@@ -885,7 +829,6 @@
     {
      "power": 0.0450747,
      "files": {
-      "snare": "RideR_2_snare.m4a",
       "hihat": "RideR_2_hihat.m4a",
       "ride": "RideR_2_ride.m4a",
       "overheads": "RideR_2_overheads.m4a",
@@ -895,7 +838,6 @@
     {
      "power": 0.0633181,
      "files": {
-      "snare": "RideR_3_snare.m4a",
       "hihat": "RideR_3_hihat.m4a",
       "ride": "RideR_3_ride.m4a",
       "overheads": "RideR_3_overheads.m4a",
@@ -905,7 +847,6 @@
     {
      "power": 0.137506,
      "files": {
-      "snare": "RideR_4_snare.m4a",
       "hihat": "RideR_4_hihat.m4a",
       "ride": "RideR_4_ride.m4a",
       "overheads": "RideR_4_overheads.m4a",
@@ -915,7 +856,6 @@
     {
      "power": 0.159953,
      "files": {
-      "snare": "RideR_5_snare.m4a",
       "hihat": "RideR_5_hihat.m4a",
       "ride": "RideR_5_ride.m4a",
       "overheads": "RideR_5_overheads.m4a",
@@ -925,7 +865,6 @@
     {
      "power": 0.202844,
      "files": {
-      "snare": "RideR_6_snare.m4a",
       "hihat": "RideR_6_hihat.m4a",
       "ride": "RideR_6_ride.m4a",
       "overheads": "RideR_6_overheads.m4a",
@@ -935,7 +874,6 @@
     {
      "power": 0.270579,
      "files": {
-      "snare": "RideR_7_snare.m4a",
       "hihat": "RideR_7_hihat.m4a",
       "ride": "RideR_7_ride.m4a",
       "overheads": "RideR_7_overheads.m4a",
@@ -977,7 +915,6 @@
     {
      "power": 0.140782,
      "files": {
-      "snare": "RideRBell_3_snare.m4a",
       "hihat": "RideRBell_3_hihat.m4a",
       "ride": "RideRBell_3_ride.m4a",
       "overheads": "RideRBell_3_overheads.m4a",
@@ -987,7 +924,6 @@
     {
      "power": 0.233708,
      "files": {
-      "snare": "RideRBell_4_snare.m4a",
       "hihat": "RideRBell_4_hihat.m4a",
       "ride": "RideRBell_4_ride.m4a",
       "overheads": "RideRBell_4_overheads.m4a",
@@ -997,7 +933,6 @@
     {
      "power": 0.292983,
      "files": {
-      "snare": "RideRBell_5_snare.m4a",
       "hihat": "RideRBell_5_hihat.m4a",
       "ride": "RideRBell_5_ride.m4a",
       "overheads": "RideRBell_5_overheads.m4a",
@@ -1007,7 +942,6 @@
     {
      "power": 0.55383,
      "files": {
-      "snare": "RideRBell_6_snare.m4a",
       "hihat": "RideRBell_6_hihat.m4a",
       "ride": "RideRBell_6_ride.m4a",
       "overheads": "RideRBell_6_overheads.m4a",
@@ -1017,7 +951,6 @@
     {
      "power": 0.588279,
      "files": {
-      "snare": "RideRBell_7_snare.m4a",
       "hihat": "RideRBell_7_hihat.m4a",
       "ride": "RideRBell_7_ride.m4a",
       "overheads": "RideRBell_7_overheads.m4a",
