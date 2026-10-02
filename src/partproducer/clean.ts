@@ -5,6 +5,7 @@
  */
 import { detectGrid, gridStepAt } from "../drumproducer/analyze";
 import { chordAt, chordPcs, scalePcs } from "./harmony";
+import { strumWindowSec } from "./strum";
 import type { Chord, GridChoice, Mode, PEvent, Proposal } from "./types";
 
 const ms = (s: number) => `${Math.round(s * 1000)} ms`;
@@ -165,7 +166,7 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     const live = ev.filter((e) => !gone.has(e.id));
     for (let i = 0; i < live.length; ) {
       let j = i;
-      while (j + 1 < live.length && sec(live[j + 1].start - live[i].start) < 0.06) j++;
+      while (j + 1 < live.length && sec(live[j + 1].start - live[i].start) < strumWindowSec(spb)) j++;
       const group = live.slice(i, j + 1);
       if (group.length > 6) {
         const extra = [...group].filter((e) => !e.locked).sort((a, b) => a.vel - b.vel).slice(0, group.length - 6);
@@ -221,7 +222,8 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     const sorted = [...out].sort((a, b) => a.start - b.start);
     for (let i = 0; i < sorted.length; ) {
       let j = i;
-      while (j + 1 < sorted.length && sec(sorted[j + 1].start - sorted[i].start) < 0.04) j++;
+      // a guitar strum (notes over 30–80 ms) is one event: it moves as a whole, keeping its spread
+      while (j + 1 < sorted.length && sec(sorted[j + 1].start - sorted[i].start) < (mode === "guitar" ? strumWindowSec(spb) : 0.04)) j++;
       const group = sorted.slice(i, j + 1).filter((e) => !e.locked);
       const anchor = sorted[i].start;
       const step = gridStepAt(anchor, params.grid, g.decision as never, g.beats);

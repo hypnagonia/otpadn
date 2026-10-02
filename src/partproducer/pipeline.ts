@@ -4,6 +4,7 @@ import { cleanPart } from "./clean";
 import { groovePart } from "./groove";
 import { reworkPart } from "./rework";
 import { autoSound } from "./sound";
+import { detectStrums } from "./strum";
 import { PP_ALGO_VERSION, type Chord, type PartSession, type PEvent, type PipelineResult, type Variant } from "./types";
 
 export type PartInput = Pick<PartSession, "mode" | "source" | "harmony" | "clean" | "rework" | "groove" | "seed" | "layerSeeds" | "locks"> & {
@@ -110,12 +111,13 @@ export function runPart(inp: PartInput): PipelineResult {
   if (inp.mode === "line" && poly > 1.3) warnings.push(`the source has chords (≈${poly.toFixed(1)} notes per onset); line mode keeps one note at a time`);
   if (inp.mode === "keys" && events.length > 0 && poly < 1.15) warnings.push("the source is a single line; keys styles build chords from the detected harmony");
   const pitches = events.map((e) => e.pitch);
+  const strum = inp.mode === "guitar" && events.length ? detectStrums(events, spb).stats : undefined;
   return {
     algo: PP_ALGO_VERSION,
     analysis: {
       bars: Math.ceil(len / 4 - 1e-9), completeBars, partialBeats: Math.round((len - completeBars * 4) * 1000) / 1000,
       key, keyFrom, chordsFrom: chords.length ? (useProject ? "project" : "notes") : "none", grid,
-      range: pitches.length ? [Math.min(...pitches), Math.max(...pitches)] : [60, 60], polyphony: Math.round(poly * 100) / 100, warnings,
+      range: pitches.length ? [Math.min(...pitches), Math.max(...pitches)] : [60, 60], polyphony: Math.round(poly * 100) / 100, warnings, strum,
     },
     chords, sourceEvents: events, proposals, cleaned, cleanedDropped, variants, chosen, final, lengthBeats,
     sound: autoSound(inp.mode, inp.rework.style, final, inp.bpm, inp.source.instrument),

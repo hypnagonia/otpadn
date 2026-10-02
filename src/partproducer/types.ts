@@ -156,6 +156,8 @@ export interface Analysis {
   grid: { decision: string; note: string };
   range: [number, number];
   polyphony: number; // mean simultaneous notes at onsets
+  /** Guitar: how the source is played (strummed share, directions, spread). */
+  strum?: { strummed: number; down: number; up: number; spreadMs: number; hits: number };
   warnings: string[];
 }
 

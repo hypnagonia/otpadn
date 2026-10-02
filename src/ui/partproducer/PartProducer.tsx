@@ -218,6 +218,13 @@ function Session({ s }: { s: PartSession }) {
             <Sl label="quantize" value={s.clean.strength} tip="soft-quantize strength; notes struck together move together" onChange={(v) => up((x) => { x.clean.strength = v; })} />
             <div className="dp-row"><span className="k">grid</span><Seg<GridChoice> value={s.clean.grid} onChange={(v) => up((x) => { x.clean.grid = v; })} options={[{ value: "auto", label: "auto" }, { value: "straight", label: "1/16" }, { value: "triplet", label: "triplet" }, { value: "mixed", label: "per beat" }]} /></div>
             {a && <div className={`dp-note ${a.grid.decision === "ambiguous" ? "warn" : ""}`}>detected: <b>{a.grid.decision}</b> — {a.grid.note}</div>}
+            {a?.strum && a.strum.hits > 0 && (
+              <div className="dp-note">
+                {a.strum.strummed >= 0.3
+                  ? <>strummed: <b>{Math.round(a.strum.strummed * 100)}%</b> of {a.strum.hits} chords · {Math.round(a.strum.down * 100)}% down / {Math.round(a.strum.up * 100)}% up · ~{a.strum.spreadMs} ms spread — strums move as one event</>
+                  : <>block chords ({a.strum.hits}): no clear strumming detected</>}
+              </div>
+            )}
             {a?.warnings.map((w) => <div key={w} className="dp-note warn">{w}</div>)}
             {r && s.clean.on && <div className="muted">{r.proposals.filter((x) => x.accepted).length}/{r.proposals.length} proposals on · {r.cleanedDropped.length} removed {Object.keys(s.clean.decisions).length > 0 && <button className="link" onClick={() => up((x) => { x.clean.decisions = {}; })}>reset decisions</button>}</div>}
           </details>

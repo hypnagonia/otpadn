@@ -12,6 +12,7 @@ import { chordAt, chordPcs, scalePcs } from "./harmony";
 import { ARPS, COMP, hitSteps, PICKS, POWER, STABS, STRUMS, WEIGHT } from "./patterns";
 import { guitarShapes, keyVoicings, pickShape, pickVoicing, powerShape, TUNING, type KeyOpts, type Shape } from "./voicing";
 import type { Chord, Mode, PEvent, Style, Variant } from "./types";
+import { detectStrums, type StrumDir } from "./strum";
 
 export const VARIANTS = [
   { name: "close", P: (p: number) => Math.max(p, 0.85), alpha: 0.2, jitter: 0.05, fill: 0.5, k: 0.5 },
@@ -38,7 +39,7 @@ export interface ReworkIn {
   kicks?: number[];
 }
 
-interface Hit { start: number; dur: number; vel: number; src?: PEvent[]; c?: string }
+interface Hit { start: number; dur: number; vel: number; src?: PEvent[]; c?: string; dir?: StrumDir; spreadMs?: number }
 
 const STEP = 0.25;
 const stepIn = (b: number) => Math.round((b - Math.floor(b / 4 + 1e-9) * 4) / STEP) % 16;
@@ -102,7 +103,10 @@ export function reworkPart(inp: ReworkIn): Variant[] {
   const { base, mode, style, chords, spb } = inp;
   const free = base.filter((e) => !e.locked);
   const fixed = base.filter((e) => e.locked);
-  const srcHits = clusters(free);
+  // Guitar: a strum is one hit, with its direction and spread (see strum.ts); other modes: onset clusters.
+  const srcHits: Hit[] = mode === "guitar"
+    ? detectStrums(free, spb).strums.map((st) => ({ start: Math.min(...st.events.map((e) => e.start)), dur: Math.max(...st.events.map((e) => e.dur)), vel: st.vel, src: st.events, dir: st.dir, spreadMs: st.spreadMs }))
+    : clusters(free);
   const occ = occupancy(srcHits, inp.completeBars);
   const bars = Math.ceil(inp.length / 4 - 1e-9);
   const completeOut = Math.floor(inp.length / 4 + 1e-9);
@@ -257,9 +261,10 @@ export function reworkPart(inp: ReworkIn): Variant[] {
         if (own) pattern = "your rhythm";
         const medV = srcHits.length ? [...srcHits].map((h) => h.vel).sort((a, b) => a - b)[Math.floor(srcHits.length / 2)] : 90;
         for (let b = 0; b < bars; b++) {
-          const evs: { at: number; c: string }[] = [];
+          const evs: { at: number; c: string; spread?: number }[] = [];
           if (own) {
-            for (const h of srcHits) if (Math.floor(h.start / 4 + 1e-9) === b) evs.push({ at: h.start, c: style === "power" ? (h.vel > medV ? "P" : "p") : stepIn(h.start) % 2 === 0 ? (h.vel >= medV * 0.8 ? "D" : "d") : "U" });
+            // your strokes: the detected direction (or beat position when the source is a block chord)
+            for (const h of srcHits) if (Math.floor(h.start / 4 + 1e-9) === b) evs.push({ at: h.start, c: style === "power" ? (h.vel > medV ? "P" : "p") : h.dir === "up" ? "U" : h.dir === "down" ? (h.vel >= medV * 0.8 ? "D" : "d") : stepIn(h.start) % 2 === 0 ? (h.vel >= medV * 0.8 ? "D" : "d") : "U", spread: h.spreadMs });
           } else {
             for (const s of hitSteps(pat.steps)) evs.push({ at: b * 4 + s * STEP, c: pat.steps[s] });
             for (const h of anchorHits) if (Math.floor(h.start / 4 + 1e-9) === b) evs.push({ at: h.start, c: style === "power" ? "p" : "d" });
@@ -276,8 +281,9 @@ export function reworkPart(inp: ReworkIn): Variant[] {
             else if (style === "strum") {
               const ring = Math.max(0.1, nextAt - e.at - 0.02);
               if (e.c === "x") emit(e.at, ss.slice(1, 4), sh, 0.06, 38, 4, "mute");
-              else if (e.c === "D" || e.c === "d") emit(e.at, ss, sh, ring, v, 9 + (1 - v / 127) * 6, "down");
-              else emit(e.at, ss.slice(-4).reverse(), sh, ring, v, 7, "up");
+              // per-string gap: your measured spread when known, else harder = faster
+              else if (e.c === "D" || e.c === "d") emit(e.at, ss, sh, ring, v, e.spread && e.spread >= 8 ? Math.max(4, Math.min(18, e.spread / Math.max(1, ss.length - 1))) : 9 + (1 - v / 127) * 6, "down");
+              else emit(e.at, ss.slice(-4).reverse(), sh, ring, v, e.spread && e.spread >= 8 ? Math.max(3, Math.min(14, e.spread / 3)) : 7, "up");
             } else {
               // fingerpick roles
               const role = e.c;
