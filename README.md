@@ -22,13 +22,14 @@ You hear a song and want to work with it: practise a part, remix it, rebuild the
 
 **Make the parts better**
 - **Drum Producer** — turns messy drum MIDI into a clean, punchy part: fixes double hits and timing, keeps ghost notes and fills, then reworks it as *house*, *techno* or *rock*, with groove, fills and a matching drum kit. Three variations to choose from, every one reproducible.
-- **Part Producer** — the same idea for **keys** (comping, house stabs, pads, arpeggios with smooth voice leading), a **vocal or lead line** (in key, tidy, with consistent repeats) and **guitar** (playable chord shapes, strumming, fingerpicking, power chords).
+- **Part Producer** — the same idea for **keys** (comping, house stabs, pads, arpeggios with smooth voice leading), a **vocal or lead line** (in key, tidy, with consistent repeats), **guitar** (playable chord shapes, strumming, fingerpicking, power chords) and **bass** (one note at a time, rests only where they mean something; roots, lock-to-kick and octave styles).
 - **Arrange & mix** — build a section-aware arrangement and get an automatic first mix with balanced levels.
 
 **Work like in any DAW**
 - Timeline with regions, a **range tool for cutting slices** out of tracks (with or without closing the gap), split, trim and duplicate.
 - **Piano roll** with box select, group moves, copy/paste, quantize and a velocity lane; guitar **tab view**.
-- **Mixer** with EQ, inserts (compressor, limiter, multiband, delay, saturator, plate reverb), sends and buses.
+- **Real instruments**: a multitrack acoustic drum kit, a multisampled 5-string bass, a Martin acoustic guitar and an electric guitar played through a modelled amp and real 4×12 cabinet responses (clean, crunch, high-gain).
+- **Mixer** with EQ, inserts (compressor, limiter, multiband, delay, saturator, guitar amp, plate reverb), sends and buses.
 - Recording with metronome and count-in, musical typing and MIDI keyboards.
 - **Export** the mix or each track as WAV (24-bit), or everything as a `.mid` file — the whole song or just the cycle range.
 
@@ -57,6 +58,7 @@ The only things downloaded are the AI models and instrument samples, once, the f
 | Stem separation model | ~136 MB | first stem split |
 | Audio → MIDI model | ~200 MB (fast) or ~600 MB (accurate) | first conversion |
 | Multitrack acoustic drum kit | ~16 MB | first time it plays |
+| Bass · acoustic guitar · electric guitar | ~5 MB · ~0.5 MB · ~3 MB | first time each plays |
 | Piano, electric pianos, orchestral sounds | a few MB each | when you pick them |
 
 ## What you need
@@ -137,6 +139,11 @@ Otpadn stands on the shoulders of open research and free sounds:
 - **Dereverb + denoise:** DPDFNet-8 by CEVA ([upstream](https://github.com/ceva-ip/DPDFNet)), via [dpdfnet-webassembly](https://github.com/jenyanepoimannykh-it/dpdfnet-webassembly). See upstream for its licence.
 - **Multitrack acoustic drums:** CrocellKit by Lars Muldjord for DrumGizmo, CC BY 4.0 (details in [`public/kits/crocell/LICENSE.txt`](public/kits/crocell/LICENSE.txt)).
 - **Studio drums:** Virtuosity Drums from sfzinstruments (CC0).
+- **Bass:** "Black And Blue Basses" by Karoryfer Samples (CC0).
+- **Acoustic guitar:** 2017 Martin HD-28 samples by Jeff Learman, from the Discord SFZ GM Bank (CC0).
+- **Electric guitar (DI):** "Electric Guitar FSBS (direct)" from the FreePats project (CC0).
+- **Guitar cabinets:** "Jester's Brutal Pack" impulse responses by Jester Dyne Productions (CC0).
+- Build script for these sample sets: [`tools/build_sampled_instruments.py`](tools/build_sampled_instruments.py); licence notes sit next to the samples in `public/instruments/`.
 - **Sampled instruments:** free libraries loaded through [smplr](https://github.com/danigb/smplr) — Splendid Grand Piano, electric pianos, MusyngKite General MIDI, Mellotron and classic drum machines.
 
 Because of the MuScriptor licence, **don't use the audio → MIDI feature commercially.**

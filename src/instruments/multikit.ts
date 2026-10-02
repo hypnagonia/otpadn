@@ -169,6 +169,8 @@ export class MultiKit implements Playable {
   private store: KitStore | null = null;
   private ringing = new Map<string, { src: AudioBufferSourceNode; g: GainNode; t: number }[]>();
   private all = new Set<AudioBufferSourceNode>();
+  /** Hits still ringing per piece, for the voice limit. */
+  private hits = new Map<string, { t: number; parts: { src: AudioBufferSourceNode; g: GainNode }[] }[]>();
   /** Last layer played per piece: a repeat would be the identical sample ("machine gun"). */
   private lastLayer = new Map<string, number>();
 
@@ -194,8 +196,13 @@ export class MultiKit implements Playable {
   }
 
   /** Route each group to its track (missing groups go to `fallback`, the kit's own strip). */
+  private routed = new Map<KitGroup, AudioNode>();
   setOutputs(dests: Partial<Record<KitGroup, AudioNode>>, fallback: AudioNode) {
     for (const g of KIT_GROUPS) {
+      // Only rewire what changed: a disconnect/reconnect mid-playback is an audible dropout.
+      const to = dests[g] ?? fallback;
+      if (this.routed.get(g) === to) continue;
+      this.routed.set(g, to);
       this.outputs[g].disconnect();
       this.outputs[g].connect(dests[g] ?? fallback);
     }
@@ -237,6 +244,7 @@ export class MultiKit implements Playable {
         r.g.gain.setTargetAtTime(0, time, 0.012);
         try { r.src.stop(time + 0.1); } catch { /* not started */ }
       }
+    const parts: { src: AudioBufferSourceNode; g: GainNode }[] = [];
     for (const [g, file] of layer.files) {
       const buf = this.store?.get(file);
       if (!buf) continue;
@@ -248,6 +256,7 @@ export class MultiKit implements Playable {
       src.connect(gain).connect(this.outputs[g]);
       src.start(time);
       this.all.add(src);
+      parts.push({ src, g: gain });
       if (piece.group) {
         const arr = this.ringing.get(piece.group) ?? [];
         arr.push({ src, g: gain, t: time });
@@ -258,10 +267,46 @@ export class MultiKit implements Playable {
         this.all.delete(src);
       };
     }
+    this.limitVoices(piece.name, time, parts);
+  }
+
+  /**
+   * Voice limit per piece (like a drum sampler): a re-struck cymbal keeps its last 3 hits ringing,
+   * older ones fade out under the new hit. Without it a ridden crash stacks ~24 six-second hits on
+   * 6–7 mics (≈ 130 sample voices) — enough to overload the audio thread and crackle live.
+   */
+  private limitVoices(name: string, time: number, parts: { src: AudioBufferSourceNode; g: GainNode }[]) {
+    if (!parts.length) return;
+    const cymbal = /crash|ride|china|splash/i.test(name);
+    const max = 3;
+    const list = (this.hits.get(name) ?? []).filter((h) => h.parts.some((p) => this.all.has(p.src)));
+    list.push({ t: time, parts });
+    list.sort((a, b) => a.t - b.t);
+    while (list.length > max) {
+      const old = list[0];
+      if (old.t >= time) break; // only hits that started before this one (notes can be scheduled out of order)
+      list.shift();
+      for (const p of old.parts) {
+        p.g.gain.setTargetAtTime(0, time, cymbal ? 0.02 : 0.01);
+        try { p.src.stop(time + (cymbal ? 0.15 : 0.08)); } catch { /* already stopped */ }
+      }
+    }
+    this.hits.set(name, list);
   }
 
   stopAll() {
-    this.all.forEach((s) => { try { s.stop(); } catch { /* not started */ } });
+    // Short fade instead of a hard stop: cutting ringing cymbals mid-wave clicks.
+    const now = this.ctx.currentTime;
+    for (const list of this.hits.values())
+      for (const h of list)
+        for (const p of h.parts) {
+          const g = p.g.gain;
+          if (typeof g.cancelAndHoldAtTime === "function") g.cancelAndHoldAtTime(now);
+          else g.cancelScheduledValues(now);
+          g.setTargetAtTime(0, now, 0.005);
+        }
+    this.hits.clear();
+    this.all.forEach((s) => { try { s.stop(now + 0.04); } catch { /* not started */ } });
     this.all.clear();
   }
   dispose() {

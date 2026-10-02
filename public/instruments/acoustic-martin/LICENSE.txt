@@ -1,0 +1,4 @@
+Acoustic guitar — 2017 Martin HD-28 Vintage Series
+Jeff Learman, for the Discord SFZ GM Bank (https://github.com/sfzinstruments/Discord-SFZ-GM-Bank)
+License: CC0 1.0 Universal (public domain dedication) — https://creativecommons.org/publicdomain/zero/1.0/
+Changes for Otpadn: subset of samples, pre-onset silence and long tails trimmed, one global gain, mono, encoded as AAC. Build script: tools/build_sampled_instruments.py

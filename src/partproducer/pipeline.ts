@@ -1,5 +1,5 @@
 /** Pure pipeline: source → harmony → clean → rework (3 variants) → groove → sound pick. Runs in the worker. */
-import { applyOverrides, chordsFromNotes, chordsFromProject, keyFromNotes } from "./harmony";
+import { applyOverrides, chordsFromBass, chordsFromNotes, chordsFromProject, keyFromNotes } from "./harmony";
 import { cleanPart } from "./clean";
 import { groovePart } from "./groove";
 import { reworkPart } from "./rework";
@@ -11,6 +11,8 @@ export type PartInput = Pick<PartSession, "mode" | "source" | "harmony" | "clean
   projectKey: { tonic: number; minor: boolean } | null;
   /** Project chord spans in absolute beats (from audio analysis). */
   projectChords: { start: number; length: number; root: number; minor: boolean }[];
+  /** Bass mode: kick-drum onsets in the region (beats), from the project's drum tracks. */
+  kicks: number[];
   openShapes: boolean;
 };
 
@@ -51,9 +53,11 @@ export function runPart(inp: PartInput): PipelineResult {
   // chords
   const covered = inp.projectChords.reduce((s, c) => s + Math.max(0, Math.min(inp.source.start + len, c.start + c.length) - Math.max(inp.source.start, c.start)), 0) / Math.max(1e-6, len);
   const useProject = inp.harmony.source === "project" || (inp.harmony.source === "auto" && covered >= 0.5);
-  let chords: Chord[] = useProject ? chordsFromProject(inp.projectChords, inp.source.start, len, events) : chordsFromNotes(events.filter((e) => e.dur * spb >= 0.06), len, key, inp.mode === "line");
+  let chords: Chord[] = useProject ? chordsFromProject(inp.projectChords, inp.source.start, len, events) : inp.mode === "bass" ? chordsFromBass(events.filter((e) => e.dur * spb >= 0.06), len, key) : chordsFromNotes(events.filter((e) => e.dur * spb >= 0.06), len, key, inp.mode === "line");
   if (inp.harmony.source === "project" && covered < 0.5) warnings.push("the project's chord track covers less than half of this region");
   if (inp.mode === "line" && !useProject) warnings.push("chords guessed from the melody alone — check them, or analyse the song for a chord track");
+  if (inp.mode === "bass" && !useProject) warnings.push("chord roots taken from the bass line, qualities from the key — click a chord to change it");
+  if (inp.mode === "bass" && inp.rework.on && inp.rework.style === "kick" && !inp.kicks.length) warnings.push("no kick drum found in this region — 'lock to kick' uses your bass rhythm instead");
   chords = applyOverrides(chords, inp.harmony.chordOverrides);
 
   // clean
@@ -88,7 +92,7 @@ export function runPart(inp: PartInput): PipelineResult {
       ch = chords.filter((c) => c.start < out);
     }
     lengthBeats = out;
-    variants = reworkPart({ base, mode: inp.mode, style: inp.rework.style, preserve: inp.rework.preserve, chords: ch, key, length: out, completeBars, seeds: inp.layerSeeds, variation: inp.groove.variation, locks: inp.locks.events, spb, openShapes: inp.openShapes });
+    variants = reworkPart({ base, mode: inp.mode, style: inp.rework.style, preserve: inp.rework.preserve, chords: ch, key, length: out, completeBars, seeds: inp.layerSeeds, variation: inp.groove.variation, locks: inp.locks.events, spb, openShapes: inp.openShapes, kicks: inp.kicks });
     if (out > len) chords = ch;
   } else {
     variants = [{ name: inp.clean.on ? "cleaned" : "source", events: cleaned, dropped: cleanedDropped, stats: { notes: cleaned.length, kept: cleaned.filter((e) => e.origin === "source" || e.origin === "moved").length, generated: 0, changed: cleaned.filter((e) => e.origin === "edited").length } }];

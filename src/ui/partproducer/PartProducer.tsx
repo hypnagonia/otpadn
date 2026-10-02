@@ -244,7 +244,7 @@ function Session({ s }: { s: PartSession }) {
                 <div className="dp-row wrap">
                   <span className="k">regenerate</span>
                   <button onClick={() => reseed("rhythm")} data-tip="new rhythm pattern / arp order only">↻ rhythm</button>
-                  {s.mode !== "line" && <button onClick={() => reseed("voicing")} data-tip="new voicings / guitar shapes only">↻ voicing</button>}
+                  {(s.mode === "keys" || s.mode === "guitar") && <button onClick={() => reseed("voicing")} data-tip="new voicings / guitar shapes only">↻ voicing</button>}
                   {s.mode !== "line" && <button onClick={() => reseed("phrase")} data-tip="new phrase-end variations only">↻ phrase</button>}
                 </div>
                 <div className="dp-row">

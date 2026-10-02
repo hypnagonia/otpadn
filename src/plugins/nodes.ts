@@ -1,6 +1,7 @@
 /** Instantiate insert plugins on any (realtime/offline) audio context. */
 import workletUrl from "./worklets.ts?worker&url";
 import { DELAY_DIV_BEATS, type Insert, type PluginType } from "./defs";
+import { createAmp, type AmpParams } from "../instruments/ampsim";
 
 export interface PluginInstance {
   input: AudioNode;
@@ -8,6 +9,8 @@ export interface PluginInstance {
   set(params: Record<string, number>, bpm: number): void;
   /** Latest gain reduction per band (dB, ≤ 0), for meters. */
   gr: number[];
+  /** Resolves when async resources (e.g. a cabinet IR) are loaded; offline renders wait for it. */
+  ready?: Promise<void>;
   /** Node whose input 1 is the sidechain (compressor only). */
   sidechainNode?: AudioNode;
   dispose(): void;
@@ -176,6 +179,10 @@ export function createPlugin(ctx: BaseAudioContext, type: PluginType): PluginIns
     case "delay": return delay(ctx);
     case "saturator": return saturator(ctx);
     case "limiter": return worklet(ctx, "otpadn-limiter", 1);
+    case "amp": {
+      const a = createAmp(ctx, { gain: 6, bass: 5.5, mid: 5, treble: 6, presence: 5.5, cab: 0, level: 0 });
+      return { input: a.input, output: a.output, gr: [], set: (p) => a.set(p as unknown as AmpParams), dispose: () => a.dispose(), get ready() { return a.ready; } } as PluginInstance;
+    }
   }
 }
 
@@ -235,6 +242,8 @@ export class InsertChain {
         try { cur.src.disconnect(cur.dst, 0, 1); } catch { /* already gone */ }
         this.sc.delete(id);
       }
+    // Async resources (amp cabinet IRs): renders must not start before they're loaded.
+    await Promise.all(inserts.filter((i) => i.on).map((i) => this.instances.get(i.id)?.ready ?? Promise.resolve()));
   }
   dispose() {
     for (const cur of this.sc.values()) {

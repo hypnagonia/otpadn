@@ -1,0 +1,5 @@
+Jester's Brutal Pack — guitar cabinet impulse responses (modified Behringer BG412S 4x12; Celestion Vintage 30, Rockdriver Jr., Eminence DV-77)
+by Bastian Karschewski / Jester Dyne Productions (https://jester-dyne-productions.com)
+License: CC0 1.0 (public domain), "completely free to use in your private and commercial projects".
+Changes for Otpadn: 3 IRs, mono, first 120 ms, unit-energy normalised.
+v30 = 1 Cookie Monster (SM57, Vintage 30) · blend = 8 Big Bubba (e606 + SM57, Rockdriver Jr. + Vintage 30) · dv77 = 2 Darth Genocider (SM57, DV-77)

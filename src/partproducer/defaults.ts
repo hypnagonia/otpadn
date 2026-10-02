@@ -2,7 +2,7 @@
 import { PICK } from "./sound";
 import { DEFAULT_STYLE, PP_ALGO_VERSION, type Mode, type PartSession } from "./types";
 
-export const modeForRole = (role: string): Mode => (role === "vocals" || role === "lead" || role === "bass" ? "line" : role === "guitar" ? "guitar" : "keys");
+export const modeForRole = (role: string): Mode => (role === "bass" ? "bass" : role === "vocals" || role === "lead" ? "line" : role === "guitar" ? "guitar" : "keys");
 
 export function defaultPartSession(id: string, mode: Mode, source: PartSession["source"], seed: number): PartSession {
   const style = DEFAULT_STYLE[mode];

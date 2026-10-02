@@ -1,5 +1,5 @@
 /** Insert-plugin catalogue: parameters, ranges, defaults. DSP lives in nodes.ts + worklets.ts. */
-export type PluginType = "compressor" | "multiband" | "delay" | "reverb" | "saturator" | "limiter";
+export type PluginType = "compressor" | "multiband" | "delay" | "reverb" | "saturator" | "limiter" | "amp";
 
 export interface Insert {
   id: string;
@@ -48,6 +48,21 @@ export const PLUGINS: Record<PluginType, PluginDef> = {
       { key: "makeup", label: "makeup", min: -12, max: 24, step: 0.5, def: 0, unit: "dB" },
       { key: "mix", label: "mix", min: 0, max: 100, step: 1, def: 100, unit: "%" },
       { key: "detector", label: "detector", min: 0, max: 1, step: 1, def: 0, options: ["peak", "rms"] },
+    ],
+  },
+  amp: {
+    type: "amp",
+    name: "guitar amp",
+    short: "amp",
+    desc: "tube-style preamp · tone stack · 4×12 cab (CC0 IRs) · for guitar DI, bass, anything dirty",
+    params: [
+      { key: "gain", label: "gain", min: 0, max: 10, step: 0.1, def: 6 },
+      { key: "bass", label: "bass", min: 0, max: 10, step: 0.1, def: 5.5 },
+      { key: "mid", label: "mid", min: 0, max: 10, step: 0.1, def: 5 },
+      { key: "treble", label: "treble", min: 0, max: 10, step: 0.1, def: 6 },
+      { key: "presence", label: "presence", min: 0, max: 10, step: 0.1, def: 5.5 },
+      { key: "cab", label: "cab", min: 0, max: 3, step: 1, def: 0, options: ["4×12 V30", "4×12 blend", "4×12 DV-77", "no cab"] },
+      { key: "level", label: "level", min: -24, max: 12, step: 0.5, def: 0, unit: "dB" },
     ],
   },
   limiter: {

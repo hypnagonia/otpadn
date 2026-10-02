@@ -1,0 +1,234 @@
+{
+ "name": "Acoustic guitar \u2014 2017 Martin HD-28 Vintage Series",
+ "license": "CC0 1.0",
+ "credit": "Jeff Learman, for the Discord SFZ GM Bank (https://github.com/sfzinstruments/Discord-SFZ-GM-Bank)",
+ "release": 0.35,
+ "mono": false,
+ "zones": [
+  {
+   "key": 40,
+   "lo": 0,
+   "hi": 41,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 687.2151,
+     "rr": [
+      "MartinGM2_040__E2_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 43,
+   "lo": 42,
+   "hi": 44,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 1560.1476,
+     "rr": [
+      "MartinGM2_043__G2_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 46,
+   "lo": 45,
+   "hi": 47,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 393.8144,
+     "rr": [
+      "MartinGM2_046_Bb2_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 49,
+   "lo": 48,
+   "hi": 50,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 476.6394,
+     "rr": [
+      "MartinGM2_049_Db3_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 52,
+   "lo": 51,
+   "hi": 53,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 752.8885,
+     "rr": [
+      "MartinGM2_052__E3_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 55,
+   "lo": 54,
+   "hi": 56,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 433.1278,
+     "rr": [
+      "MartinGM2_055__G3_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 58,
+   "lo": 57,
+   "hi": 59,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 215.6626,
+     "rr": [
+      "MartinGM2_058_Bb3_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 61,
+   "lo": 60,
+   "hi": 62,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 157.3027,
+     "rr": [
+      "MartinGM2_061_Db4_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 64,
+   "lo": 63,
+   "hi": 66,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 85.809,
+     "rr": [
+      "MartinGM2_064__E4_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 68,
+   "lo": 67,
+   "hi": 69,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 70.8251,
+     "rr": [
+      "MartinGM2_068_Ab4_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 71,
+   "lo": 70,
+   "hi": 72,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 47.5425,
+     "rr": [
+      "MartinGM2_071__B4_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 74,
+   "lo": 73,
+   "hi": 75,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 12.4296,
+     "rr": [
+      "MartinGM2_074__D5_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 77,
+   "lo": 76,
+   "hi": 78,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 86.2748,
+     "rr": [
+      "MartinGM2_077__F5_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 80,
+   "lo": 79,
+   "hi": 81,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 17.7642,
+     "rr": [
+      "MartinGM2_080_Ab5_1.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 83,
+   "lo": 82,
+   "hi": 127,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 127,
+     "power": 52.9156,
+     "rr": [
+      "MartinGM2_083__B5_1.m4a"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -49,7 +49,31 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
   const meter = ctx.createAnalyser();
   meter.fftSize = 1024; // ≈ 21 ms at 48 kHz: one meter reading per frame
 
-  input.connect(hpf).connect(low).connect(mid).connect(mid2).connect(high).connect(lpf).connect(chain.input);
+  // EQ bands that are flat are left out of the signal path (wired back in when used): six
+  // always-on stereo filters per strip add up fast with many tracks (a multitrack kit = 8 strips).
+  const bands: [BiquadFilterNode, (ch: ChannelSettings) => boolean][] = [
+    [hpf, (ch) => ch.hpf > 0],
+    [low, (ch) => Math.abs(ch.eqLow) > 0.01],
+    [mid, (ch) => Math.abs(ch.eqMid) > 0.01],
+    [mid2, (ch) => Math.abs(ch.eqMid2) > 0.01],
+    [high, (ch) => Math.abs(ch.eqHigh) > 0.01],
+    [lpf, (ch) => ch.lpf > 0],
+  ];
+  let wired = "-";
+  const wire = (on: BiquadFilterNode[]) => {
+    const sig = on.map((n) => bands.findIndex((b) => b[0] === n)).join(",");
+    if (sig === wired) return;
+    wired = sig;
+    input.disconnect();
+    for (const [n] of bands) n.disconnect();
+    let prev: AudioNode = input;
+    for (const n of on) {
+      prev.connect(n);
+      prev = n;
+    }
+    prev.connect(chain.input);
+  };
+  wire([]);
   chain.output.connect(fader).connect(pan);
   pan.connect(out);
   pan.connect(analyser);
@@ -67,6 +91,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     meter,
     apply(ch, audible, neutral = false) {
       if (neutral) {
+        wire([]);
         set(hpf.frequency, 10);
         set(low.gain, 0);
         set(mid.gain, 0);
@@ -78,6 +103,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
         set(send.gain, 0);
         return;
       }
+      wire(bands.filter((b) => b[1](ch)).map((b) => b[0]));
       set(hpf.frequency, ch.hpf > 0 ? ch.hpf : 10);
       set(low.gain, ch.eqLow);
       set(low.frequency, ch.eqLowFreq);

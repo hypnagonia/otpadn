@@ -157,3 +157,55 @@ export function applyOverrides(chords: Chord[], ov: Record<string, { root: numbe
 }
 
 export const chordAt = (chords: Chord[], beat: number) => chords.find((c) => beat >= c.start - 1e-9 && beat < c.start + c.length - 1e-9) ?? (chords.length ? chords[chords.length - 1] : null);
+
+/**
+ * Chords for a bass line: the bass mostly plays roots, so per half bar the root is the pitch class
+ * with the most weight on strong beats; the quality is the key's diatonic triad on that root
+ * (I ii iii IV V vi vii° / i ii° III iv v VI VII), so the chord lane is musical, not guessed tones.
+ */
+export function chordsFromBass(events: PEvent[], length: number, key: { tonic: number; minor: boolean }): Chord[] {
+  const MAJ: Quality[] = ["maj", "min", "min", "maj", "maj", "min", "dim"], MIN: Quality[] = ["min", "dim", "maj", "min", "min", "maj", "maj"];
+  const steps = key.minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+  const qualityOf = (root: number): Quality => {
+    const deg = steps.indexOf((root - key.tonic + 12) % 12);
+    return deg < 0 ? "maj" : (key.minor ? MIN : MAJ)[deg];
+  };
+  const raw: Chord[] = [];
+  let prev: number | null = null;
+  for (let a = 0; a < length - 1e-9; a += 2) {
+    const b = Math.min(length, a + 2);
+    const w = new Array(12).fill(0);
+    for (const e of events) {
+      const ov = Math.min(b, e.start + e.dur) - Math.max(a, e.start);
+      if (ov <= 0) continue;
+      const strong = Math.abs(e.start - Math.round(e.start)) < 0.06 ? (Math.abs(e.start - a) < 0.06 ? 2.5 : 1.5) : 1;
+      w[e.pitch % 12] += ov * strong * (0.5 + e.vel / 254);
+    }
+    const total = w.reduce((x, y) => x + y, 0);
+    if (total < 0.05) {
+      if (prev !== null) raw.push({ start: a, length: b - a, root: prev, q: qualityOf(prev), fit: 0, alts: [], from: "notes" });
+      continue;
+    }
+    const order = w.map((v, pc) => [v, pc]).sort((x, y) => y[0] - x[0]);
+    const root = order[0][1];
+    const alts: Chord["alts"] = [{ root, q: qualityOf(root) }, { root, q: qualityOf(root) === "maj" ? "min" : "maj" }, { root, q: qualityOf(root) === "min" ? "m7" : "7" }];
+    if (order[1][0] > 0) alts.push({ root: order[1][1], q: qualityOf(order[1][1]) });
+    // The second half of a bar playing the previous chord's 5th / 3rd / octave is the same chord
+    // (root–fifth bass lines), not a new one.
+    const last = raw[raw.length - 1];
+    if (last && a % 4 >= 2 - 1e-6 && Math.abs(last.start + last.length - a) < 1e-6 && QUALITY_IV[last.q].map((i) => (last.root + i) % 12).includes(root)) {
+      raw.push({ ...last, start: a, length: b - a, alts: [...last.alts] });
+      continue;
+    }
+    raw.push({ start: a, length: b - a, root, q: qualityOf(root), fit: Math.min(1, order[0][0] / total), alts, from: "notes" });
+    prev = root;
+  }
+  const out: Chord[] = [];
+  for (const c of raw) {
+    const last = out[out.length - 1];
+    if (last && last.root === c.root && last.q === c.q && Math.abs(last.start + last.length - c.start) < 1e-6) last.length += c.length;
+    else out.push(c);
+  }
+  return out;
+}
+

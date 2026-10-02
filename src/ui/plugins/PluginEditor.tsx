@@ -249,7 +249,7 @@ export default function PluginEditor() {
   if (!sel || !ins) return <div className="hint">click an insert slot on a channel strip (or add one with “+”) to edit it</div>;
   const def = PLUGINS[ins.type];
   const ownerName = sel.owner === "master" ? "master" : s.project.tracks.find((t) => t.id === sel.owner)?.name ?? "";
-  const view = ins.type === "compressor" ? <CompView ins={ins} owner={sel.owner} /> : ins.type === "multiband" ? <MbView ins={ins} owner={sel.owner} /> : ins.type === "delay" ? <DelayView ins={ins} bpm={s.project.bpm} /> : ins.type === "saturator" ? <SatView ins={ins} /> : ins.type === "limiter" ? <LimiterView ins={ins} owner={sel.owner} /> : <ReverbView ins={ins} />;
+  const view = ins.type === "compressor" ? <CompView ins={ins} owner={sel.owner} /> : ins.type === "multiband" ? <MbView ins={ins} owner={sel.owner} /> : ins.type === "delay" ? <DelayView ins={ins} bpm={s.project.bpm} /> : ins.type === "saturator" ? <SatView ins={ins} /> : ins.type === "amp" ? <SatView ins={{ ...ins, params: { ...ins.params, drive: (ins.params.gain ?? 6) * 4.5 } }} /> : ins.type === "limiter" ? <LimiterView ins={ins} owner={sel.owner} /> : <ReverbView ins={ins} />;
   return (
     <div className={`plugin-editor ${ins.on ? "" : "bypassed"}`}>
       <div className="pl-head">

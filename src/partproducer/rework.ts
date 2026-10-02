@@ -34,6 +34,8 @@ export interface ReworkIn {
   spb: number;
   /** Prefer open shapes (acoustic sounds). */
   openShapes: boolean;
+  /** Bass: kick-drum onsets in the region (beats). */
+  kicks?: number[];
 }
 
 interface Hit { start: number; dur: number; vel: number; src?: PEvent[]; c?: string }
@@ -290,6 +292,13 @@ export function reworkPart(inp: ReworkIn): Variant[] {
       }
     }
 
+    /* ───── bass ───── */
+    if (mode === "bass") {
+      const r = bassVariant(inp, free, k, P, conf.fill);
+      out = r.notes;
+      pattern = r.pattern;
+    }
+
     /* ───── line ───── */
     if (mode === "line") {
       const styleI = style === "faithful" ? 0 : style === "tight" ? 0.6 : 1;
@@ -378,7 +387,7 @@ export function reworkPart(inp: ReworkIn): Variant[] {
     /* ───── phrase development (keys / guitar): bounded, never on every repeat ───── */
     let fills = 0;
     const phraseLen = completeOut >= 8 ? 8 : completeOut >= 4 ? 4 : 0;
-    if (phraseLen && mode !== "line" && !(mode === "guitar" && style === "faithful") && !(mode === "keys" && k === 0 && style === "comp")) {
+    if (phraseLen && mode !== "line" && mode !== "bass" && !(mode === "guitar" && style === "faithful") && !(mode === "keys" && k === 0 && style === "comp")) {
       let prevHad = false;
       for (let b = phraseLen - 1; b < completeOut - 1; b += phraseLen) {
         let p = inp.variation * conf.fill;
@@ -431,3 +440,169 @@ export function reworkPart(inp: ReworkIn): Variant[] {
     return { name: conf.name, events: out, dropped, stats: { notes: out.length, kept, generated: out.filter((e) => !e.src).length, changed: out.filter((e) => e.src && e.origin !== "source" && e.origin !== "moved").length + fills, pattern } };
   });
 }
+
+/* ───────────── bass ───────────── */
+
+const BASS_LO = 28, BASS_HI = 52; // E1 … E3: where a bass line sits
+
+/** The octave of a pitch class closest to the previous note (or the centre), inside the bass register. */
+function bassPitch(pc: number, prev: number | null, center = 38) {
+  const ref = prev ?? center;
+  let best = BASS_LO, bd = Infinity;
+  for (let p = BASS_LO - 4; p <= BASS_HI + 4; p++) {
+    if (((p % 12) + 12) % 12 !== pc) continue;
+    const d = Math.abs(p - ref) + (p < BASS_LO || p > BASS_HI ? 6 : 0);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+
+interface RestCtx { chords: Chord[]; kicks: number[]; srcRests: { bar: number; pos: number }[]; completeBars: number; staccato: boolean }
+
+/**
+ * A bass rests only for a musical reason. Returns the reason, or null (→ the previous note sustains):
+ * the rest repeats in other bars (it's the groove), it closes a phrase (breathing), the kick drum
+ * rests there too (bass breathes with the kick), it's a pickup into a chord change, or the whole
+ * part is played staccato.
+ */
+function restReason(a: number, b: number, next: number, c: RestCtx): string | null {
+  if (c.staccato) return "staccato part";
+  const bar = Math.floor(a / 4 + 1e-9), pos = a - bar * 4;
+  if ((bar + 1) % 4 === 0 && pos >= 2 - 1e-6) return "phrase end";
+  if (c.completeBars >= 3) {
+    const same = c.srcRests.filter((r) => r.bar !== bar && Math.abs(r.pos - pos) < 0.13).length;
+    if (same >= Math.max(1, (c.completeBars - 1) * 0.5)) return "repeats in other bars";
+  }
+  if (c.kicks.length && !c.kicks.some((x) => x > a + 0.05 && x < b - 0.05) && c.kicks.some((x) => Math.abs(x - next) < 0.06)) return "breathes with the kick";
+  const change = c.chords.find((ch) => ch.start > next + 1e-6 && ch.start <= next + 1 + 1e-6);
+  if (change && next % 1 >= 0.25 && b - a <= 1 + 1e-6) return "pickup into the chord change";
+  return null;
+}
+
+function bassVariant(inp: ReworkIn, free: PEvent[], k: number, P: number, fillScale: number): { notes: PEvent[]; pattern: string } {
+  const { chords, length, style } = inp;
+  const kicks = inp.kicks ?? [];
+  const src = [...free].sort((a, b) => a.start - b.start);
+  // Rests in the source line, for "repeats in other bars".
+  const srcRests: { bar: number; pos: number }[] = [];
+  for (let i = 0; i < src.length - 1; i++) {
+    const end = src[i].start + src[i].dur, gap = src[i + 1].start - end;
+    if (gap >= 0.25) srcRests.push({ bar: Math.floor(end / 4 + 1e-9), pos: end - Math.floor(end / 4 + 1e-9) * 4 });
+  }
+  const durs = src.map((e) => e.dur).sort((a, b) => a - b);
+  const iois = src.slice(1).map((e, i) => e.start - src[i].start).filter((x) => x > 0.05).sort((a, b) => a - b);
+  const staccato = src.length >= 8 && durs[Math.floor(durs.length / 2)] < 0.55 * (iois[Math.floor(iois.length / 2)] ?? 1) && durs[Math.floor(durs.length / 2)] <= 0.35;
+  const ctx: RestCtx = { chords, kicks, srcRests, completeBars: inp.completeBars, staccato };
+  const chordAtB = (b: number) => chordAt(chords, b);
+  let prev: number | null = null;
+  const note = (start: number, pc: number | null, dur: number, vel: number, id: string, base?: PEvent): PEvent => {
+    const pitch = pc === null ? base!.pitch : bassPitch(pc, prev, base?.pitch ?? 38);
+    prev = pitch;
+    return base ? { ...base, pitch, start, dur, vel, origin: pitch !== base.pitch || Math.abs(start - base.start) > 1e-3 ? "edited" : base.origin } : { id, pitch, start, micro: 0, dur, vel, origin: "generated" };
+  };
+  let line: PEvent[] = [];
+  let pattern = style as string;
+  const rhythmFromSource = k === 0 || !src.length;
+
+  if (style === "faithful" || (rhythmFromSource && style !== "kick")) {
+    // Your line; roots enforced on chord changes (moderate / free), pitches otherwise kept.
+    pattern = style === "faithful" ? "your line" : "your rhythm";
+    for (const e of src) {
+      const c = chordAtB(e.start);
+      const onChange = c && Math.abs(e.start - c.start) < 0.13;
+      const fits = c ? chordPcs(c).includes(e.pitch % 12) : true;
+      const snapRoot = c && ((style !== "faithful") || (onChange && !fits && k > 0));
+      line.push(note(e.start, snapRoot ? c!.root : null, e.dur, e.vel, e.id, e));
+    }
+  } else if (style === "kick") {
+    const hits = kicks.length ? kicks : src.map((e) => e.start);
+    pattern = kicks.length ? "on the kicks" : "your rhythm (no kick found)";
+    hits.forEach((h, i) => {
+      const c = chordAtB(h);
+      const nextHit = hits[i + 1] ?? length;
+      const change = chords.find((ch) => ch.start > h + 1e-6 && ch.start < nextHit - 1e-6);
+      const end = Math.min(nextHit, change ? change.start : nextHit, h + (k === 2 ? 1 : 2));
+      line.push(note(h, c ? c.root : null, Math.max(0.2, end - h - 0.03), 105, `g:k:${Math.round(h * 48)}`, c ? undefined : src[0]));
+      // free: an octave pop on the off-beat inside long kick gaps
+      if (k === 2 && nextHit - h >= 1.5 && c) line.push(note(h + 0.5 + Math.floor((nextHit - h - 0.5) / 2), c.root, 0.22, 82, `g:k:o:${Math.round(h * 48)}`));
+    });
+  } else if (style === "roots") {
+    pattern = k === 2 ? "root-fifth-octave" : "root 8ths";
+    for (const c of chords) {
+      for (let t = c.start; t < c.start + c.length - 1e-9; t += 0.5) {
+        if (t >= length - 1e-9) break;
+        const last = t + 0.5 >= c.start + c.length - 1e-9;
+        const next = chords.find((x) => x.start >= c.start + c.length - 1e-9);
+        let pc = c.root;
+        if (k === 2) {
+          const i = Math.round((t - c.start) / 0.5) % 4;
+          pc = [c.root, c.root, (c.root + 7) % 12, c.root][i];
+        }
+        if (last && next && next.root !== c.root) {
+          // approach note into the chord change: a step below the next root (in key when possible)
+          const below = (next.root + 11) % 12, above = (next.root + 1) % 12, scale = scalePcs(inp.key);
+          pc = scale.has((next.root + 10) % 12) && k < 2 ? (next.root + 10) % 12 : scale.has(below) ? below : above;
+        }
+        const n = note(t, pc, 0.46, t % 1 === 0 ? 108 : 92, `g:r:${Math.round(t * 48)}`);
+        if (k === 2 && Math.round((t - c.start) / 0.5) % 4 === 3 && !last) n.pitch = Math.min(BASS_HI + 7, n.pitch + 12); // octave pop
+        line.push(n);
+      }
+    }
+  } else if (style === "octaves") {
+    pattern = k === 2 ? "house off-beats" : "disco octaves";
+    for (const c of chords) {
+      for (let t = c.start; t < c.start + c.length - 1e-9; t += 0.5) {
+        if (t >= length - 1e-9) break;
+        const off = t % 1 >= 0.5 - 1e-9;
+        if (k === 2 && !off) continue; // house: off-beats only
+        const low = bassPitch(c.root, prev, 36);
+        const pitch = off ? low + 12 : low;
+        line.push({ id: `g:o:${Math.round(t * 48)}`, pitch, start: t, micro: 0, dur: 0.38, vel: off ? 104 : 94, origin: "generated" });
+        prev = low;
+      }
+    }
+  }
+
+  // Rests need a reason: an unjustified gap is filled (the previous note sustains), up to a limit by variant.
+  line.sort((a, b) => a.start - b.start);
+  const maxFill = [0.5, 1, 2][k];
+  for (let i = 0; i < line.length - 1; i++) {
+    const e = line[i], n = line[i + 1];
+    const end = e.start + e.dur, gap = n.start - end;
+    if (gap <= 0.02) continue;
+    if (style === "octaves" || (style === "roots" && k > 0)) continue; // short notes are the style there
+    const why = restReason(end, n.start, n.start, ctx);
+    if (why) {
+      e.tags = [...(e.tags ?? []), `rest: ${why}`];
+      continue;
+    }
+    if (gap <= maxFill + 1e-9 && !e.locked) {
+      e.dur = n.start - e.start - 0.02;
+      if (e.origin === "source" || e.origin === "moved") e.origin = "edited";
+      e.tags = [...(e.tags ?? []), "sustained (no reason to rest)"];
+    }
+  }
+  // Phrase-end walk-up into the next phrase (bounded, never on consecutive phrases).
+  const completeOut = Math.floor(length / 4 + 1e-9);
+  const phraseLen = completeOut >= 8 ? 8 : completeOut >= 4 ? 4 : 0;
+  if (phraseLen && style !== "faithful") {
+    let prevHad = false;
+    for (let b = phraseLen - 1; b < completeOut - 1; b += phraseLen) {
+      let p = inp.variation * fillScale;
+      if (prevHad) p *= 0.35;
+      if (rand(inp.seeds.phrase, k, "walk", b) >= p) { prevHad = false; continue; }
+      prevHad = true;
+      const end = (b + 1) * 4, next = chordAt(chords, end);
+      if (!next) continue;
+      line = line.filter((e) => e.locked || !(e.start >= end - 1 && e.start < end));
+      const target = bassPitch(next.root, prev, 38);
+      [-3, -2, -1].forEach((d, i) => line.push({ id: `f:w:${b}:${i}`, pitch: target + d, start: end - 1 + (i + 1) * 0.25, micro: 0, dur: 0.23, vel: 88 + i * 6, origin: "fill", tags: ["fill", "walk-up"] }));
+      line.push({ id: `f:w:${b}:0`, pitch: target - 5 >= BASS_LO ? target - 5 : target + 7, start: end - 1, micro: 0, dur: 0.23, vel: 96, origin: "fill", tags: ["fill", "walk-up"] });
+    }
+  }
+  // One note at a time, always.
+  line.sort((a, b) => a.start - b.start);
+  for (let i = 0; i < line.length - 1; i++) if (!line[i].locked && line[i].start + line[i].dur > line[i + 1].start - 0.02) line[i].dur = Math.max(0.05, line[i + 1].start - line[i].start - 0.02);
+  return { notes: line.filter((e) => e.start < length - 1e-9), pattern };
+}
+

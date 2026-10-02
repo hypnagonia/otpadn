@@ -25,8 +25,26 @@ export function partInput(s: PartSession): PartInput {
   return {
     mode: s.mode, source: s.source, harmony: s.harmony, clean: s.clean, rework: s.rework, groove: s.groove, seed: s.seed, layerSeeds: s.layerSeeds, locks: s.locks,
     bpm: p.bpm, projectKey: p.key, projectChords: p.chords ?? [],
+    kicks: s.mode === "bass" ? kickBeats(s.source.start, s.source.length) : [],
     openShapes: !/distortion|power/.test(inst ?? "") && s.rework.style !== "power",
   };
+}
+
+/** Kick-drum onsets (GM 35/36) from the project's drum tracks inside a region, relative to its start. */
+function kickBeats(start: number, length: number): number[] {
+  const out: number[] = [];
+  for (const t of store.project.tracks) {
+    if (t.kind !== "midi" || t.pp || !(t.role === "drums" || /^(drums|abuse|kit|dpkit|multikit):/.test(t.instrument ?? ""))) continue;
+    for (const c of t.clips) {
+      if (c.kind !== "midi") continue;
+      for (const n of c.notes) {
+        if (n.pitch !== 35 && n.pitch !== 36) continue;
+        const at = c.start + n.start - start;
+        if (at >= 0 && at < length && n.start < c.length) out.push(Math.round(at * 1000) / 1000);
+      }
+    }
+  }
+  return [...new Set(out)].sort((a, b) => a - b);
 }
 
 export function captureNotes(trackIds: string[], start: number, length: number) {
@@ -103,7 +121,7 @@ export function toNotes(events: PEvent[], lengthBeats: number): Note[] {
     .sort((a, b) => a.start - b.start || a.pitch - b.pitch);
 }
 
-const ROLE_OF: Record<Mode, Role> = { keys: "keys", line: "lead", guitar: "guitar" };
+const ROLE_OF: Record<Mode, Role> = { keys: "keys", line: "lead", guitar: "guitar", bass: "bass" };
 
 function procInto(t: Track, proc: Proc, keyBase: string) {
   const ch = t.ch;

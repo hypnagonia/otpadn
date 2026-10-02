@@ -1,5 +1,6 @@
 import { DrumAbuse, DrumMachine, ElectricPiano, Mellotron, Scheduler, Smolken, Soundfont, SplendidGrandPiano } from "smplr";
 import { DrumSynth } from "./drumsynth";
+import { SampledInstrument } from "./sampled";
 import { AcousticKit } from "./kit";
 import { MultiKit } from "./multikit";
 import { PluckGuitar } from "./pluck";
@@ -37,6 +38,8 @@ export function createInstrument(ctx: BaseAudioContext, id: string, destination:
       let groups: string[] | null = null;
       return new SmplrPlayable(dm as unknown as SmplrLike, (n) => resolveDrum((groups ??= dm.getGroupNames()), n));
     }
+    case "sampled":
+      return new SampledInstrument(ctx, destination, name);
     case "dpkit":
       return new DrumSynth(ctx, destination, name);
     case "kit":

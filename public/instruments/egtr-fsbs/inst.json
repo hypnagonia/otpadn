@@ -1,0 +1,459 @@
+{
+ "name": "Electric guitar DI \u2014 FSBS, bridge pickup",
+ "license": "CC0 1.0",
+ "credit": "FreePats project, \"Electric Guitar FSBS (direct)\" (https://github.com/freepats/electric-guitar-FSBS-direct)",
+ "release": 0.12,
+ "mono": false,
+ "zones": [
+  {
+   "key": 36,
+   "lo": 0,
+   "hi": 38,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1282.0198,
+     "rr": [
+      "C2_s1_soft_01.m4a",
+      "C2_s1_soft_02.m4a",
+      "C2_s1_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 798.7969,
+     "rr": [
+      "C2_s1_01.m4a",
+      "C2_s1_02.m4a",
+      "C2_s1_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 40,
+   "lo": 39,
+   "hi": 40,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1375.0289,
+     "rr": [
+      "E2_s1_soft_01.m4a",
+      "E2_s1_soft_02.m4a",
+      "E2_s1_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 789.0944,
+     "rr": [
+      "E2_s1_01.m4a",
+      "E2_s1_02.m4a",
+      "E2_s1_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 41,
+   "lo": 41,
+   "hi": 43,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 870.7122,
+     "rr": [
+      "F2_s1_soft_01.m4a",
+      "F2_s1_soft_02.m4a",
+      "F2_s1_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 639.3651,
+     "rr": [
+      "F2_s1_01.m4a",
+      "F2_s1_02.m4a",
+      "F2_s1_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 45,
+   "lo": 44,
+   "hi": 46,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1392.1178,
+     "rr": [
+      "A2_s2_soft_01.m4a",
+      "A2_s2_soft_02.m4a",
+      "A2_s2_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 691.2861,
+     "rr": [
+      "A2_s2_01.m4a",
+      "A2_s2_02.m4a",
+      "A2_s2_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 48,
+   "lo": 47,
+   "hi": 49,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1632.8846,
+     "rr": [
+      "C3_s2_soft_01.m4a",
+      "C3_s2_soft_02.m4a",
+      "C3_s2_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 412.1909,
+     "rr": [
+      "C3_s2_01.m4a",
+      "C3_s2_02.m4a",
+      "C3_s2_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 50,
+   "lo": 50,
+   "hi": 51,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1112.4138,
+     "rr": [
+      "D3_s3_soft_01.m4a",
+      "D3_s3_soft_02.m4a",
+      "D3_s3_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 657.0364,
+     "rr": [
+      "D3_s3_01.m4a",
+      "D3_s3_02.m4a",
+      "D3_s3_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 52,
+   "lo": 52,
+   "hi": 53,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1324.072,
+     "rr": [
+      "E3_s3_soft_01.m4a",
+      "E3_s3_soft_02.m4a",
+      "E3_s3_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 456.9958,
+     "rr": [
+      "E3_s3_01.m4a",
+      "E3_s3_02.m4a",
+      "E3_s3_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 55,
+   "lo": 54,
+   "hi": 57,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 849.5542,
+     "rr": [
+      "G3_s4_soft_01.m4a",
+      "G3_s4_soft_02.m4a",
+      "G3_s4_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 453.6021,
+     "rr": [
+      "G3_s4_01.m4a",
+      "G3_s4_02.m4a",
+      "G3_s4_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 59,
+   "lo": 58,
+   "hi": 60,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 902.9146,
+     "rr": [
+      "B3_s5_soft_01.m4a",
+      "B3_s5_soft_02.m4a",
+      "B3_s5_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 382.85,
+     "rr": [
+      "B3_s5_01.m4a",
+      "B3_s5_02.m4a",
+      "B3_s5_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 61,
+   "lo": 61,
+   "hi": 62,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 783.9214,
+     "rr": [
+      "Cs4_s5_soft_01.m4a",
+      "Cs4_s5_soft_02.m4a",
+      "Cs4_s5_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 308.7636,
+     "rr": [
+      "Cs4_s5_01.m4a",
+      "Cs4_s5_02.m4a",
+      "Cs4_s5_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 64,
+   "lo": 63,
+   "hi": 65,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 757.6127,
+     "rr": [
+      "E4_s6_soft_01.m4a",
+      "E4_s6_soft_02.m4a",
+      "E4_s6_soft_03.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 521.9942,
+     "rr": [
+      "E4_s6_01.m4a",
+      "E4_s6_02.m4a",
+      "E4_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 67,
+   "lo": 66,
+   "hi": 69,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 615.3025,
+     "rr": [
+      "G4_s6_01.m4a",
+      "G4_s6_02.m4a",
+      "G4_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 71,
+   "lo": 70,
+   "hi": 71,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 953.8762,
+     "rr": [
+      "B4_s6_01.m4a",
+      "B4_s6_02.m4a",
+      "B4_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 72,
+   "lo": 72,
+   "hi": 73,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1320.5486,
+     "rr": [
+      "C5_s6_soft_01.m4a",
+      "C5_s6_soft_02.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 689.4455,
+     "rr": [
+      "C5_s6_01.m4a",
+      "C5_s6_02.m4a",
+      "C5_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 74,
+   "lo": 74,
+   "hi": 75,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 92,
+     "power": 1075.4087,
+     "rr": [
+      "D5_s6_soft_01.m4a"
+     ]
+    },
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 1156.2799,
+     "rr": [
+      "D5_s6_01.m4a",
+      "D5_s6_02.m4a",
+      "D5_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 77,
+   "lo": 76,
+   "hi": 78,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 1022.688,
+     "rr": [
+      "F5_s6_01.m4a",
+      "F5_s6_02.m4a",
+      "F5_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 80,
+   "lo": 79,
+   "hi": 81,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 1276.5923,
+     "rr": [
+      "Gs5_s6_01.m4a",
+      "Gs5_s6_02.m4a",
+      "Gs5_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 82,
+   "lo": 82,
+   "hi": 83,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 956.1506,
+     "rr": [
+      "As5_s6_01.m4a",
+      "As5_s6_02.m4a",
+      "As5_s6_03.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 85,
+   "lo": 84,
+   "hi": 127,
+   "layers": [
+    {
+     "lovel": 93,
+     "hivel": 127,
+     "power": 630.2331,
+     "rr": [
+      "Cs6_s6_01.m4a",
+      "Cs6_s6_02.m4a",
+      "Cs6_s6_03.m4a"
+     ]
+    }
+   ]
+  }
+ ]
+}

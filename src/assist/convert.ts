@@ -14,12 +14,12 @@ import { midiTrack } from "./tracks";
 /** MuScriptor instrument group → Otpadn role + default sound. */
 const GROUPS: Record<string, { role: Role; sound: string; label: string }> = {
   drums: { role: "drums", sound: "kit:acoustic", label: "Drums" },
-  electric_bass: { role: "bass", sound: "sf:electric_bass_finger", label: "Electric Bass" },
+  electric_bass: { role: "bass", sound: "sampled:bass-fingered", label: "Electric Bass" },
   acoustic_bass: { role: "bass", sound: "sf:acoustic_bass", label: "Acoustic Bass" },
   contrabass: { role: "bass", sound: "smolken:Pizzicato", label: "Contrabass" },
-  acoustic_guitar: { role: "guitar", sound: "pluck:acoustic", label: "Acoustic Guitar" },
-  clean_electric_guitar: { role: "guitar", sound: "sf:electric_guitar_clean", label: "Clean Guitar" },
-  distorted_electric_guitar: { role: "guitar", sound: "pluck:distortion", label: "Distorted Guitar" },
+  acoustic_guitar: { role: "guitar", sound: "sampled:acoustic-martin", label: "Acoustic Guitar" },
+  clean_electric_guitar: { role: "guitar", sound: "sampled:egtr-clean", label: "Clean Guitar" },
+  distorted_electric_guitar: { role: "guitar", sound: "sampled:egtr-highgain", label: "Distorted Guitar" },
   acoustic_piano: { role: "piano", sound: "piano:splendid", label: "Piano" },
   electric_piano: { role: "keys", sound: "ep:WurlitzerEP200", label: "Electric Piano" },
   organ: { role: "keys", sound: "sf:drawbar_organ", label: "Organ" },

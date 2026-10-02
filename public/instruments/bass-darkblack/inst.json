@@ -1,0 +1,955 @@
+{
+ "name": "Black And Blue Basses \u2014 dark black 5-string, fingered",
+ "license": "CC0 1.0",
+ "credit": "Karoryfer Samples, \"Black And Blue Basses\" (https://shop.karoryfer.com/pages/free-black-and-blue-basses)",
+ "release": 0.08,
+ "mono": true,
+ "zones": [
+  {
+   "key": 35,
+   "lo": 0,
+   "hi": 36,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 29.3125,
+     "rr": [
+      "darkblack_b1_p_rr1.m4a",
+      "darkblack_b1_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 112.0648,
+     "rr": [
+      "darkblack_b1_mp_rr1.m4a",
+      "darkblack_b1_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 277.9536,
+     "rr": [
+      "darkblack_b1_mf_rr1.m4a",
+      "darkblack_b1_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 767.8129,
+     "rr": [
+      "darkblack_b1_f_rr1.m4a",
+      "darkblack_b1_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 37,
+   "lo": 37,
+   "hi": 38,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 35.8917,
+     "rr": [
+      "darkblack_db2_p_rr1.m4a",
+      "darkblack_db2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 96.9091,
+     "rr": [
+      "darkblack_db2_mp_rr1.m4a",
+      "darkblack_db2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 312.82,
+     "rr": [
+      "darkblack_db2_mf_rr1.m4a",
+      "darkblack_db2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 772.4604,
+     "rr": [
+      "darkblack_db2_f_rr1.m4a",
+      "darkblack_db2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 39,
+   "lo": 39,
+   "hi": 40,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 35.1185,
+     "rr": [
+      "darkblack_eb2_p_rr1.m4a",
+      "darkblack_eb2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 127.3736,
+     "rr": [
+      "darkblack_eb2_mp_rr1.m4a",
+      "darkblack_eb2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 349.1398,
+     "rr": [
+      "darkblack_eb2_mf_rr1.m4a",
+      "darkblack_eb2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 832.8576,
+     "rr": [
+      "darkblack_eb2_f_rr1.m4a",
+      "darkblack_eb2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 41,
+   "lo": 41,
+   "hi": 42,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 32.8203,
+     "rr": [
+      "darkblack_f2_p_rr1.m4a",
+      "darkblack_f2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 92.1839,
+     "rr": [
+      "darkblack_f2_mp_rr1.m4a",
+      "darkblack_f2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 231.8055,
+     "rr": [
+      "darkblack_f2_mf_rr1.m4a",
+      "darkblack_f2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 352.2471,
+     "rr": [
+      "darkblack_f2_f_rr1.m4a",
+      "darkblack_f2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 43,
+   "lo": 43,
+   "hi": 44,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 36.2678,
+     "rr": [
+      "darkblack_g2_p_rr1.m4a",
+      "darkblack_g2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 113.4477,
+     "rr": [
+      "darkblack_g2_mp_rr1.m4a",
+      "darkblack_g2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 238.5357,
+     "rr": [
+      "darkblack_g2_mf_rr1.m4a",
+      "darkblack_g2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 332.6905,
+     "rr": [
+      "darkblack_g2_f_rr1.m4a",
+      "darkblack_g2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 45,
+   "lo": 45,
+   "hi": 46,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 37.4988,
+     "rr": [
+      "darkblack_a2_p_rr1.m4a",
+      "darkblack_a2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 129.0925,
+     "rr": [
+      "darkblack_a2_mp_rr1.m4a",
+      "darkblack_a2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 262.3494,
+     "rr": [
+      "darkblack_a2_mf_rr1.m4a",
+      "darkblack_a2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 303.4235,
+     "rr": [
+      "darkblack_a2_f_rr1.m4a",
+      "darkblack_a2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 47,
+   "lo": 47,
+   "hi": 48,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 37.9897,
+     "rr": [
+      "darkblack_b2_p_rr1.m4a",
+      "darkblack_b2_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 87.0159,
+     "rr": [
+      "darkblack_b2_mp_rr1.m4a",
+      "darkblack_b2_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 202.0392,
+     "rr": [
+      "darkblack_b2_mf_rr1.m4a",
+      "darkblack_b2_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 223.0112,
+     "rr": [
+      "darkblack_b2_f_rr1.m4a",
+      "darkblack_b2_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 49,
+   "lo": 49,
+   "hi": 50,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 37.8334,
+     "rr": [
+      "darkblack_db3_p_rr1.m4a",
+      "darkblack_db3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 94.3945,
+     "rr": [
+      "darkblack_db3_mp_rr1.m4a",
+      "darkblack_db3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 218.7094,
+     "rr": [
+      "darkblack_db3_mf_rr1.m4a",
+      "darkblack_db3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 234.7615,
+     "rr": [
+      "darkblack_db3_f_rr1.m4a",
+      "darkblack_db3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 51,
+   "lo": 51,
+   "hi": 52,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 20.568,
+     "rr": [
+      "darkblack_eb3_p_rr1.m4a",
+      "darkblack_eb3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 61.549,
+     "rr": [
+      "darkblack_eb3_mp_rr1.m4a",
+      "darkblack_eb3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 190.1294,
+     "rr": [
+      "darkblack_eb3_mf_rr1.m4a",
+      "darkblack_eb3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 201.9185,
+     "rr": [
+      "darkblack_eb3_f_rr1.m4a",
+      "darkblack_eb3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 53,
+   "lo": 53,
+   "hi": 54,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 38.8706,
+     "rr": [
+      "darkblack_f3_p_rr1.m4a",
+      "darkblack_f3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 104.0274,
+     "rr": [
+      "darkblack_f3_mp_rr1.m4a",
+      "darkblack_f3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 207.5537,
+     "rr": [
+      "darkblack_f3_mf_rr1.m4a",
+      "darkblack_f3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 187.2557,
+     "rr": [
+      "darkblack_f3_f_rr1.m4a",
+      "darkblack_f3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 55,
+   "lo": 55,
+   "hi": 56,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 34.5356,
+     "rr": [
+      "darkblack_g3_p_rr1.m4a",
+      "darkblack_g3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 98.6119,
+     "rr": [
+      "darkblack_g3_mp_rr1.m4a",
+      "darkblack_g3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 214.2915,
+     "rr": [
+      "darkblack_g3_mf_rr1.m4a",
+      "darkblack_g3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 209.8724,
+     "rr": [
+      "darkblack_g3_f_rr1.m4a",
+      "darkblack_g3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 57,
+   "lo": 57,
+   "hi": 58,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 19.4241,
+     "rr": [
+      "darkblack_a3_p_rr1.m4a",
+      "darkblack_a3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 59.2304,
+     "rr": [
+      "darkblack_a3_mp_rr1.m4a",
+      "darkblack_a3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 169.037,
+     "rr": [
+      "darkblack_a3_mf_rr1.m4a",
+      "darkblack_a3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 171.0068,
+     "rr": [
+      "darkblack_a3_f_rr1.m4a",
+      "darkblack_a3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 59,
+   "lo": 59,
+   "hi": 60,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 23.7965,
+     "rr": [
+      "darkblack_b3_p_rr1.m4a",
+      "darkblack_b3_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 75.2788,
+     "rr": [
+      "darkblack_b3_mp_rr1.m4a",
+      "darkblack_b3_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 187.3226,
+     "rr": [
+      "darkblack_b3_mf_rr1.m4a",
+      "darkblack_b3_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 192.5033,
+     "rr": [
+      "darkblack_b3_f_rr1.m4a",
+      "darkblack_b3_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 61,
+   "lo": 61,
+   "hi": 62,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 21.5203,
+     "rr": [
+      "darkblack_db4_p_rr1.m4a",
+      "darkblack_db4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 53.2148,
+     "rr": [
+      "darkblack_db4_mp_rr1.m4a",
+      "darkblack_db4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 186.8081,
+     "rr": [
+      "darkblack_db4_mf_rr1.m4a",
+      "darkblack_db4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 219.5031,
+     "rr": [
+      "darkblack_db4_f_rr1.m4a",
+      "darkblack_db4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 63,
+   "lo": 63,
+   "hi": 64,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 22.4671,
+     "rr": [
+      "darkblack_eb4_p_rr1.m4a",
+      "darkblack_eb4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 58.5314,
+     "rr": [
+      "darkblack_eb4_mp_rr1.m4a",
+      "darkblack_eb4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 150.0942,
+     "rr": [
+      "darkblack_eb4_mf_rr1.m4a",
+      "darkblack_eb4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 162.124,
+     "rr": [
+      "darkblack_eb4_f_rr1.m4a",
+      "darkblack_eb4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 65,
+   "lo": 65,
+   "hi": 66,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 31.0914,
+     "rr": [
+      "darkblack_f4_p_rr1.m4a",
+      "darkblack_f4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 68.2573,
+     "rr": [
+      "darkblack_f4_mp_rr1.m4a",
+      "darkblack_f4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 141.7418,
+     "rr": [
+      "darkblack_f4_mf_rr1.m4a",
+      "darkblack_f4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 163.9682,
+     "rr": [
+      "darkblack_f4_f_rr1.m4a",
+      "darkblack_f4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 67,
+   "lo": 67,
+   "hi": 68,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 27.6922,
+     "rr": [
+      "darkblack_g4_p_rr1.m4a",
+      "darkblack_g4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 48.6744,
+     "rr": [
+      "darkblack_g4_mp_rr1.m4a",
+      "darkblack_g4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 195.0153,
+     "rr": [
+      "darkblack_g4_mf_rr1.m4a",
+      "darkblack_g4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 255.4987,
+     "rr": [
+      "darkblack_g4_f_rr1.m4a",
+      "darkblack_g4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 69,
+   "lo": 69,
+   "hi": 70,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 22.9601,
+     "rr": [
+      "darkblack_a4_p_rr1.m4a",
+      "darkblack_a4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 47.0334,
+     "rr": [
+      "darkblack_a4_mp_rr1.m4a",
+      "darkblack_a4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 157.3071,
+     "rr": [
+      "darkblack_a4_mf_rr1.m4a",
+      "darkblack_a4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 306.0403,
+     "rr": [
+      "darkblack_a4_f_rr1.m4a",
+      "darkblack_a4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 71,
+   "lo": 71,
+   "hi": 72,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 23.0318,
+     "rr": [
+      "darkblack_b4_p_rr1.m4a",
+      "darkblack_b4_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 41.7078,
+     "rr": [
+      "darkblack_b4_mp_rr1.m4a",
+      "darkblack_b4_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 250.3589,
+     "rr": [
+      "darkblack_b4_mf_rr1.m4a",
+      "darkblack_b4_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 394.3985,
+     "rr": [
+      "darkblack_b4_f_rr1.m4a",
+      "darkblack_b4_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 73,
+   "lo": 73,
+   "hi": 74,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 24.4464,
+     "rr": [
+      "darkblack_db5_p_rr1.m4a",
+      "darkblack_db5_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 48.2041,
+     "rr": [
+      "darkblack_db5_mp_rr1.m4a",
+      "darkblack_db5_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 325.2127,
+     "rr": [
+      "darkblack_db5_mf_rr1.m4a",
+      "darkblack_db5_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 841.0282,
+     "rr": [
+      "darkblack_db5_f_rr1.m4a",
+      "darkblack_db5_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 75,
+   "lo": 75,
+   "hi": 75,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 23.9257,
+     "rr": [
+      "darkblack_eb5_p_rr1.m4a",
+      "darkblack_eb5_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 64.8849,
+     "rr": [
+      "darkblack_eb5_mp_rr1.m4a",
+      "darkblack_eb5_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 372.5243,
+     "rr": [
+      "darkblack_eb5_mf_rr1.m4a",
+      "darkblack_eb5_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 764.3027,
+     "rr": [
+      "darkblack_eb5_f_rr1.m4a",
+      "darkblack_eb5_f_rr2.m4a"
+     ]
+    }
+   ]
+  },
+  {
+   "key": 76,
+   "lo": 76,
+   "hi": 127,
+   "layers": [
+    {
+     "lovel": 1,
+     "hivel": 45,
+     "power": 25.9155,
+     "rr": [
+      "darkblack_e5_p_rr1.m4a",
+      "darkblack_e5_p_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 46,
+     "hivel": 75,
+     "power": 53.3821,
+     "rr": [
+      "darkblack_e5_mp_rr1.m4a",
+      "darkblack_e5_mp_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 76,
+     "hivel": 102,
+     "power": 345.8444,
+     "rr": [
+      "darkblack_e5_mf_rr1.m4a",
+      "darkblack_e5_mf_rr2.m4a"
+     ]
+    },
+    {
+     "lovel": 103,
+     "hivel": 127,
+     "power": 1010.4732,
+     "rr": [
+      "darkblack_e5_f_rr1.m4a",
+      "darkblack_e5_f_rr2.m4a"
+     ]
+    }
+   ]
+  }
+ ]
+}

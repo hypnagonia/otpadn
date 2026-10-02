@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { dspPool } from "../../dsp/pool";
 import { engine } from "../../engine/transport";
+import { bufferPref, setBufferPref } from "../../engine/audioPrefs";
+import { confirmDialog } from "../common/Dialog";
 import { muscriptorGpu } from "../../ml/muscriptor";
 import { useStore } from "../../model/store";
 import { formatTime } from "../common/format";
@@ -22,6 +24,21 @@ export default function StatusBar() {
       <span className="spacer" />
       <MemoryMeter />
       <span>{engine.ctx.sampleRate / 1000} khz</span>
+      <button
+        className="link sb-buf"
+        data-tip={`audio buffer: ${bufferPref() === "safe" ? "safe (no crackle on heavy projects)" : "low latency (for recording / live playing; may crackle on heavy projects)"} · ${Math.round(((engine.ctx.baseLatency || 0) + ((engine.ctx as AudioContext & { outputLatency?: number }).outputLatency || 0)) * 1000)} ms · click to switch`}
+        onClick={() => {
+          const next = bufferPref() === "safe" ? "low" : "safe";
+          void confirmDialog({ title: `switch to ${next === "safe" ? "safe" : "low-latency"} audio buffer?`, body: next === "safe" ? "a larger buffer: steady playback without crackle on heavy projects. keyboard and recording latency go up slightly. the page reloads; your project is autosaved." : "the smallest buffer: best for recording and playing live, but heavy projects can crackle. the page reloads; your project is autosaved.", ok: "switch & reload" }).then((ok) => {
+            if (!ok) return;
+            setBufferPref(next);
+            dispatchEvent(new Event("pagehide")); // flush autosave
+            setTimeout(() => location.reload(), 400);
+          });
+        }}
+      >
+        buf {bufferPref() === "safe" ? "safe" : "low"}
+      </button>
       <span>dsp {dspPool.size} workers</span>
       <span>→ midi {muscriptorGpu || "idle"}</span>
     </footer>

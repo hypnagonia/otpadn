@@ -7,6 +7,12 @@ const SF = (id: string, name: string, category: string): InstrumentDef => ({ id:
 export const INSTRUMENTS: InstrumentDef[] = [
   // ★ Essentials: hand-picked high-quality, thin, lazy-loaded tones
   { id: "multikit:crocell", name: "CrocellKit · multitrack (rock/metal)", category: "Essentials", size: "~17 MB" },
+  { id: "sampled:bass-fingered", name: "Bass · Black & Blue 5-string (fingered)", category: "Essentials", size: "~5 MB" },
+  { id: "sampled:acoustic-martin", name: "Acoustic Guitar · Martin HD-28", category: "Essentials", size: "~0.5 MB" },
+  { id: "sampled:egtr-highgain", name: "Electric Guitar · High-Gain (amp + 4×12)", category: "Essentials", size: "~3 MB" },
+  { id: "sampled:egtr-crunch", name: "Electric Guitar · Crunch (amp + 4×12)", category: "Guitar", size: "~3 MB" },
+  { id: "sampled:egtr-clean", name: "Electric Guitar · Clean (amp + cab)", category: "Guitar", size: "~3 MB" },
+  { id: "sampled:egtr-di", name: "Electric Guitar · DI (dry, add an amp)", category: "Guitar", size: "~3 MB" },
   { id: "kit:acoustic", name: "Studio Drums (acoustic)", category: "Essentials", size: "~8 MB" },
   { id: "abuse:roland-tr-909", name: "TR-909 (electronic)", category: "Essentials", size: "~2 MB" },
   { id: "synth:moog-bass", name: "Moog Bass", category: "Essentials", size: "0" },
@@ -75,12 +81,12 @@ export const INSTRUMENTS: InstrumentDef[] = [
 
 export const DEFAULT_INSTRUMENT: Partial<Record<Role, string>> = {
   drums: "kit:acoustic",
-  bass: "sf:electric_bass_finger",
+  bass: "sampled:bass-fingered",
   vocals: "synth:saw-lead",
   lead: "synth:saw-lead",
   keys: "piano:splendid",
   other: "piano:splendid",
-  guitar: "pluck:acoustic",
+  guitar: "sampled:acoustic-martin",
   piano: "piano:splendid",
   pad: "synth:string-pad",
 };

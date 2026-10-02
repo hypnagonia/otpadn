@@ -62,8 +62,8 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     }
   }
 
-  // ── E: monophonic line — overlapping different pitches
-  if (mode === "line") {
+  // ── E: monophonic line / bass — overlapping different pitches
+  if (mode === "line" || mode === "bass") {
     const live = ev.filter((e) => !gone.has(e.id));
     for (let i = 0; i < live.length; i++) {
       const a = live[i];
@@ -73,10 +73,11 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
         const ov = Math.min(a.start + a.dur, b.start + b.dur) - b.start;
         const shorter = Math.min(a.dur, b.dur);
         if (ov > 0.5 * shorter && sec(ov) > 0.04) {
-          const weak = a.vel * a.dur < b.vel * b.dur ? a : b;
+          // A bass keeps the lower note (transcription adds harmonics above it); a line keeps the stronger.
+          const weak = mode === "bass" ? (a.pitch > b.pitch ? a : b) : a.vel * a.dur < b.vel * b.dur ? a : b;
           if (weak.locked) continue;
           const oct = Math.abs(a.pitch - b.pitch) % 12 === 0;
-          push({ id: `poly:${weak.id}`, kind: "remove", eventIds: [weak.id, weak === a ? b.id : a.id], at: weak.start, reason: `a sung line has one note at a time: ${pname(weak.pitch)} overlaps ${pname((weak === a ? b : a).pitch)}${oct ? " an octave apart (octave ghost)" : ""}`, heur: oct ? 0.85 : 0.7, def: true });
+          push({ id: `poly:${weak.id}`, kind: "remove", eventIds: [weak.id, weak === a ? b.id : a.id], at: weak.start, reason: `${mode === "bass" ? "a bass plays" : "a sung line has"} one note at a time: ${pname(weak.pitch)} overlaps ${pname((weak === a ? b : a).pitch)}${oct ? " an octave apart (octave ghost)" : ""}`, heur: oct ? 0.85 : 0.7, def: true });
           gone.add(weak.id);
         } else if (sec(ov) > 0.015 && !a.locked) push({ id: `mono:${a.id}`, kind: "trim", eventIds: [a.id, b.id], at: a.start, reason: `${pname(a.pitch)} overlaps the next note by ${ms(sec(ov))} — ends where the next begins`, heur: 0.7, def: true });
       }
@@ -84,7 +85,7 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
   }
 
   // ── D: overtone ghosts (keys / guitar): a quieter note an octave/12th/2 octaves above a louder one, same onset
-  if (mode !== "line") {
+  if (mode === "keys" || mode === "guitar") {
     for (const e of ev) {
       if (gone.has(e.id) || e.locked) continue;
       const base = ev.find((o) => o !== e && !gone.has(o.id) && Math.abs(sec(o.start - e.start)) < 0.04 && [12, 19, 24].includes(e.pitch - o.pitch) && e.vel < o.vel * 0.7);
@@ -100,10 +101,10 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     if (gone.has(e.id) || e.locked) continue;
     const d = sec(e.dur);
     if (d >= 0.06) continue;
-    if (mode === "line") {
+    if (mode === "line" || mode === "bass") {
       const nb = ev.find((o) => o !== e && !gone.has(o.id) && Math.abs(o.pitch - e.pitch) <= 2 && sec(o.dur) > 0.12 && (Math.abs(sec(o.start - (e.start + e.dur))) < 0.04 || Math.abs(sec(e.start - (o.start + o.dur))) < 0.04));
       if (nb) {
-        push({ id: `scoop:${e.id}`, kind: "merge", eventIds: [nb.id, e.id], at: e.start, reason: `${ms(d)} ${pname(e.pitch)} glued to a held ${pname(nb.pitch)} — a scoop/fall of the voice, merged into it`, heur: 0.7, def: true });
+        push({ id: `scoop:${e.id}`, kind: "merge", eventIds: [nb.id, e.id], at: e.start, reason: `${ms(d)} ${pname(e.pitch)} glued to a held ${pname(nb.pitch)} — ${mode === "bass" ? "a slide into the note" : "a scoop/fall of the voice"}, merged into it`, heur: 0.7, def: true });
         gone.add(e.id);
         continue;
       }
@@ -115,8 +116,8 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     gone.add(e.id);
   }
 
-  // ── F: octave errors in a line
-  if (mode === "line") {
+  // ── F: octave errors in a line / bass
+  if (mode === "line" || mode === "bass") {
     const live = ev.filter((e) => !gone.has(e.id));
     for (let i = 1; i < live.length - 1; i++) {
       const p = live[i - 1], e = live[i], n = live[i + 1];
@@ -144,6 +145,18 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     const strong = Math.abs(e.start - Math.round(e.start)) < 0.06;
     const long = e.dur >= 0.5;
     push({ id: `key:${e.id}`, kind: "pitch", eventIds: [e.id], at: e.start, pitch: to, reason: long || strong ? `${pname(e.pitch)} is outside the key and chord but ${long ? "held" : "on the beat"} — could be intended colour; snap to ${pname(to)}?` : `short ${pname(e.pitch)} outside key and chord, off the beat — probably a mis-detected neighbour; snap to ${pname(to)}`, heur: long || strong ? 0.4 : 0.6, def: !(long || strong) });
+  }
+
+  // ── bass register: transcribed bass lines pick up octave-up harmonics and sub-octave errors
+  if (mode === "bass") {
+    for (const e of ev) {
+      if (gone.has(e.id) || e.locked) continue;
+      let to = e.pitch;
+      while (to > 64) to -= 12;
+      while (to < 23) to += 12;
+      if (to !== e.pitch && !proposals.some((p) => p.eventIds[0] === e.id && p.kind === "octave"))
+        push({ id: `reg:${e.id}`, kind: "octave", eventIds: [e.id], at: e.start, pitch: to, reason: `${pname(e.pitch)} is outside a bass's range — moved to ${pname(to)}`, heur: 0.75, def: true });
+    }
   }
 
   // ── H: guitar playability
@@ -226,7 +239,7 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
             if (e.origin === "source") e.origin = "moved";
           }
           // Note ends: snap with the same strength when close to a grid line (keys/guitar only).
-          if (apply && mode !== "line") {
+          if (apply && (mode === "keys" || mode === "guitar")) {
             const end = orig + e.dur, ge = Math.round(end / step) * step;
             if (Math.abs(end - ge) < step * 0.5 && ge > target) e.dur = Math.max(0.05, end + (ge - end) * strength - (target + e.micro));
           }
@@ -236,7 +249,7 @@ export function cleanPart({ events, mode, key, chords, params, spb, length }: Cl
     }
   }
   if (qOn)
-    proposals.push({ id: "quantize", kind: "quantize", eventIds: [], at: 0, reason: `soft-quantize ${moved} notes ${Math.round(strength * 100)}% toward the ${params.grid === "auto" ? g.decision : params.grid} grid; notes struck together move together${mode !== "line" ? ", note ends follow" : ""}`, heur: 0.8, def: true, accepted: qAcc });
+    proposals.push({ id: "quantize", kind: "quantize", eventIds: [], at: 0, reason: `soft-quantize ${moved} notes ${Math.round(strength * 100)}% toward the ${params.grid === "auto" ? g.decision : params.grid} grid; notes struck together move together${mode === "keys" || mode === "guitar" ? ", note ends follow" : ""}`, heur: 0.8, def: true, accepted: qAcc });
   out = out.sort((a, b) => a.start + a.micro - (b.start + b.micro) || a.pitch - b.pitch);
   return { proposals, events: out, dropped, grid: { decision: ambiguous ? "ambiguous" : (params.grid === "auto" ? g.decision : params.grid), note: g.note }, ambiguous };
 }

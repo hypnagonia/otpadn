@@ -1,5 +1,6 @@
 /** Live playback: transport, lookahead note scheduler, mixer reconciliation. Singleton `engine`. */
 import { createInstrument } from "../instruments/factory";
+import { latencyHint } from "./audioPrefs";
 import type { Playable } from "../instruments/types";
 import { store } from "../model/store";
 import type { Track } from "../model/types";
@@ -23,7 +24,7 @@ export interface Audition {
 }
 
 export class Engine {
-  ctx = new AudioContext({ latencyHint: "interactive" });
+  ctx = new AudioContext({ latencyHint: latencyHint() });
   master: Master = createMaster(this.ctx);
   strips = new Map<string, Strip>();
   insts = new Map<string, { id: string; p: Playable }>();
