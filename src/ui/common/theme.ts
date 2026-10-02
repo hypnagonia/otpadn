@@ -1,18 +1,18 @@
 /**
- * Canvas palette. Mirrors the CSS tokens in styles.css: console greys (mid-grey rulers and
- * panels over darker playlists), sans labels, Courier for numbers.
+ * Canvas palette. Mirrors the CSS tokens in styles.css: studio charcoal
+ * (Logic/Pro Tools conventions) with jenyadoesapps typography.
  */
 export const T = {
-  bg: "#242527",
-  laneA: "#2c2d30",
-  laneB: "#2f3033",
-  laneSel: "#383d48",
-  header: "#3a3b3e",
-  gridFaint: "#323336",
-  grid: "#3c3e42",
-  gridStrong: "#4d5056",
-  hairline: "#19191b",
-  tick: "#74777d",
+  bg: "#232428",
+  laneA: "#2a2b2f",
+  laneB: "#2d2e33",
+  laneSel: "#363c48",
+  header: "#2f3035",
+  gridFaint: "#303237",
+  grid: "#383a40",
+  gridStrong: "#474a51",
+  hairline: "#18191b",
+  tick: "#62656c",
   text: "#ececec",
   body: "#c9cbcf",
   muted: "#9a9da3",
@@ -33,8 +33,7 @@ export const T = {
   rowWhite: "#2d2e33",
   rowBlack: "#27282c",
   noteSel: "#ffffff",
-  font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
-  mono: "'Courier New', Courier, monospace",
+  font: "'Courier New', Courier, monospace",
 };
 
 /** Arrangement-marker colours (Logic-style). */

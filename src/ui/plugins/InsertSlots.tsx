@@ -33,7 +33,7 @@ export default function InsertSlots({ owner, inserts }: { owner: InsertOwner; in
   const sel = s.ui.selectedInsert;
   return (
     <div className="slot-sec" ref={ref}>
-      <div className="slot-head">inserts</div>
+      <div className="slot-head">audio fx</div>
       {inserts.map((ins) => (
         <div
           key={ins.id}

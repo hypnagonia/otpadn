@@ -42,13 +42,13 @@ Staging: https://daw.jenyadoesapps.com (Vercel project `stemdaw`; deploy with `v
 - **AI stems** are stored as 16-bit PCM in IndexedDB (`persist.savePcm`); DSP stems are re-split on restore.
 
 - **Persistence**: every new decoded buffer must get a `bufferSources` entry (file or stem provenance) or it can't be restored after reload.
-- **Colors**: console-grey palette (big-studio DAW look, not a copy: mid-grey panels over darker playlists, amber mute, yellow solo, green play, red record, yellow cycle, green→red meters, saturated regions with the name bar at the bottom, inset black number readouts); tokens in `styles.css` + `ui/common/theme.ts`. Flat — no gradients.
+- **Colors**: studio charcoal palette (Logic/Pro Tools conventions: blue mute, yellow solo, yellow cycle, green→red meters, saturated regions); tokens in `styles.css` + `ui/common/theme.ts`.
 
 - **State**: mutate the project only via `store.update(p => …)`; UI-only state via `store.setUi`. `store.projectVersion` bumps only on project changes (the engine syncs on that).
 - **Heavy work never on the main thread**: DSP → `dspPool`, ML → `ml/transcribe`, rendering → `OfflineAudioContext`.
 - **Times**: clips/notes are in **beats**; audio clip `offset`/`duration` in **seconds**. `spb = 60 / bpm`. Change tempo only via `retempo(p, bpm)` (edit/ops): audio, `anchored` MIDI (transcribed from audio) and sections keep their time; hand-made MIDI keeps its beats.
 - **smplr instruments** must be created through `createInstrument` (it injects a no-lookahead Scheduler; without it offline renders drop notes).
-- **Canvas colors/fonts** come from `ui/common/theme.ts` (`T.font` sans for labels, `T.mono` for numbers); CSS tokens in `styles.css` mirror it (`--ui` / `--mono`). Dark only; compact sans UI text, Courier for every number (counters, dB, pan, values), 2 px button corners.
+- **Canvas colors/fonts** come from `ui/common/theme.ts`; CSS tokens in `styles.css` mirror it. Dark only; jenyadoesapps.com typography (Courier, square corners).
 - **React effects**: always use braces in `useEffect` bodies (Chrome's `scrollIntoView` returns a Promise; an expression body makes React call it as cleanup → crash).
 
 ## Checks
