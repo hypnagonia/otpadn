@@ -104,10 +104,10 @@ kbd { font: 10px var(--mono); color: var(--faint); border: 1px solid var(--line-
 .inspector { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
 .insp-section { border-bottom: 1px solid var(--line); padding: 6px 10px 8px; }
 .pm-btns { display: flex; gap: 3px; }
-.trk.frozen { background: linear-gradient(90deg, rgba(110,170,230,0.13), transparent 70%); }
+.trk.frozen { background: rgba(110,170,230,0.10); }
 .ms.fz.on { background: #6fa9e6; border-color: #6fa9e6; color: #0f1620; }
 .ms.fz.stale { background: #e6b56f; border-color: #e6b56f; color: #1b140b; }
-.aw-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: radial-gradient(circle at 50% 40%, #2b2f38, #17181c 70%); }
+.aw-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #212329; }
 .aw-name { font-size: 22px; letter-spacing: 0.04em; color: var(--text); }
 .aw-by { font-size: 10px; color: var(--muted); text-transform: lowercase; }
 .controlbar .icon.auto.on { background: #f4c95d; border-color: #f4c95d; color: #16171a; }
@@ -460,17 +460,17 @@ button.danger { background: var(--danger); border-color: var(--danger); color: #
 .statusbar .sb-buf { font-size: 11px; color: var(--muted); border-bottom-color: var(--line-2); }
 
 /* ───────── visual polish v2: depth, light and fixed-length faders (Logic/Nuendo feel) ───────── */
-button { background: linear-gradient(#383a40, #2e3035); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
-button:hover:not(:disabled) { background: linear-gradient(#41444b, #35373d); }
-button:active:not(:disabled) { background: linear-gradient(#2a2c31, #33353a); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
-button.on { background: linear-gradient(#2d5a8a, #23466c); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 8px rgba(74,158,255,0.25); }
-button.primary { background: linear-gradient(#5aa8ff, #3d8ef0); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 0 10px rgba(74,158,255,0.3); }
+button { background: #33353a; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+button:hover:not(:disabled) { background: #3a3c42; }
+button:active:not(:disabled) { background: #2c2e33; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+button.on { background: #284f7a; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 8px rgba(74,158,255,0.25); }
+button.primary { background: #4a9eff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 0 10px rgba(74,158,255,0.3); }
 button.ms.m.on { box-shadow: 0 0 6px rgba(78,163,240,0.55); }
 button.ms.s.on { box-shadow: 0 0 6px rgba(240,196,58,0.55); }
 button.ms.r.on { box-shadow: 0 0 7px rgba(255,90,77,0.6); }
 
-.controlbar { background: linear-gradient(#2f3035, #27282c); box-shadow: 0 1px 0 #111214, 0 4px 14px rgba(0,0,0,0.25); }
-.lcd { background: radial-gradient(ellipse at 50% 0%, #1c222b, #12151a 75%); box-shadow: inset 0 1px 3px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.05); }
+.controlbar { background: #2b2c30; box-shadow: 0 1px 0 #111214, 0 4px 14px rgba(0,0,0,0.25); }
+.lcd { background: #15181d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.05); }
 .lcd-cell { text-shadow: 0 0 8px rgba(140,190,255,0.35); }
 
 .popover, .ctx { box-shadow: 0 14px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03); }
@@ -482,8 +482,8 @@ button.ms.r.on { box-shadow: 0 0 7px rgba(255,90,77,0.6); }
 /* Mixer strips: depth, a lit name plate, and faders of a fixed length (max 230 px) — extra height
    goes to the insert / send lists, never to an endlessly stretched fader. */
 .mixer-strips { background: #1b1c1f; }
-.strip { background: linear-gradient(90deg, #2b2d32, #27292d 60%, #24262a); box-shadow: inset -1px 0 0 rgba(255,255,255,0.03); }
-.strip.sel { background: linear-gradient(90deg, #354052, #2e3746 60%, #2a3240); }
+.strip { background: #28292e; box-shadow: inset -1px 0 0 rgba(255,255,255,0.03); }
+.strip.sel { background: #303a49; }
 /* Lists always show their header + one slot (they scroll inside); the fader takes what's left up
    to 230 px — on a tall pane the rest goes to the lists, never to an endlessly stretched fader. */
 .strip > .slot-sec { flex: 0 1 auto; min-height: 34px; }
@@ -492,11 +492,11 @@ button.ms.r.on { box-shadow: 0 0 7px rgba(255,90,77,0.6); }
 .strip .fader::-webkit-slider-runnable-track { width: 4px; background: #0d0e10; box-shadow: inset 0 0 2px #000, 1px 0 0 rgba(255,255,255,0.05); }
 .strip .fader::-webkit-slider-thumb {
   width: 22px; height: 30px; margin-left: -9px;
-  background: linear-gradient(#e6e8eb, #b9bcc2 45%, #8d9097 50%, #b9bcc2 55%, #d6d8dc);
+  background: #c3c6cb;
   border: 1px solid #0b0c0e; box-shadow: 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.7);
 }
-.strip .meter { width: 7px; background: linear-gradient(#1a0e0e, #0e0f11 12%, #0e0f11); box-shadow: inset 0 0 2px #000; }
-.strip .name { background: linear-gradient(#25272b, #1d1e21); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); text-shadow: 0 1px 0 #000; }
+.strip .meter { width: 7px; background: #0e0f11; box-shadow: inset 0 0 2px #000; }
+.strip .name { background: #212226; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); text-shadow: 0 1px 0 #000; }
 .strip .readout span { color: #b8c3d1; }
 .fx { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
-.fx.on { background: linear-gradient(#3b6fb0, #2d5a93); }
+.fx.on { background: #33639f; }
