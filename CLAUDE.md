@@ -26,6 +26,9 @@ Staging: https://daw.jenyadoesapps.com (Vercel project `stemdaw`; deploy with `v
 
 - **Routing**: `bus` tracks are FX returns (no clips, no sends of their own); channels send via `ch.sends` (dB, pre/post). Compressor inserts may have `sidechain: trackId` (post-fader source → worklet input 1). Inserts + sends are wired in a second pass once all strips exist (engine + offline render).
 - Kit default mix lives in `model/auxTracks.ts` (`KIT_MIX`, measured fader levels); applied only when a kit's outputs are first created.
+- **Pro-mix chains**: `model/chains.ts` (`CHAINS` per instrument, e.g. sampled bass) + the kit's mic/bus chain in `auxTracks.ts`; applied when the instrument lands on a track (`track.chain` marks it), "reset to pro mix" in the track menu re-applies. Faders are calibrated by offline LUFS renders — re-measure if you change a chain.
+- **Summing**: every channel strip is stereo from its input (mono → dual-mono) with our own constant-power pan (unity centre); never reintroduce `StereoPannerNode` on strips (it's equal-power for mono but a summing balance for stereo, so levels jumped with the source / with any insert).
+- **Worklet plugins get their initial params via `processorOptions`** (`createPlugin(ctx, type, params)`): offline renders can finish before a port message arrives.
 
 - **Aux tracks** (`kind: "aux"`, `auxOf`, `auxOut`) are owned outputs of a multi-out instrument; `model/auxTracks.ts` creates/removes them after every project change — never add/delete them by hand. Their strips feed the owner's strip (drum bus).
 - Drum Producer style `rock` = acoustic mode (`drumproducer/acoustic.ts`): one track on the CrocellKit, velocities fitted to the kit's layers.

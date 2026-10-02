@@ -11,6 +11,8 @@ const FADE = 0.004;
  */
 export const isAudible = (p: Project, t: Track): boolean => {
   if (t.ch.mute) return false;
+  // A kit mic of a muted kit is silent too — its sends (reverb, buses) bypass the kit's bus fader.
+  if (t.kind === "aux" && p.tracks.find((o) => o.id === t.auxOf)?.ch.mute) return false;
   if (!p.tracks.some((x) => x.ch.solo)) return true;
   if (t.ch.solo) return true;
   if (t.kind === "aux") return !!p.tracks.find((o) => o.id === t.auxOf)?.ch.solo;

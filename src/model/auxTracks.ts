@@ -29,13 +29,13 @@ export const KIT_MIX: Record<KitGroup, { ch: Partial<ChannelSettings>; inserts: 
     inserts: () => [comp({ threshold: -20, ratio: 4, attack: 12, release: 60, makeup: 2.5, knee: 4 }), sat({ mode: 1, drive: 5, tone: 9000, mix: 40 })],
   },
   snare: {
-    ch: { volumeDb: 1.9, hpf: 90, eqLow: 1.5, eqLowFreq: 200, eqMid: -3, eqMidFreq: 520, eqMidQ: 1.4, eqMid2: 4, eqMid2Freq: 5000, eqMid2Q: 0.9, eqHigh: 2, eqHighFreq: 10000, reverbSend: 0.16 },
+    ch: { volumeDb: 2.1, hpf: 90, eqLow: 1.5, eqLowFreq: 200, eqMid: -3, eqMidFreq: 520, eqMidQ: 1.4, eqMid2: 4, eqMid2Freq: 5000, eqMid2Q: 0.9, eqHigh: 2, eqHighFreq: 10000, reverbSend: 0.16 },
     inserts: () => [comp({ threshold: -24, ratio: 4, attack: 5, release: 90, makeup: 3, knee: 4 }), sat({ mode: 2, drive: 8, tone: 9000, mix: 30 })],
   },
   toms: { ch: { volumeDb: -12.5, hpf: 70, eqMid: -4, eqMidFreq: 420, eqMidQ: 0.9, eqMid2: 3, eqMid2Freq: 4000, eqMid2Q: 1, reverbSend: 0.12 }, inserts: () => [] },
-  hihat: { ch: { volumeDb: -4.8, hpf: 350, eqHigh: 1.5, eqHighFreq: 10000 }, inserts: () => [] },
+  hihat: { ch: { volumeDb: -7.8, hpf: 350, eqHigh: 1.5, eqHighFreq: 10000 }, inserts: () => [] },
   // The ride mic hears the whole kit (its bleed was half the 250–500 Hz mud): low and high-passed.
-  ride: { ch: { volumeDb: -6, hpf: 500, eqHigh: 1.5, eqHighFreq: 9000 }, inserts: () => [] },
+  ride: { ch: { volumeDb: -9, hpf: 500, eqHigh: 1.5, eqHighFreq: 9000 }, inserts: () => [] },
   overheads: {
     ch: { volumeDb: -8.6, hpf: 200, eqMid: -3, eqMidFreq: 420, eqMidQ: 1, eqHigh: 2.5, eqHighFreq: 11000 },
     inserts: () => [comp({ threshold: -16, ratio: 2, attack: 25, release: 150, makeup: 1, knee: 6 })],

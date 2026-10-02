@@ -24,8 +24,9 @@ export function ensureWorklets(ctx: BaseAudioContext): Promise<void> {
   return p;
 }
 
-function worklet(ctx: BaseAudioContext, name: string, bands: number, inputs = 1): PluginInstance {
-  const node = new AudioWorkletNode(ctx, name, { numberOfInputs: inputs, numberOfOutputs: 1, outputChannelCount: [2], channelCountMode: "explicit", channelCount: 2 });
+function worklet(ctx: BaseAudioContext, name: string, bands: number, inputs = 1, params?: Record<string, number>): PluginInstance {
+  // Initial params go in with the node: offline renders may finish before a port message lands.
+  const node = new AudioWorkletNode(ctx, name, { numberOfInputs: inputs, numberOfOutputs: 1, outputChannelCount: [2], channelCountMode: "explicit", channelCount: 2, processorOptions: { params } });
   const inst: PluginInstance = {
     input: node,
     output: node,
@@ -170,15 +171,15 @@ function saturator(ctx: BaseAudioContext): PluginInstance {
   };
 }
 
-/** Requires ensureWorklets(ctx) to have resolved for worklet-based types. */
-export function createPlugin(ctx: BaseAudioContext, type: PluginType): PluginInstance {
+/** Requires ensureWorklets(ctx) to have resolved for worklet-based types. `params` = initial settings. */
+export function createPlugin(ctx: BaseAudioContext, type: PluginType, params?: Record<string, number>): PluginInstance {
   switch (type) {
-    case "compressor": return worklet(ctx, "otpadn-comp", 1, 2);
-    case "multiband": return worklet(ctx, "otpadn-mbcomp", 3);
-    case "reverb": return worklet(ctx, "otpadn-plate", 0);
+    case "compressor": return worklet(ctx, "otpadn-comp", 1, 2, params);
+    case "multiband": return worklet(ctx, "otpadn-mbcomp", 3, 1, params);
+    case "reverb": return worklet(ctx, "otpadn-plate", 0, 1, params);
     case "delay": return delay(ctx);
     case "saturator": return saturator(ctx);
-    case "limiter": return worklet(ctx, "otpadn-limiter", 1);
+    case "limiter": return worklet(ctx, "otpadn-limiter", 1, 1, params);
     case "amp": {
       const a = createAmp(ctx, { gain: 6, bass: 5.5, mid: 5, treble: 6, presence: 5.5, cab: 0, level: 0 });
       return { input: a.input, output: a.output, gr: [], set: (p) => a.set(p as unknown as AmpParams), dispose: () => a.dispose(), get ready() { return a.ready; } } as PluginInstance;
@@ -200,6 +201,7 @@ export class InsertChain {
   private sc = new Map<string, { src: AudioNode; dst: AudioNode }>();
   /** Returns a promise that resolves when the chain is wired (worklets loaded). */
   async apply(inserts: Insert[], bpm: number, sidechainOf?: (trackId: string) => AudioNode | undefined): Promise<void> {
+    const paramsOf = (ins: Insert) => (ins.type === "compressor" ? { ...ins.params, sc: ins.sidechain && sidechainOf?.(ins.sidechain) ? 1 : 0 } : ins.params);
     const sig = inserts.map((i) => `${i.id}:${i.type}:${i.on ? 1 : 0}`).join("|");
     if (sig !== this.sig) {
       this.sig = sig;
@@ -215,14 +217,14 @@ export class InsertChain {
       for (const ins of inserts) {
         if (!ins.on) continue;
         let inst = this.instances.get(ins.id);
-        if (!inst) this.instances.set(ins.id, (inst = createPlugin(this.ctx, ins.type)));
+        if (!inst) this.instances.set(ins.id, (inst = createPlugin(this.ctx, ins.type, paramsOf(ins))));
         inst.output.disconnect();
         prev.connect(inst.input);
         prev = inst.output;
       }
       prev.connect(this.output);
     }
-    for (const ins of inserts) if (ins.on) this.instances.get(ins.id)?.set(ins.type === "compressor" ? { ...ins.params, sc: ins.sidechain && sidechainOf?.(ins.sidechain) ? 1 : 0 } : ins.params, bpm);
+    for (const ins of inserts) if (ins.on) this.instances.get(ins.id)?.set(paramsOf(ins), bpm);
     // Sidechain sources → compressor input 1 (rewired only when the source changes).
     for (const ins of inserts) {
       const inst = this.instances.get(ins.id);

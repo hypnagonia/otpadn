@@ -20,9 +20,17 @@ export interface Strip {
   dispose(): void;
 }
 
-/** input → HPF → low shelf → mid peak → high shelf → compressor → fader → pan → out (+ post-fader reverb send) */
+/**
+ * input (always stereo) → HPF → low shelf → bells → high shelf → LPF → inserts → fader → pan → out
+ * (+ post-fader reverb send). Every channel is stereo from its input on — a mono source becomes
+ * dual-mono there — so a track's level and pan never depend on whether it is mono, or on whether
+ * an insert (stereo worklet) happens to sit in its chain.
+ */
 export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: AudioNode): Strip {
   const input = ctx.createGain();
+  input.channelCount = 2;
+  input.channelCountMode = "explicit";
+  input.channelInterpretation = "speakers";
   const hpf = ctx.createBiquadFilter();
   hpf.type = "highpass";
   hpf.Q.value = 0.707;
@@ -42,7 +50,12 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
   const chain = new InsertChain(ctx);
   const sends = new Map<string, { gain: GainNode; bus: string; pre: boolean; dest: AudioNode }>();
   const fader = ctx.createGain();
-  const pan = ctx.createStereoPanner();
+  // Stereo pan, constant power: unity at centre, the kept side +3 dB at the extremes (a dual-mono
+  // source keeps its loudness wherever it's panned). Web Audio's StereoPannerNode is equal-power
+  // for mono input but a +6 dB-summing balance for stereo input — levels jumped with the source.
+  const panSplit = ctx.createChannelSplitter(2), panL = ctx.createGain(), panR = ctx.createGain(), pan = ctx.createChannelMerger(2);
+  panSplit.connect(panL, 0).connect(pan, 0, 0);
+  panSplit.connect(panR, 1).connect(pan, 0, 1);
   const send = ctx.createGain();
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 4096; // EQ spectrum display
@@ -74,7 +87,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     prev.connect(chain.input);
   };
   wire([]);
-  chain.output.connect(fader).connect(pan);
+  chain.output.connect(fader).connect(panSplit);
   pan.connect(out);
   pan.connect(analyser);
   pan.connect(meter);
@@ -99,7 +112,8 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
         set(high.gain, 0);
         set(lpf.frequency, 22000);
         set(fader.gain, audible ? 1 : 0);
-        set(pan.pan, 0);
+        set(panL.gain, 1);
+        set(panR.gain, 1);
         set(send.gain, 0);
         return;
       }
@@ -117,7 +131,9 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
       set(high.frequency, ch.eqHighFreq);
       set(lpf.frequency, ch.lpf > 0 ? ch.lpf : 22000);
       set(fader.gain, audible ? dbToGain(ch.volumeDb) : 0);
-      set(pan.pan, ch.pan);
+      const th = ((Math.max(-1, Math.min(1, ch.pan)) + 1) * Math.PI) / 4;
+      set(panL.gain, Math.SQRT2 * Math.cos(th));
+      set(panR.gain, Math.SQRT2 * Math.sin(th));
       set(send.gain, ch.reverbSend);
     },
     inserts: chain,

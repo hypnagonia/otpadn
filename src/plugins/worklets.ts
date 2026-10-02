@@ -3,8 +3,12 @@
  *  - otpadn-comp:     soft-knee feed-forward compressor, peak/RMS, stereo-linked, parallel mix
  *  - otpadn-mbcomp:   3-band compressor on Linkwitz-Riley LR4 crossovers with all-pass phase compensation
  *  - otpadn-plate:    Dattorro plate reverb (1997 "Effect Design" topology), modulated tank
- * Parameters arrive over the MessagePort; meters (gain reduction) go back the same way.
+ * Initial parameters come with the node (processorOptions.params) so the very first block already
+ * uses them — an offline render can finish before a MessagePort message is ever delivered, which
+ * made bounces randomly run on default settings. Later changes arrive over the MessagePort;
+ * meters (gain reduction) go back the same way.
  */
+type Init = { processorOptions?: { params?: Record<string, number> } };
 declare const sampleRate: number;
 declare const currentFrame: number;
 declare function registerProcessor(name: string, ctor: unknown): void;
@@ -35,8 +39,9 @@ class Comp extends AudioWorkletProcessor {
   rms = 0;
   minGr = 0;
   blocks = 0;
-  constructor() {
+  constructor(o?: Init) {
     super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
     this.port.onmessage = (e) => Object.assign(this.p, e.data);
   }
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
@@ -108,8 +113,9 @@ class MBComp extends AudioWorkletProcessor {
   blocks = 0;
   lastX = [0, 0];
   bands: Float32Array[][] | null = null;
-  constructor() {
+  constructor(o?: Init) {
     super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
     this.port.onmessage = (e) => Object.assign(this.p, e.data);
     this.tune();
   }
@@ -205,8 +211,9 @@ class Plate extends AudioWorkletProcessor {
   dampA = 0; dampB = 0;
   fbA = 0; fbB = 0;
   lfo = 0;
-  constructor() {
+  constructor(o?: Init) {
     super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
     this.port.onmessage = (e) => Object.assign(this.p, e.data);
     const k = this.k, M = 1.5 * k;
     this.inAP = [new AP(142 * k, 0.75), new AP(107 * k, 0.75), new AP(379 * k, 0.625), new AP(277 * k, 0.625)];
@@ -287,8 +294,9 @@ class Limiter extends AudioWorkletProcessor {
   minGr = 0;
   blocks = 0;
   xs = [0, 0];
-  constructor() {
+  constructor(o?: Init) {
     super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
     this.port.onmessage = (e) => {
       Object.assign(this.p, e.data);
       this.alloc();
