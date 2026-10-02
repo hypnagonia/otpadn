@@ -266,37 +266,37 @@ export class MultiKit implements Playable {
     if (!piece?.layers.length) return;
     const L = piece.layers.length;
     const v = Math.max(1, Math.min(127, velocity)) / 127;
-    // Velocity → layer (slightly convex so mid velocities reach mid layers), ±1 layer for variation.
-    let li = Math.round(Math.pow(v, 0.9) * (L - 1));
+    // Velocity → loudness, like a player: amplitude ∝ velocity^1.5 (110 ≈ −1.9 dB, 70 ≈ −7.8 dB,
+    // 30 ≈ −19 dB re the hardest hit); cymbals a little steeper (played more dynamically). The
+    // recorded layer nearest that loudness is played and trimmed the rest of the way, so the same
+    // velocity sounds the same on every piece however its layers are spaced.
+    const cym = CYMBAL_PIECES.has(piece.name);
+    const P = piece.layers.map((l) => l.power), Pmax = P[L - 1];
+    const layerDb = P.map((x) => 10 * Math.log10(Math.max(1e-12, x) / Pmax)); // power is energy-like
+    const target = (cym ? 36 : 30) * Math.log10(v); // 110 ≈ −1.9 dB, 70 ≈ −7.8 dB, 30 ≈ −19 dB (cymbals steeper)
+    let want = 0;
+    for (let i = 1; i < L; i++) if (Math.abs(layerDb[i] - target) < Math.abs(layerDb[want] - target)) want = i;
+    let li = want;
     // Seeded by note + time (not Math.random): the same variation on every playback and bounce.
     const h = hash01(note, time);
-    const want = li; // the layer this velocity asks for
-    if (L > 2 && h < 0.35) li = Math.max(0, Math.min(L - 1, li + (h < 0.175 ? -1 : 1)));
-    // Anti machine-gun: never the same sample twice in a row on one piece (the kit has one sample
-    // per layer, no round-robins) — take the neighbour closest in loudness instead.
+    // ±1 layer for timbre variety, only to a neighbour within 3 dB of the target.
+    if (L > 2 && h < 0.35) {
+      const nb = Math.max(0, Math.min(L - 1, li + (h < 0.175 ? -1 : 1)));
+      if (Math.abs(layerDb[nb] - target) < 3) li = nb;
+    }
+    // Anti machine-gun: never the same sample twice in a row on one piece (one sample per layer).
     if (L > 1 && this.lastLayer.get(piece.name) === li) {
-      const P = piece.layers.map((l) => l.power);
-      const alt = [li - 1, li + 1].filter((i) => i >= 0 && i < L).sort((a, b) => Math.abs(Math.log(P[a] / P[li])) - Math.abs(Math.log(P[b] / P[li])) || (h < 0.5 ? a - b : b - a))[0];
-      if (alt !== undefined && Math.abs(Math.log(P[alt] / P[want])) < Math.log(3)) li = alt;
+      const alt = [li - 1, li + 1].filter((i) => i >= 0 && i < L).sort((x, y) => Math.abs(layerDb[x] - target) - Math.abs(layerDb[y] - target))[0];
+      if (alt !== undefined && Math.abs(layerDb[alt] - target) < 4.5) li = alt;
     }
     this.lastLayer.set(piece.name, li);
     const layer = piece.layers[li];
-    // Fine level within the layer so the whole velocity range is continuous.
-    const center = (want + 0.5) / L;
-    // Cymbals (hats, ride, bell, crash) are played far more dynamically than drums: a wide,
-    // velocity-following level inside the layer (≈ −14…+3.5 dB); drums keep a tighter response.
-    const cym = CYMBAL_PIECES.has(piece.name);
-    let level = cym ? Math.max(0.2, Math.min(1.5, Math.pow(v / center, 0.9))) : Math.max(0.6, Math.min(1.25, Math.pow(v / center, 0.4)));
-    // Played a different layer than the velocity asked for: match its loudness. Layer "power" is
-    // energy-like (measured: RMS² ∝ power), so amplitude scales with √power.
-    if (li !== want) level *= Math.max(0.5, Math.min(2, Math.sqrt(piece.layers[want].power / layer.power)));
+    // trim the chosen layer to the target loudness (bounded: a layer never stretched > ±6 dB)
+    let level = Math.pow(10, Math.max(-6, Math.min(6, target - layerDb[li])) / 20);
     // Per-hit micro variation, identical on every mic of this hit (keeps the multitrack image coherent).
     const h2 = hash01(note + 128, time), h3 = hash01(note + 256, time);
     const rate = 1 + (h2 - 0.5) * 0.012; // ±0.6 % ≈ ±10 cents
     level *= 1 + (h3 - 0.5) * (cym ? 0.3 : 0.1); // ±0.4 dB drums, ±1.2 dB cymbals (no two strokes alike)
-    // The kit's cymbal layers are recorded close in loudness: an overall curve on top, so a soft
-    // hat / ride stroke really is soft (velocity 30 ≈ −10 dB more), the hardest hits unchanged.
-    if (cym) level *= Math.pow(v / 0.85, 0.75); // anchored at velocity ≈ 108: typical playing keeps its level
     if (piece.choke)
       for (const r of this.ringing.get(piece.choke) ?? []) {
         if (r.t >= time) continue; // only hats that started earlier (notes may be scheduled out of order)

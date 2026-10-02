@@ -34,7 +34,7 @@
    ],
    "layers": [
     {
-     "power": 0.0522649,
+     "power": 0.00833794,
      "files": {
       "kick": "KDrumR_0_kick.m4a",
       "hihat": "KDrumR_0_hihat.flac",
@@ -44,7 +44,7 @@
      }
     },
     {
-     "power": 0.456263,
+     "power": 0.0413692,
      "files": {
       "kick": "KDrumR_1_kick.m4a",
       "snare": "KDrumR_1_snare.flac",
@@ -55,7 +55,7 @@
      }
     },
     {
-     "power": 0.803002,
+     "power": 0.0522649,
      "files": {
       "kick": "KDrumR_2_kick.m4a",
       "snare": "KDrumR_2_snare.flac",
@@ -66,7 +66,7 @@
      }
     },
     {
-     "power": 1.071,
+     "power": 0.0751456,
      "files": {
       "kick": "KDrumR_3_kick.m4a",
       "snare": "KDrumR_3_snare.flac",
@@ -77,7 +77,7 @@
      }
     },
     {
-     "power": 1.73131,
+     "power": 0.337554,
      "files": {
       "kick": "KDrumR_4_kick.m4a",
       "snare": "KDrumR_4_snare.flac",
@@ -88,7 +88,7 @@
      }
     },
     {
-     "power": 2.8324,
+     "power": 0.803002,
      "files": {
       "kick": "KDrumR_5_kick.m4a",
       "snare": "KDrumR_5_snare.flac",
@@ -99,7 +99,7 @@
      }
     },
     {
-     "power": 3.66706,
+     "power": 2.01945,
      "files": {
       "kick": "KDrumR_6_kick.m4a",
       "snare": "KDrumR_6_snare.flac",
@@ -110,7 +110,7 @@
      }
     },
     {
-     "power": 4.57431,
+     "power": 4.84377,
      "files": {
       "kick": "KDrumR_7_kick.m4a",
       "snare": "KDrumR_7_snare.flac",
@@ -129,7 +129,7 @@
    ],
    "layers": [
     {
-     "power": 0.0206627,
+     "power": 0.00985718,
      "files": {
       "snare": "Snare_0_snare.flac",
       "hihat": "Snare_0_hihat.flac",
@@ -139,7 +139,7 @@
      }
     },
     {
-     "power": 0.332614,
+     "power": 0.0206627,
      "files": {
       "snare": "Snare_1_snare.flac",
       "hihat": "Snare_1_hihat.flac",
@@ -149,7 +149,7 @@
      }
     },
     {
-     "power": 0.618736,
+     "power": 0.0482537,
      "files": {
       "snare": "Snare_2_snare.flac",
       "hihat": "Snare_2_hihat.flac",
@@ -159,7 +159,7 @@
      }
     },
     {
-     "power": 0.967574,
+     "power": 0.122976,
      "files": {
       "snare": "Snare_3_snare.flac",
       "hihat": "Snare_3_hihat.flac",
@@ -169,7 +169,7 @@
      }
     },
     {
-     "power": 1.14384,
+     "power": 0.279692,
      "files": {
       "snare": "Snare_4_snare.flac",
       "hihat": "Snare_4_hihat.flac",
@@ -179,7 +179,7 @@
      }
     },
     {
-     "power": 1.66366,
+     "power": 0.618736,
      "files": {
       "snare": "Snare_5_snare.flac",
       "hihat": "Snare_5_hihat.flac",
@@ -189,7 +189,7 @@
      }
     },
     {
-     "power": 2.10815,
+     "power": 1.41931,
      "files": {
       "snare": "Snare_6_snare.flac",
       "hihat": "Snare_6_hihat.flac",
@@ -199,7 +199,7 @@
      }
     },
     {
-     "power": 3.03418,
+     "power": 3.29455,
      "files": {
       "snare": "Snare_7_snare.flac",
       "hihat": "Snare_7_hihat.flac",
@@ -217,7 +217,7 @@
    ],
    "layers": [
     {
-     "power": 0.117955,
+     "power": 0.0224954,
      "files": {
       "toms": "Tom1_0_toms.m4a",
       "hihat": "Tom1_0_hihat.flac",
@@ -227,7 +227,7 @@
      }
     },
     {
-     "power": 0.639363,
+     "power": 0.0833245,
      "files": {
       "toms": "Tom1_1_toms.m4a",
       "hihat": "Tom1_1_hihat.flac",
@@ -237,7 +237,7 @@
      }
     },
     {
-     "power": 1.24085,
+     "power": 0.117955,
      "files": {
       "toms": "Tom1_2_toms.m4a",
       "hihat": "Tom1_2_hihat.flac",
@@ -247,7 +247,7 @@
      }
     },
     {
-     "power": 1.92656,
+     "power": 0.255878,
      "files": {
       "toms": "Tom1_3_toms.m4a",
       "hihat": "Tom1_3_hihat.flac",
@@ -257,7 +257,7 @@
      }
     },
     {
-     "power": 2.47295,
+     "power": 0.474904,
      "files": {
       "toms": "Tom1_4_toms.m4a",
       "hihat": "Tom1_4_hihat.flac",
@@ -267,7 +267,7 @@
      }
     },
     {
-     "power": 3.37619,
+     "power": 1.24085,
      "files": {
       "toms": "Tom1_5_toms.m4a",
       "hihat": "Tom1_5_hihat.flac",
@@ -277,7 +277,7 @@
      }
     },
     {
-     "power": 3.99882,
+     "power": 2.47295,
      "files": {
       "toms": "Tom1_6_toms.m4a",
       "hihat": "Tom1_6_hihat.flac",
@@ -287,7 +287,7 @@
      }
     },
     {
-     "power": 5.37378,
+     "power": 5.54889,
      "files": {
       "toms": "Tom1_7_toms.m4a",
       "hihat": "Tom1_7_hihat.flac",
@@ -305,7 +305,7 @@
    ],
    "layers": [
     {
-     "power": 0.0424079,
+     "power": 0.0371475,
      "files": {
       "toms": "Tom2_0_toms.m4a",
       "hihat": "Tom2_0_hihat.flac",
@@ -315,7 +315,7 @@
      }
     },
     {
-     "power": 0.204162,
+     "power": 0.0429449,
      "files": {
       "toms": "Tom2_1_toms.m4a",
       "hihat": "Tom2_1_hihat.flac",
@@ -325,7 +325,7 @@
      }
     },
     {
-     "power": 0.670448,
+     "power": 0.177029,
      "files": {
       "toms": "Tom2_2_toms.m4a",
       "hihat": "Tom2_2_hihat.flac",
@@ -335,7 +335,7 @@
      }
     },
     {
-     "power": 1.09052,
+     "power": 0.3139,
      "files": {
       "toms": "Tom2_3_toms.m4a",
       "hihat": "Tom2_3_hihat.flac",
@@ -345,7 +345,7 @@
      }
     },
     {
-     "power": 1.82434,
+     "power": 0.455421,
      "files": {
       "toms": "Tom2_4_toms.m4a",
       "hihat": "Tom2_4_hihat.flac",
@@ -355,7 +355,7 @@
      }
     },
     {
-     "power": 2.25762,
+     "power": 1.01309,
      "files": {
       "toms": "Tom2_5_toms.m4a",
       "hihat": "Tom2_5_hihat.flac",
@@ -365,7 +365,7 @@
      }
     },
     {
-     "power": 2.5454,
+     "power": 1.97908,
      "files": {
       "toms": "Tom2_6_toms.m4a",
       "hihat": "Tom2_6_hihat.flac",
@@ -375,7 +375,7 @@
      }
     },
     {
-     "power": 3.70421,
+     "power": 3.85788,
      "files": {
       "toms": "Tom2_7_toms.m4a",
       "hihat": "Tom2_7_hihat.flac",
@@ -393,16 +393,17 @@
    ],
    "layers": [
     {
-     "power": 0.0110128,
+     "power": 0.00851433,
      "files": {
       "toms": "FTom1_0_toms.m4a",
+      "hihat": "FTom1_0_hihat.flac",
       "ride": "FTom1_0_ride.flac",
       "overheads": "FTom1_0_overheads.flac",
       "room": "FTom1_0_room.flac"
      }
     },
     {
-     "power": 0.0657158,
+     "power": 0.0178941,
      "files": {
       "toms": "FTom1_1_toms.m4a",
       "hihat": "FTom1_1_hihat.flac",
@@ -412,7 +413,7 @@
      }
     },
     {
-     "power": 0.16129,
+     "power": 0.0397024,
      "files": {
       "toms": "FTom1_2_toms.m4a",
       "hihat": "FTom1_2_hihat.flac",
@@ -422,7 +423,7 @@
      }
     },
     {
-     "power": 0.291009,
+     "power": 0.0862168,
      "files": {
       "toms": "FTom1_3_toms.m4a",
       "hihat": "FTom1_3_hihat.flac",
@@ -432,7 +433,7 @@
      }
     },
     {
-     "power": 0.512053,
+     "power": 0.24826,
      "files": {
       "toms": "FTom1_4_toms.m4a",
       "hihat": "FTom1_4_hihat.flac",
@@ -442,7 +443,7 @@
      }
     },
     {
-     "power": 0.799002,
+     "power": 0.442347,
      "files": {
       "toms": "FTom1_5_toms.m4a",
       "hihat": "FTom1_5_hihat.flac",
@@ -452,7 +453,7 @@
      }
     },
     {
-     "power": 1.14736,
+     "power": 1.08801,
      "files": {
       "toms": "FTom1_6_toms.m4a",
       "hihat": "FTom1_6_hihat.flac",
@@ -462,7 +463,7 @@
      }
     },
     {
-     "power": 1.82642,
+     "power": 2.14108,
      "files": {
       "toms": "FTom1_7_toms.m4a",
       "hihat": "FTom1_7_hihat.flac",
@@ -479,15 +480,16 @@
    ],
    "layers": [
     {
-     "power": 0.00163766,
+     "power": 0.000121854,
      "files": {
       "hihat": "HihatClosed_0_hihat.flac",
+      "ride": "HihatClosed_0_ride.flac",
       "overheads": "HihatClosed_0_overheads.flac",
       "room": "HihatClosed_0_room.flac"
      }
     },
     {
-     "power": 0.0188049,
+     "power": 0.000934992,
      "files": {
       "hihat": "HihatClosed_1_hihat.flac",
       "ride": "HihatClosed_1_ride.flac",
@@ -496,9 +498,8 @@
      }
     },
     {
-     "power": 0.0548271,
+     "power": 0.00163766,
      "files": {
-      "snare": "HihatClosed_2_snare.flac",
       "hihat": "HihatClosed_2_hihat.flac",
       "ride": "HihatClosed_2_ride.flac",
       "overheads": "HihatClosed_2_overheads.flac",
@@ -506,7 +507,7 @@
      }
     },
     {
-     "power": 0.0915195,
+     "power": 0.00393073,
      "files": {
       "snare": "HihatClosed_3_snare.flac",
       "hihat": "HihatClosed_3_hihat.flac",
@@ -516,7 +517,7 @@
      }
     },
     {
-     "power": 0.10769,
+     "power": 0.0105367,
      "files": {
       "snare": "HihatClosed_4_snare.flac",
       "hihat": "HihatClosed_4_hihat.flac",
@@ -526,7 +527,7 @@
      }
     },
     {
-     "power": 0.137801,
+     "power": 0.0336852,
      "files": {
       "snare": "HihatClosed_5_snare.flac",
       "hihat": "HihatClosed_5_hihat.flac",
@@ -536,7 +537,7 @@
      }
     },
     {
-     "power": 0.190687,
+     "power": 0.0915195,
      "files": {
       "snare": "HihatClosed_6_snare.flac",
       "hihat": "HihatClosed_6_hihat.flac",
@@ -546,7 +547,7 @@
      }
     },
     {
-     "power": 0.255038,
+     "power": 0.263976,
      "files": {
       "snare": "HihatClosed_7_snare.flac",
       "hihat": "HihatClosed_7_hihat.flac",
@@ -565,7 +566,7 @@
    ],
    "layers": [
     {
-     "power": 0.00142699,
+     "power": 0.000146308,
      "files": {
       "hihat": "HihatOpen_0_hihat.flac",
       "ride": "HihatOpen_0_ride.flac",
@@ -574,9 +575,8 @@
      }
     },
     {
-     "power": 0.022082,
+     "power": 0.000677304,
      "files": {
-      "snare": "HihatOpen_1_snare.flac",
       "hihat": "HihatOpen_1_hihat.flac",
       "ride": "HihatOpen_1_ride.flac",
       "overheads": "HihatOpen_1_overheads.flac",
@@ -584,7 +584,7 @@
      }
     },
     {
-     "power": 0.0334429,
+     "power": 0.00142699,
      "files": {
       "snare": "HihatOpen_2_snare.flac",
       "hihat": "HihatOpen_2_hihat.flac",
@@ -594,7 +594,7 @@
      }
     },
     {
-     "power": 0.0809567,
+     "power": 0.00384106,
      "files": {
       "snare": "HihatOpen_3_snare.flac",
       "hihat": "HihatOpen_3_hihat.flac",
@@ -604,7 +604,7 @@
      }
     },
     {
-     "power": 0.109417,
+     "power": 0.00947989,
      "files": {
       "snare": "HihatOpen_4_snare.flac",
       "hihat": "HihatOpen_4_hihat.flac",
@@ -614,7 +614,7 @@
      }
     },
     {
-     "power": 0.133859,
+     "power": 0.0261592,
      "files": {
       "snare": "HihatOpen_5_snare.flac",
       "hihat": "HihatOpen_5_hihat.flac",
@@ -624,7 +624,7 @@
      }
     },
     {
-     "power": 0.151215,
+     "power": 0.0806448,
      "files": {
       "snare": "HihatOpen_6_snare.flac",
       "hihat": "HihatOpen_6_hihat.flac",
@@ -634,7 +634,7 @@
      }
     },
     {
-     "power": 0.204311,
+     "power": 0.21271,
      "files": {
       "snare": "HihatOpen_7_snare.flac",
       "hihat": "HihatOpen_7_hihat.flac",
@@ -654,26 +654,32 @@
     {
      "power": 7.43172e-05,
      "files": {
-      "hihat": "HihatPedal_0_hihat.flac"
+      "hihat": "HihatPedal_0_hihat.flac",
+      "ride": "HihatPedal_0_ride.flac",
+      "overheads": "HihatPedal_0_overheads.flac",
+      "room": "HihatPedal_0_room.flac"
      }
     },
     {
-     "power": 0.00081805,
+     "power": 0.00042112,
      "files": {
       "hihat": "HihatPedal_1_hihat.flac",
+      "ride": "HihatPedal_1_ride.flac",
       "overheads": "HihatPedal_1_overheads.flac",
       "room": "HihatPedal_1_room.flac"
      }
     },
     {
-     "power": 0.00191475,
+     "power": 0.00081805,
      "files": {
       "hihat": "HihatPedal_2_hihat.flac",
-      "overheads": "HihatPedal_2_overheads.flac"
+      "ride": "HihatPedal_2_ride.flac",
+      "overheads": "HihatPedal_2_overheads.flac",
+      "room": "HihatPedal_2_room.flac"
      }
     },
     {
-     "power": 0.00391885,
+     "power": 0.00191475,
      "files": {
       "hihat": "HihatPedal_3_hihat.flac",
       "ride": "HihatPedal_3_ride.flac",
@@ -682,7 +688,7 @@
      }
     },
     {
-     "power": 0.00413788,
+     "power": 0.00391885,
      "files": {
       "snare": "HihatPedal_4_snare.flac",
       "hihat": "HihatPedal_4_hihat.flac",
@@ -692,7 +698,7 @@
      }
     },
     {
-     "power": 0.00426045,
+     "power": 0.00413788,
      "files": {
       "snare": "HihatPedal_5_snare.flac",
       "hihat": "HihatPedal_5_hihat.flac",
@@ -702,7 +708,7 @@
      }
     },
     {
-     "power": 0.01031,
+     "power": 0.00541494,
      "files": {
       "snare": "HihatPedal_6_snare.flac",
       "hihat": "HihatPedal_6_hihat.flac",
@@ -714,6 +720,7 @@
     {
      "power": 0.0128564,
      "files": {
+      "snare": "HihatPedal_7_snare.flac",
       "hihat": "HihatPedal_7_hihat.flac",
       "ride": "HihatPedal_7_ride.flac",
       "overheads": "HihatPedal_7_overheads.flac",
@@ -733,7 +740,7 @@
    ],
    "layers": [
     {
-     "power": 0.00138077,
+     "power": 0.000298735,
      "files": {
       "hihat": "CrashL_0_hihat.flac",
       "ride": "CrashL_0_ride.flac",
@@ -742,7 +749,7 @@
      }
     },
     {
-     "power": 0.0105716,
+     "power": 0.00138077,
      "files": {
       "hihat": "CrashL_1_hihat.flac",
       "ride": "CrashL_1_ride.flac",
@@ -751,7 +758,7 @@
      }
     },
     {
-     "power": 0.0282476,
+     "power": 0.00404778,
      "files": {
       "hihat": "CrashL_2_hihat.flac",
       "ride": "CrashL_2_ride.flac",
@@ -760,7 +767,7 @@
      }
     },
     {
-     "power": 0.0414128,
+     "power": 0.00567351,
      "files": {
       "hihat": "CrashL_3_hihat.flac",
       "ride": "CrashL_3_ride.flac",
@@ -769,7 +776,7 @@
      }
     },
     {
-     "power": 0.0626806,
+     "power": 0.0204118,
      "files": {
       "hihat": "CrashL_4_hihat.flac",
       "ride": "CrashL_4_ride.flac",
@@ -778,7 +785,7 @@
      }
     },
     {
-     "power": 0.124218,
+     "power": 0.0596746,
      "files": {
       "hihat": "CrashL_5_hihat.flac",
       "ride": "CrashL_5_ride.flac",
@@ -787,7 +794,7 @@
      }
     },
     {
-     "power": 0.261799,
+     "power": 0.162489,
      "files": {
       "hihat": "CrashL_6_hihat.flac",
       "ride": "CrashL_6_ride.flac",
@@ -813,13 +820,15 @@
    ],
    "layers": [
     {
-     "power": 0.00529176,
+     "power": 0.00295455,
      "files": {
-      "ride": "RideR_0_ride.flac"
+      "ride": "RideR_0_ride.flac",
+      "overheads": "RideR_0_overheads.flac",
+      "room": "RideR_0_room.flac"
      }
     },
     {
-     "power": 0.0163973,
+     "power": 0.0057471,
      "files": {
       "ride": "RideR_1_ride.flac",
       "overheads": "RideR_1_overheads.flac",
@@ -827,7 +836,7 @@
      }
     },
     {
-     "power": 0.0450747,
+     "power": 0.0142698,
      "files": {
       "hihat": "RideR_2_hihat.flac",
       "ride": "RideR_2_ride.flac",
@@ -836,7 +845,7 @@
      }
     },
     {
-     "power": 0.0633181,
+     "power": 0.0201018,
      "files": {
       "hihat": "RideR_3_hihat.flac",
       "ride": "RideR_3_ride.flac",
@@ -845,7 +854,7 @@
      }
     },
     {
-     "power": 0.137506,
+     "power": 0.0450747,
      "files": {
       "hihat": "RideR_4_hihat.flac",
       "ride": "RideR_4_ride.flac",
@@ -854,7 +863,7 @@
      }
     },
     {
-     "power": 0.159953,
+     "power": 0.0899278,
      "files": {
       "hihat": "RideR_5_hihat.flac",
       "ride": "RideR_5_ride.flac",
@@ -863,7 +872,7 @@
      }
     },
     {
-     "power": 0.202844,
+     "power": 0.159953,
      "files": {
       "hihat": "RideR_6_hihat.flac",
       "ride": "RideR_6_ride.flac",
@@ -872,7 +881,7 @@
      }
     },
     {
-     "power": 0.270579,
+     "power": 0.306652,
      "files": {
       "hihat": "RideR_7_hihat.flac",
       "ride": "RideR_7_ride.flac",
@@ -888,7 +897,7 @@
    ],
    "layers": [
     {
-     "power": 0.0147614,
+     "power": 0.00388118,
      "files": {
       "ride": "RideRBell_0_ride.flac",
       "overheads": "RideRBell_0_overheads.flac",
@@ -896,15 +905,16 @@
      }
     },
     {
-     "power": 0.0286793,
+     "power": 0.0147614,
      "files": {
+      "hihat": "RideRBell_1_hihat.flac",
       "ride": "RideRBell_1_ride.flac",
       "overheads": "RideRBell_1_overheads.flac",
       "room": "RideRBell_1_room.flac"
      }
     },
     {
-     "power": 0.0437487,
+     "power": 0.0192254,
      "files": {
       "hihat": "RideRBell_2_hihat.flac",
       "ride": "RideRBell_2_ride.flac",
@@ -913,7 +923,7 @@
      }
     },
     {
-     "power": 0.140782,
+     "power": 0.039296,
      "files": {
       "hihat": "RideRBell_3_hihat.flac",
       "ride": "RideRBell_3_ride.flac",
@@ -922,7 +932,7 @@
      }
     },
     {
-     "power": 0.233708,
+     "power": 0.112361,
      "files": {
       "hihat": "RideRBell_4_hihat.flac",
       "ride": "RideRBell_4_ride.flac",
@@ -931,7 +941,7 @@
      }
     },
     {
-     "power": 0.292983,
+     "power": 0.140782,
      "files": {
       "hihat": "RideRBell_5_hihat.flac",
       "ride": "RideRBell_5_ride.flac",
@@ -940,7 +950,7 @@
      }
     },
     {
-     "power": 0.55383,
+     "power": 0.362197,
      "files": {
       "hihat": "RideRBell_6_hihat.flac",
       "ride": "RideRBell_6_ride.flac",
@@ -949,7 +959,7 @@
      }
     },
     {
-     "power": 0.588279,
+     "power": 0.704931,
      "files": {
       "hihat": "RideRBell_7_hihat.flac",
       "ride": "RideRBell_7_ride.flac",

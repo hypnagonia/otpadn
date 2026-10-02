@@ -60,9 +60,17 @@ def fetch(work):
             samples = sorted((float(pw), f) for _, pw, f in samples)
             n = len(samples)
             k = min(LAYERS, n)
-            hi = 1.0 if p in TOP else 0.97
-            idx = sorted({min(n - 1, round((0.05 + (hi - 0.05) * i / max(1, k - 1)) * (n - 1))) for i in range(k)})
-            picks = [samples[i] for i in idx]
+            # Layers span the softest to the hardest recorded hit, evenly spaced in loudness (dB):
+            # picking by list position from 5 % dropped the quietest 7–11 dB of the cymbals.
+            import math
+            lo_p, hi_p = max(samples[0][0], 1e-9), samples[-1][0]
+            picks, used = [], set()
+            for i in range(k):
+                target = math.exp(math.log(lo_p) + (math.log(hi_p) - math.log(lo_p)) * i / max(1, k - 1))
+                j = min((j for j in range(n) if j not in used), key=lambda j: abs(math.log(max(samples[j][0], 1e-9)) - math.log(target)))
+                used.add(j)
+                picks.append(samples[j])
+            picks.sort()
             plan[p] = {"channels": {c: int(i) for c, i in chans}, "layers": [{"power": pw, "file": f} for pw, f in picks]}
             for _, f in picks:
                 dst = f"{work}/raw/{p}__{os.path.basename(f)}"
@@ -122,7 +130,7 @@ def build(work):
                 continue  # e.g. no snare/cymbal bleed on the toms track, no tom/cymbal bleed on the snare
             a = a * G
             peak = float(np.abs(a).max())
-            if 20 * np.log10(peak + 1e-12) < -48:
+            if 20 * np.log10(peak + 1e-12) < -60:  # (soft hits must stay audible)
                 continue  # negligible bleed: skip the file
             # Each track ends where *it* decays (60 dB under its own peak, floor −80 dBFS):
             # bleed tails are short, so they don't inherit the cymbal's length.
