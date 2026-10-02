@@ -401,3 +401,81 @@ export function insertSilence(a: number, b: number) {
   });
 }
 
+
+/* ───────────── clipboard (⌘C / ⌘X / ⌘V) ───────────── */
+
+/** Copied regions, positioned relative to the copy's start and its topmost track. */
+let clipboard: { items: { row: number; trackId: string; clip: Clip }[]; length: number } | null = null;
+export const hasClipboard = () => !!clipboard?.items.length;
+
+/** Copy the range selection (just the slice inside it) or else the selected regions. */
+export function copySelection(): boolean {
+  const p = store.project, s = 60 / p.bpm, r = store.ui.range;
+  const rows = new Map(p.tracks.map((t, i) => [t.id, i]));
+  const items: { row: number; trackId: string; clip: Clip }[] = [];
+  let a: number, b: number;
+  if (r && Math.abs(r.end - r.start) > 1e-6) {
+    a = Math.min(r.start, r.end);
+    b = Math.max(r.start, r.end);
+    for (const t of p.tracks) {
+      if (r.trackIds && !r.trackIds.includes(t.id)) continue;
+      for (const c of t.clips) {
+        const len = c.kind === "midi" ? c.length : c.duration / s;
+        if (c.start + len <= a + 1e-9 || c.start >= b - 1e-9) continue;
+        const x = piece(c, Math.max(0, a - c.start), Math.min(len, b - c.start), s, false);
+        if (x) items.push({ row: rows.get(t.id)!, trackId: t.id, clip: x });
+      }
+    }
+  } else {
+    const hits = selectedClips().map(findClip).filter((h): h is NonNullable<ReturnType<typeof findClip>> => !!h);
+    if (!hits.length) return false;
+    a = Math.min(...hits.map((h) => h.clip.start));
+    b = Math.max(...hits.map((h) => clipEnd(h.clip)));
+    for (const h of hits) items.push({ row: rows.get(h.track.id)!, trackId: h.track.id, clip: structuredClone(h.clip) });
+  }
+  if (!items.length) return false;
+  const top = Math.min(...items.map((x) => x.row));
+  clipboard = { items: items.map((x) => ({ ...x, row: x.row - top, clip: { ...x.clip, start: x.clip.start - a } })), length: b - a };
+  return true;
+}
+
+/** Cut = copy, then remove: the slice (leaving a gap) or the selected regions. */
+export function cutSelection() {
+  const r = store.ui.range;
+  if (!copySelection()) return;
+  store.checkpoint();
+  if (r && Math.abs(r.end - r.start) > 1e-6) {
+    editRange(r, "delete");
+    store.setUi({ range: null });
+  } else deleteClips(selectedClips());
+}
+
+/**
+ * Paste at `atBeat` (the playhead) onto the selected track; a multi-track copy keeps its layout
+ * downwards from there. A region that can't live on the target (audio ↔ midi) goes back to the
+ * track it came from. The pasted regions end up selected.
+ */
+export function pasteClipboard(atBeat: number) {
+  if (!clipboard?.items.length) return;
+  const p = store.project;
+  const sel = p.tracks.findIndex((t) => t.id === store.ui.selectedTrackId);
+  const base = sel >= 0 ? sel : p.tracks.findIndex((t) => t.id === clipboard!.items[0].trackId);
+  const made: string[] = [];
+  store.checkpoint();
+  store.update((pp) => {
+    for (const it of clipboard!.items) {
+      const kind = it.clip.kind;
+      const fits = (t?: (typeof pp.tracks)[number]) => !!t && t.kind === kind && !t.auxOf;
+      let t: (typeof pp.tracks)[number] | undefined = pp.tracks[base + it.row];
+      if (!fits(t)) t = pp.tracks.find((x) => x.id === it.trackId);
+      if (!fits(t)) continue;
+      const c = structuredClone(it.clip);
+      c.id = uid("clip");
+      c.start = Math.max(0, atBeat + it.clip.start);
+      t!.clips.push(c);
+      made.push(c.id);
+    }
+  });
+  if (made.length) selectClips(made, made[0]);
+  else store.log("Paste: no track here takes these regions (audio regions go on audio tracks, midi on midi)");
+}

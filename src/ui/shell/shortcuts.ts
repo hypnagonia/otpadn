@@ -2,7 +2,7 @@ import { groupTracks, ungroup } from "../../edit/groups";
 import { isProjectFile, openProjectFile, saveProjectToDisk } from "../../io/projectFile";
 import { useEffect } from "react";
 import { importAudio } from "../../assist/import";
-import { deleteClips, duplicateClips, editRange, moveClips, selectAllClips, selectClips, selectedClips, splitClips, findClip, TOOLS } from "../../edit/ops";
+import { copySelection, cutSelection, pasteClipboard, deleteClips, duplicateClips, editRange, moveClips, selectAllClips, selectClips, selectedClips, splitClips, findClip, TOOLS } from "../../edit/ops";
 import { engine } from "../../engine/transport";
 import { isRecording, stopRecording, toggleRecording } from "../../engine/recorder";
 import { exportWav } from "../../io/export";
@@ -48,6 +48,14 @@ export function useShortcuts(openFile: () => void) {
           engine.seek(Math.floor(engine.beat / 4) * 4 + 4);
           break;
         case "KeyC":
+          if (mod) {
+            if (!copySelection()) handled = false;
+          } else store.update((p) => (p.loop.on = !p.loop.on));
+          break;
+        case "KeyV":
+          if (mod) pasteClipboard(engine.beat);
+          else handled = false;
+          break;
         case "KeyL":
           if (mod) handled = false;
           else store.update((p) => (p.loop.on = !p.loop.on));
@@ -96,7 +104,8 @@ export function useShortcuts(openFile: () => void) {
           store.setUi({ showEditor: !ui.showEditor });
           break;
         case "KeyX":
-          tabToggle("mixer");
+          if (mod) cutSelection();
+          else tabToggle("mixer");
           break;
         case "KeyP":
           tabToggle("piano");

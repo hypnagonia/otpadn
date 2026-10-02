@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { convertToMidi } from "../../assist/convert";
 import { splitStems } from "../../assist/separate";
 import { cleanAudio } from "../../assist/clean";
-import { deleteClip, deleteClips, deleteTrack, duplicateClip, duplicateClips, duplicateTrack, findClip, selectedClips, splitClip, splitClips, editRange, insertSilence } from "../../edit/ops";
+import { copySelection, cutSelection, pasteClipboard, hasClipboard, deleteClip, deleteClips, deleteTrack, duplicateClip, duplicateClips, duplicateTrack, findClip, selectedClips, splitClip, splitClips, editRange, insertSilence } from "../../edit/ops";
 import { engine } from "../../engine/transport";
 import { store, useStore } from "../../model/store";
 import { runTask } from "../common/runTask";
@@ -61,6 +61,8 @@ export default function ContextMenu() {
           <div className="menu-title">selection · {fmtBars(range.start, range.end)} · {range.trackIds.length} track{range.trackIds.length > 1 ? "s" : ""}</div>
           <button onClick={act(() => { editRange(range, "delete"); store.setUi({ range: null }); })}>delete slice (leave gap) <kbd>⌫</kbd></button>
           <button onClick={act(() => { editRange(range, "ripple"); store.setUi({ range: null }); })}>delete slice &amp; close gap <kbd>⇧⌫</kbd></button>
+          <button onClick={act(() => void copySelection())}>copy slice <kbd>⌘C</kbd></button>
+          <button onClick={act(cutSelection)}>cut slice <kbd>⌘X</kbd></button>
           <button onClick={act(() => editRange(range, "split"))}>split regions at edges <kbd>⌘T</kbd></button>
           <button onClick={act(() => store.update((pp) => { pp.loop = { on: true, start: range.start, end: range.end }; }))}>set cycle to selection</button>
           <div className="menu-sep" />
@@ -70,6 +72,8 @@ export default function ContextMenu() {
         <>
           <div className="menu-title">{group.length} regions selected</div>
           <button onClick={act(() => splitClips(group, engine.beat))}>split all at playhead <kbd>⌘T</kbd></button>
+          <button onClick={act(() => void copySelection())}>copy group <kbd>⌘C</kbd></button>
+          <button onClick={act(cutSelection)}>cut group <kbd>⌘X</kbd></button>
           <button onClick={act(() => duplicateClips(group))}>duplicate group <kbd>⌘D</kbd></button>
           <button onClick={act(() => deleteClips(group))}>delete group <kbd>⌫</kbd></button>
           <div className="menu-sep" />
@@ -87,6 +91,8 @@ export default function ContextMenu() {
             </>
           )}
           <button onClick={act(() => splitClip(clip.id, engine.beat))}>split at playhead <kbd>⌘T</kbd></button>
+          <button onClick={act(() => { store.setUi({ selectedClipId: clip.id, selectedClipIds: [clip.id], range: null }); copySelection(); })}>copy <kbd>⌘C</kbd></button>
+          <button onClick={act(() => { store.setUi({ selectedClipId: clip.id, selectedClipIds: [clip.id], range: null }); cutSelection(); })}>cut <kbd>⌘X</kbd></button>
           <button onClick={act(() => duplicateClip(clip.id))}>duplicate <kbd>⌘D</kbd></button>
           <button onClick={act(() => deleteClip(clip.id))}>delete <kbd>⌫</kbd></button>
         </>
@@ -94,6 +100,7 @@ export default function ContextMenu() {
       {track && (
         <>
           <div className="menu-title">track · {track.name}</div>
+          {hasClipboard() && <button onClick={act(() => { store.setUi({ selectedTrackId: track.id }); pasteClipboard(engine.beat); })}>paste at playhead <kbd>⌘V</kbd></button>}
           {track.kind === "audio" && (
             <>
               <button disabled={busy} onClick={act(() => runTask(() => splitStems(track.id, "ai")))}>split into stems (6, ai)</button>
