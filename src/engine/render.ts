@@ -2,7 +2,7 @@
 import { isPluginLane, lanesOf, pluginAutomation, scheduleLane } from "./automation";
 import { createInstrument } from "../instruments/factory";
 import type { Playable } from "../instruments/types";
-import type { Project, Track } from "../model/types";
+import type { Project, Track, NoteSlide } from "../model/types";
 import { createMaster, createStrip } from "./graph";
 import { forNotes, isAudible, scheduleAudio, kitLayersOf, frozenAsAudio, isFrozen } from "./schedule";
 import { ensureWorklets } from "../plugins/nodes";
@@ -111,8 +111,8 @@ export async function renderProject(p: Project, opts: RenderOptions = {}): Promi
   };
   applyPlugins(0);
   // Time order matters for chokes and voice stealing: clips/notes aren't stored sorted.
-  const evs: { inst: Playable; time: number; note: number; dur: number; vel: number }[] = [];
-  for (const { t, inst } of pending) forNotes(t, from, to, (beat, pitch, dur, vel) => evs.push({ inst, time: (beat - from) * spb, note: pitch, dur: dur * spb, vel }));
+  const evs: { inst: Playable; time: number; note: number; dur: number; vel: number; slide?: NoteSlide }[] = [];
+  for (const { t, inst } of pending) forNotes(t, from, to, (beat, pitch, dur, vel, slide) => evs.push({ inst, time: (beat - from) * spb, note: pitch, dur: dur * spb, vel, slide }));
   evs.sort((a, b) => a.time - b.time);
   // Voices are created slice by slice while the render runs (suspend → schedule → resume), so only
   // the notes that are actually sounding exist in the graph. Creating every note up front made
@@ -122,7 +122,7 @@ export async function renderProject(p: Project, opts: RenderOptions = {}): Promi
   const scheduleUntil = (sec: number) => {
     for (; next < evs.length && evs[next].time < sec; next++) {
       const e = evs[next];
-      e.inst.start({ note: e.note, time: e.time, duration: e.dur, velocity: e.vel });
+      e.inst.start({ note: e.note, time: e.time, duration: e.dur, velocity: e.vel, slide: e.slide });
     }
   };
   const total = ctx.length / sr;

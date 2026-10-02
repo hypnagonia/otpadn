@@ -290,8 +290,8 @@ export class Engine {
       if (t.kind !== "midi" || t.frozen) continue;
       const inst = this.insts.get(t.id)?.p;
       if (!inst) continue;
-      forNotes(t, from, until, (beat, pitch, dur, vel) => {
-        inst.start({ note: pitch, time: this.startCtx + (beat - this.startBeat) * this.spb, duration: dur * this.spb, velocity: vel });
+      forNotes(t, from, until, (beat, pitch, dur, vel, slide) => {
+        inst.start({ note: pitch, time: this.startCtx + (beat - this.startBeat) * this.spb, duration: dur * this.spb, velocity: vel, slide });
       });
     }
   }

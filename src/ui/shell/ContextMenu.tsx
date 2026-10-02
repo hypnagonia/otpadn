@@ -11,6 +11,7 @@ import { applyProMixCmd } from "../../edit/proMix";
 import { MIX_STYLE_LABEL } from "../../model/mixStyles";
 import { addHarmonyTracks, HARMONY_PRESETS } from "../../assist/harmony";
 import { canFreeze, freezeTrack, unfreezeTrack } from "../../edit/freeze";
+import { addNaturalSlides, removeSlides } from "../../assist/slides";
 
 /** Right-click menu for regions and tracks (Logic / Ableton conventions). */
 export default function ContextMenu() {
@@ -108,6 +109,12 @@ export default function ContextMenu() {
                 <button key={h.id} onClick={act(() => addHarmonyTracks(track.id, h.id))}>{h.label}</button>
               ))}
               <div className="menu-sep" />
+            </>
+          )}
+          {track.kind === "midi" && track.role === "bass" && (
+            <>
+              <button onClick={act(() => addNaturalSlides(track.id))}>natural slides<small>glides into notes · falls before rests</small></button>
+              {track.clips.some((c) => c.kind === "midi" && c.notes.some((n) => n.slide)) && <button onClick={act(() => removeSlides(track.id))}>remove slides</button>}
             </>
           )}
           {track.kind === "audio" && (track.role === "vocals" || track.role === "lead") && (

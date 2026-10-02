@@ -21,7 +21,7 @@ export const CYMBAL_BLEED: Record<MixStyle, number> = { metal: -30, rock: 0 };
 export const DEFAULT_STYLE: MixStyle = "metal";
 export const MIX_STYLE_LABEL: Record<MixStyle, string> = { metal: "modern metal", rock: "classic rock" };
 /** Bump when a style's chains change: tracks set up with an older version show "update". */
-export const MIX_VERSION: Record<MixStyle, number> = { metal: 9, rock: 0 };
+export const MIX_VERSION: Record<MixStyle, number> = { metal: 10, rock: 0 };
 
 export interface ChannelChain {
   ch: Partial<ChannelSettings>;
@@ -81,7 +81,7 @@ export const metalBusInserts = (): Insert[] => [
   comp({ threshold: -30, ratio: 8, attack: 5, release: 60, makeup: 8, knee: 2, mix: 18 }),
   match(BUS_MATCH),
   // converter-style clipping of the kick/snare peaks (the reference's density: ~17 dB crest)
-  clip({ drive: 4, output: -4 }),
+  clip({ drive: 1.5, output: -1.5 }), // only real overs: harder clipping intermodulated the cymbals
 ];
 export const METAL_BUS_CH: Partial<ChannelSettings> = { volumeDb: -7, eqLow: -2.5, eqLowFreq: 120, eqMid: -2.5, eqMidFreq: 190, eqMidQ: 0.8, eqMid2: 3.5, eqMid2Freq: 1000, eqMid2Q: 0.6, eqHigh: 2, eqHighFreq: 9000 };
 

@@ -58,7 +58,7 @@ function melodyOf(t: Track): Ev[] {
 function otherNotes(p: Project, src: Track): { ev: Ev; w: number }[] {
   const out: { ev: Ev; w: number }[] = [];
   for (const t of p.tracks) {
-    if (t.id === src.id || t.kind !== "midi" || t.role === "drums" || t.dp || t.name.includes("· harmony")) continue;
+    if (t.id === src.id || t.kind !== "midi" || t.role === "drums" || t.dp || t.name.includes("· harmony") || t.name.startsWith("Gen ·")) continue;
     for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) out.push({ ev: { start: c.start + n.start, dur: n.dur, pitch: n.pitch, vel: n.vel }, w: t.role === "bass" ? 2 : 1 });
   }
   return out;
@@ -76,6 +76,14 @@ function estimateKey(p: Project, mel: Ev[], others: { ev: Ev; w: number }[]): Ke
   const h = new Array(12).fill(0);
   for (const { ev, w } of others) h[pcOf(ev.pitch)] += ev.dur * w;
   for (const e of mel) h[pcOf(e.pitch)] += e.dur * 1.5;
+  // The tonic is where the song starts and ends: the opening and closing bass notes weigh in
+  // (A–F–C–G alone fits F major as well as A minor).
+  const bass = others.filter((o) => o.w >= 2).map((o) => o.ev).sort((a, b) => a.start - b.start);
+  const total = h.reduce((a, v) => a + v, 0);
+  if (bass.length) {
+    h[pcOf(bass[0].pitch)] += total * 0.15;
+    h[pcOf(bass[bass.length - 1].pitch)] += total * 0.08;
+  }
   let best = { tonic: 0, minor: false, r: -Infinity };
   for (let tonic = 0; tonic < 12; tonic++)
     for (const minor of [false, true]) {
@@ -220,6 +228,18 @@ function phrases(mel: Ev[]): Ev[][] {
 }
 
 export interface HarmonyAnalysis { key: Key; chords: Chord[] }
+
+/**
+ * Song-wide key + chords for generators: every pitched MIDI track (bass weighted), the analysed
+ * chord track where nothing else is known. `parts` = names starting "Gen ·" are ignored (earlier
+ * generated parts must not feed the next one).
+ */
+export function songContext(p: Project, end: number): HarmonyAnalysis {
+  const dummy = { id: "__none__", name: "", kind: "midi" } as Track;
+  const others = otherNotes(p, dummy).filter(() => true);
+  const key = estimateKey(p, [], others);
+  return { key, chords: chordsFor(p, [], others, key, end) };
+}
 
 export function analyse(p: Project, src: Track): HarmonyAnalysis & { mel: Ev[] } {
   const mel = melodyOf(src), others = otherNotes(p, src);

@@ -1,3 +1,4 @@
+import type { NoteSlide } from "../model/types";
 /**
  * Multisampled pitched instruments (bass, acoustic guitar, DI electric guitar), built by
  * tools/build_sampled_instruments.py from CC0 sources. Zones × velocity layers × round robins;
@@ -173,7 +174,7 @@ export class SampledInstrument implements Playable {
     ]).then(() => undefined);
   }
 
-  start({ note, time, duration, velocity }: { note: number; time: number; duration: number; velocity: number }) {
+  start({ note, time, duration, velocity, slide }: { note: number; time: number; duration: number; velocity: number; slide?: NoteSlide }) {
     const m = this.manifest, st = this.store;
     if (!m || !st) return;
     const ctx = this.ctx;
@@ -210,7 +211,18 @@ export class SampledInstrument implements Playable {
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(level, t + 0.002);
     const noteEnd = t + Math.max(0.03, duration);
-    env.gain.setValueAtTime(level, noteEnd);
+    // Player slides: glide in (detune from N semitones to 0), fall at the end (down + fading).
+    if (slide?.from) {
+      src.detune.setValueAtTime(slide.from * 100, t);
+      src.detune.linearRampToValueAtTime(0, t + Math.max(0.02, Math.min(slide.fromTime ?? 0.06, duration * 0.6)));
+    }
+    if (slide?.fall) {
+      const ft = Math.max(0.04, Math.min(slide.fallTime ?? 0.18, duration * 0.7));
+      src.detune.setValueAtTime(0, noteEnd - ft);
+      src.detune.linearRampToValueAtTime(slide.fall * 100, noteEnd);
+      env.gain.setValueAtTime(level, noteEnd - ft);
+      env.gain.linearRampToValueAtTime(level * 0.3, noteEnd);
+    } else env.gain.setValueAtTime(level, noteEnd);
     env.gain.setTargetAtTime(0, noteEnd, release / 4);
     const sampleEnd = t + buf.duration / rate;
     const end = Math.min(sampleEnd, noteEnd + release * 1.5);

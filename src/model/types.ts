@@ -21,7 +21,11 @@ export interface Note {
   vel: number; // 1..127
   /** Recognition confidence 0..1 — only set when a transcriber measured one. */
   conf?: number;
+  /** Player slides: glide in from `from` semitones away over `fromTime` s; fall `fall` semitones over the last `fallTime` s. */
+  slide?: NoteSlide;
 }
+
+export interface NoteSlide { from?: number; fromTime?: number; fall?: number; fallTime?: number }
 
 export interface AudioClip {
   id: string;

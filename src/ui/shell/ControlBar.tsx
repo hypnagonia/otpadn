@@ -1,3 +1,4 @@
+import { generatePart, PART_KINDS } from "../../assist/parts";
 import { resetLatch } from "../../edit/automation";
 import { saveProjectToDisk } from "../../io/projectFile";
 import { useEffect, useRef, useState } from "react";
@@ -129,13 +130,21 @@ export default function ControlBar() {
             )}
           </div>
           <div className="rel">
-            <button disabled={!midiClip} onClick={() => toggle("produce")} data-tip="4 · edit or rework the selected midi region">produce ▾</button>
-            {menu === "produce" && midiClip && (
+            <button disabled={!p.tracks.length || busy} onClick={() => toggle("produce")} data-tip="4 · rework the selected midi region, or generate new parts from the song's chords">produce ▾</button>
+            {menu === "produce" && (
               <div className="popover menu">
-                <div className="menu-title">“{sel!.name}” · selected midi region</div>
-                <button onClick={() => openProduce("piano")}><span>piano roll</span><small>edit notes <kbd>P</kbd></small></button>
-                <button onClick={() => openProduce("drums")}><span>drum producer</span><small>clean · rework (house / techno) · groove · kit</small></button>
-                <button onClick={() => openProduce("parts")}><span>part producer</span><small>keys · vocal / lead line · guitar</small></button>
+                {midiClip && (
+                  <>
+                    <div className="menu-title">“{sel!.name}” · selected midi region</div>
+                    <button onClick={() => openProduce("piano")}><span>piano roll</span><small>edit notes <kbd>P</kbd></small></button>
+                    <button onClick={() => openProduce("drums")}><span>drum producer</span><small>clean · rework (house / techno) · groove · kit</small></button>
+                    <button onClick={() => openProduce("parts")}><span>part producer</span><small>keys · vocal / lead line · guitar</small></button>
+                  </>
+                )}
+                <div className="menu-title" style={midiClip ? { borderTop: "1px solid var(--line-2)", marginTop: 2 } : undefined}>generate a new part · from the song's chords</div>
+                {PART_KINDS.map((k) => (
+                  <button key={k.id} onClick={() => { setMenu(null); runTask(async () => generatePart(k.id)); }}><span>{k.label}</span><small>{k.hint}</small></button>
+                ))}
               </div>
             )}
           </div>

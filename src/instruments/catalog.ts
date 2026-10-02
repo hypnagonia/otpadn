@@ -6,7 +6,7 @@ const SF = (id: string, name: string, category: string): InstrumentDef => ({ id:
 
 export const INSTRUMENTS: InstrumentDef[] = [
   // ★ Essentials: hand-picked high-quality, thin, lazy-loaded tones
-  { id: "multikit:crocell", name: "CrocellKit · multitrack (rock/metal)", category: "Essentials", size: "~17 MB" },
+  { id: "multikit:crocell", name: "CrocellKit · multitrack (rock/metal)", category: "Essentials", size: "~26 MB" },
   { id: "sampled:bass-fingered", name: "Bass · Black & Blue 5-string (fingered)", category: "Essentials", size: "~5 MB" },
   { id: "sampled:acoustic-martin", name: "Acoustic Guitar · Martin HD-28", category: "Essentials", size: "~0.5 MB" },
   { id: "sampled:egtr-highgain", name: "Electric Guitar · High-Gain (amp + 4×12)", category: "Essentials", size: "~3 MB" },

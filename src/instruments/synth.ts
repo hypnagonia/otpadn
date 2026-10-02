@@ -1,3 +1,4 @@
+import type { NoteSlide } from "../model/types";
 /**
  * Zero-download subtractive synth. Band-limited WebAudio oscillators with unison + stereo spread,
  * 12/24 dB low-pass with envelope, oversampled drive, vibrato and filter LFOs.
@@ -108,7 +109,7 @@ export class Synth implements Playable {
     }
   }
 
-  start({ note, time, duration, velocity }: { note: number; time: number; duration: number; velocity: number }) {
+  start({ note, time, duration, velocity, slide }: { note: number; time: number; duration: number; velocity: number; slide?: NoteSlide }) {
     const { ctx, p } = this;
     this.allocate(note, time);
     const freq = 440 * Math.pow(2, (note - 69) / 12);
@@ -207,6 +208,23 @@ export class Synth implements Playable {
       sources.push(lfo);
     }
 
+    // Player slides on every oscillator's detune (on top of its unison spread).
+    if (slide?.from || slide?.fall) {
+      const endT = time + Math.max(duration, p.a);
+      for (const s of sources) {
+        if (!(s instanceof OscillatorNode) || s.frequency.value < 20) continue; // skip LFOs
+        const base = s.detune.value;
+        if (slide.from) {
+          s.detune.setValueAtTime(base + slide.from * 100, time);
+          s.detune.linearRampToValueAtTime(base, time + Math.max(0.02, Math.min(slide.fromTime ?? 0.06, duration * 0.6)));
+        }
+        if (slide.fall) {
+          const ft = Math.max(0.04, Math.min(slide.fallTime ?? 0.18, duration * 0.7));
+          s.detune.setValueAtTime(base, endT - ft);
+          s.detune.linearRampToValueAtTime(base + slide.fall * 100, endT);
+        }
+      }
+    }
     // Envelopes
     const peak = p.gain * (0.35 + 0.65 * vel);
     const g = out.gain;

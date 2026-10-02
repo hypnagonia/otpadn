@@ -1,6 +1,6 @@
 /** Clip → audio-node scheduling shared by live playback and offline bounce. */
 import { buffers, store } from "../model/store";
-import type { Note } from "../model/types";
+import type { Note, NoteSlide } from "../model/types";
 import type { AudioClip, Project, Track } from "../model/types";
 
 const FADE = 0.004;
@@ -150,7 +150,7 @@ function sortedNotes(notes: Note[]): Note[] {
   return sorted;
 }
 
-export function forNotes(track: Track, b0: number, b1: number, fn: (beat: number, pitch: number, durBeats: number, vel: number) => void) {
+export function forNotes(track: Track, b0: number, b1: number, fn: (beat: number, pitch: number, durBeats: number, vel: number, slide?: NoteSlide) => void) {
   for (const c of track.clips) {
     if (c.kind !== "midi") continue;
     if (c.start >= b1 || c.start + c.length <= b0) continue;
@@ -176,7 +176,7 @@ export function forNotes(track: Track, b0: number, b1: number, fn: (beat: number
       }
       const beat = c.start + n.start;
       if (big && beat >= b1) break;
-      if (beat >= b0 && beat < b1) fn(beat, n.pitch, Math.min(n.dur, c.length - n.start), n.vel);
+      if (beat >= b0 && beat < b1) fn(beat, n.pitch, Math.min(n.dur, c.length - n.start), n.vel, n.slide);
     }
   }
 }

@@ -120,6 +120,23 @@ function PianoRoll() {
       }
       g.fillStyle = "rgba(0,0,0,0.45)";
       g.fillRect(x + n.dur * ppb - 3, y + 1, 2, ROW - 2);
+      // Player slides: a short line gliding into the note / falling off its end.
+      if (n.slide) {
+        g.strokeStyle = on ? "#ffffff" : track.color;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        if (n.slide.from) {
+          g.moveTo(x - 8, y + ROW / 2 - n.slide.from * ROW);
+          g.lineTo(x + 2, y + ROW / 2);
+        }
+        if (n.slide.fall) {
+          const xe = x + n.dur * ppb;
+          g.moveTo(xe - 6, y + ROW / 2);
+          g.lineTo(xe + 4, y + ROW / 2 - n.slide.fall * ROW * 0.5);
+        }
+        g.stroke();
+        g.lineWidth = 1;
+      }
       // Note name on the brick when it fits (zoom in to see more).
       if (ROW >= 9 && w >= 20) {
         g.fillStyle = on ? "#ffffff" : "rgba(0,0,0,0.78)";

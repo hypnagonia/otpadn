@@ -37,87 +37,87 @@
      "power": 0.0522649,
      "files": {
       "kick": "KDrumR_0_kick.m4a",
-      "hihat": "KDrumR_0_hihat.m4a",
-      "ride": "KDrumR_0_ride.m4a",
-      "overheads": "KDrumR_0_overheads.m4a",
-      "room": "KDrumR_0_room.m4a"
+      "hihat": "KDrumR_0_hihat.flac",
+      "ride": "KDrumR_0_ride.flac",
+      "overheads": "KDrumR_0_overheads.flac",
+      "room": "KDrumR_0_room.flac"
      }
     },
     {
      "power": 0.456263,
      "files": {
       "kick": "KDrumR_1_kick.m4a",
-      "snare": "KDrumR_1_snare.m4a",
-      "hihat": "KDrumR_1_hihat.m4a",
-      "ride": "KDrumR_1_ride.m4a",
-      "overheads": "KDrumR_1_overheads.m4a",
-      "room": "KDrumR_1_room.m4a"
+      "snare": "KDrumR_1_snare.flac",
+      "hihat": "KDrumR_1_hihat.flac",
+      "ride": "KDrumR_1_ride.flac",
+      "overheads": "KDrumR_1_overheads.flac",
+      "room": "KDrumR_1_room.flac"
      }
     },
     {
      "power": 0.803002,
      "files": {
       "kick": "KDrumR_2_kick.m4a",
-      "snare": "KDrumR_2_snare.m4a",
-      "hihat": "KDrumR_2_hihat.m4a",
-      "ride": "KDrumR_2_ride.m4a",
-      "overheads": "KDrumR_2_overheads.m4a",
-      "room": "KDrumR_2_room.m4a"
+      "snare": "KDrumR_2_snare.flac",
+      "hihat": "KDrumR_2_hihat.flac",
+      "ride": "KDrumR_2_ride.flac",
+      "overheads": "KDrumR_2_overheads.flac",
+      "room": "KDrumR_2_room.flac"
      }
     },
     {
      "power": 1.071,
      "files": {
       "kick": "KDrumR_3_kick.m4a",
-      "snare": "KDrumR_3_snare.m4a",
-      "hihat": "KDrumR_3_hihat.m4a",
-      "ride": "KDrumR_3_ride.m4a",
-      "overheads": "KDrumR_3_overheads.m4a",
-      "room": "KDrumR_3_room.m4a"
+      "snare": "KDrumR_3_snare.flac",
+      "hihat": "KDrumR_3_hihat.flac",
+      "ride": "KDrumR_3_ride.flac",
+      "overheads": "KDrumR_3_overheads.flac",
+      "room": "KDrumR_3_room.flac"
      }
     },
     {
      "power": 1.73131,
      "files": {
       "kick": "KDrumR_4_kick.m4a",
-      "snare": "KDrumR_4_snare.m4a",
-      "hihat": "KDrumR_4_hihat.m4a",
-      "ride": "KDrumR_4_ride.m4a",
-      "overheads": "KDrumR_4_overheads.m4a",
-      "room": "KDrumR_4_room.m4a"
+      "snare": "KDrumR_4_snare.flac",
+      "hihat": "KDrumR_4_hihat.flac",
+      "ride": "KDrumR_4_ride.flac",
+      "overheads": "KDrumR_4_overheads.flac",
+      "room": "KDrumR_4_room.flac"
      }
     },
     {
      "power": 2.8324,
      "files": {
       "kick": "KDrumR_5_kick.m4a",
-      "snare": "KDrumR_5_snare.m4a",
-      "hihat": "KDrumR_5_hihat.m4a",
-      "ride": "KDrumR_5_ride.m4a",
-      "overheads": "KDrumR_5_overheads.m4a",
-      "room": "KDrumR_5_room.m4a"
+      "snare": "KDrumR_5_snare.flac",
+      "hihat": "KDrumR_5_hihat.flac",
+      "ride": "KDrumR_5_ride.flac",
+      "overheads": "KDrumR_5_overheads.flac",
+      "room": "KDrumR_5_room.flac"
      }
     },
     {
      "power": 3.66706,
      "files": {
       "kick": "KDrumR_6_kick.m4a",
-      "snare": "KDrumR_6_snare.m4a",
-      "hihat": "KDrumR_6_hihat.m4a",
-      "ride": "KDrumR_6_ride.m4a",
-      "overheads": "KDrumR_6_overheads.m4a",
-      "room": "KDrumR_6_room.m4a"
+      "snare": "KDrumR_6_snare.flac",
+      "hihat": "KDrumR_6_hihat.flac",
+      "ride": "KDrumR_6_ride.flac",
+      "overheads": "KDrumR_6_overheads.flac",
+      "room": "KDrumR_6_room.flac"
      }
     },
     {
      "power": 4.57431,
      "files": {
       "kick": "KDrumR_7_kick.m4a",
-      "snare": "KDrumR_7_snare.m4a",
-      "hihat": "KDrumR_7_hihat.m4a",
-      "ride": "KDrumR_7_ride.m4a",
-      "overheads": "KDrumR_7_overheads.m4a",
-      "room": "KDrumR_7_room.m4a"
+      "snare": "KDrumR_7_snare.flac",
+      "hihat": "KDrumR_7_hihat.flac",
+      "ride": "KDrumR_7_ride.flac",
+      "overheads": "KDrumR_7_overheads.flac",
+      "room": "KDrumR_7_room.flac"
      }
     }
    ]
@@ -131,81 +131,81 @@
     {
      "power": 0.0206627,
      "files": {
-      "snare": "Snare_0_snare.m4a",
-      "hihat": "Snare_0_hihat.m4a",
-      "ride": "Snare_0_ride.m4a",
-      "overheads": "Snare_0_overheads.m4a",
-      "room": "Snare_0_room.m4a"
+      "snare": "Snare_0_snare.flac",
+      "hihat": "Snare_0_hihat.flac",
+      "ride": "Snare_0_ride.flac",
+      "overheads": "Snare_0_overheads.flac",
+      "room": "Snare_0_room.flac"
      }
     },
     {
      "power": 0.332614,
      "files": {
-      "snare": "Snare_1_snare.m4a",
-      "hihat": "Snare_1_hihat.m4a",
-      "ride": "Snare_1_ride.m4a",
-      "overheads": "Snare_1_overheads.m4a",
-      "room": "Snare_1_room.m4a"
+      "snare": "Snare_1_snare.flac",
+      "hihat": "Snare_1_hihat.flac",
+      "ride": "Snare_1_ride.flac",
+      "overheads": "Snare_1_overheads.flac",
+      "room": "Snare_1_room.flac"
      }
     },
     {
      "power": 0.618736,
      "files": {
-      "snare": "Snare_2_snare.m4a",
-      "hihat": "Snare_2_hihat.m4a",
-      "ride": "Snare_2_ride.m4a",
-      "overheads": "Snare_2_overheads.m4a",
-      "room": "Snare_2_room.m4a"
+      "snare": "Snare_2_snare.flac",
+      "hihat": "Snare_2_hihat.flac",
+      "ride": "Snare_2_ride.flac",
+      "overheads": "Snare_2_overheads.flac",
+      "room": "Snare_2_room.flac"
      }
     },
     {
      "power": 0.967574,
      "files": {
-      "snare": "Snare_3_snare.m4a",
-      "hihat": "Snare_3_hihat.m4a",
-      "ride": "Snare_3_ride.m4a",
-      "overheads": "Snare_3_overheads.m4a",
-      "room": "Snare_3_room.m4a"
+      "snare": "Snare_3_snare.flac",
+      "hihat": "Snare_3_hihat.flac",
+      "ride": "Snare_3_ride.flac",
+      "overheads": "Snare_3_overheads.flac",
+      "room": "Snare_3_room.flac"
      }
     },
     {
      "power": 1.14384,
      "files": {
-      "snare": "Snare_4_snare.m4a",
-      "hihat": "Snare_4_hihat.m4a",
-      "ride": "Snare_4_ride.m4a",
-      "overheads": "Snare_4_overheads.m4a",
-      "room": "Snare_4_room.m4a"
+      "snare": "Snare_4_snare.flac",
+      "hihat": "Snare_4_hihat.flac",
+      "ride": "Snare_4_ride.flac",
+      "overheads": "Snare_4_overheads.flac",
+      "room": "Snare_4_room.flac"
      }
     },
     {
      "power": 1.66366,
      "files": {
-      "snare": "Snare_5_snare.m4a",
-      "hihat": "Snare_5_hihat.m4a",
-      "ride": "Snare_5_ride.m4a",
-      "overheads": "Snare_5_overheads.m4a",
-      "room": "Snare_5_room.m4a"
+      "snare": "Snare_5_snare.flac",
+      "hihat": "Snare_5_hihat.flac",
+      "ride": "Snare_5_ride.flac",
+      "overheads": "Snare_5_overheads.flac",
+      "room": "Snare_5_room.flac"
      }
     },
     {
      "power": 2.10815,
      "files": {
-      "snare": "Snare_6_snare.m4a",
-      "hihat": "Snare_6_hihat.m4a",
-      "ride": "Snare_6_ride.m4a",
-      "overheads": "Snare_6_overheads.m4a",
-      "room": "Snare_6_room.m4a"
+      "snare": "Snare_6_snare.flac",
+      "hihat": "Snare_6_hihat.flac",
+      "ride": "Snare_6_ride.flac",
+      "overheads": "Snare_6_overheads.flac",
+      "room": "Snare_6_room.flac"
      }
     },
     {
      "power": 3.03418,
      "files": {
-      "snare": "Snare_7_snare.m4a",
-      "hihat": "Snare_7_hihat.m4a",
-      "ride": "Snare_7_ride.m4a",
-      "overheads": "Snare_7_overheads.m4a",
-      "room": "Snare_7_room.m4a"
+      "snare": "Snare_7_snare.flac",
+      "hihat": "Snare_7_hihat.flac",
+      "ride": "Snare_7_ride.flac",
+      "overheads": "Snare_7_overheads.flac",
+      "room": "Snare_7_room.flac"
      }
     }
    ]
@@ -220,80 +220,80 @@
      "power": 0.117955,
      "files": {
       "toms": "Tom1_0_toms.m4a",
-      "hihat": "Tom1_0_hihat.m4a",
-      "ride": "Tom1_0_ride.m4a",
-      "overheads": "Tom1_0_overheads.m4a",
-      "room": "Tom1_0_room.m4a"
+      "hihat": "Tom1_0_hihat.flac",
+      "ride": "Tom1_0_ride.flac",
+      "overheads": "Tom1_0_overheads.flac",
+      "room": "Tom1_0_room.flac"
      }
     },
     {
      "power": 0.639363,
      "files": {
       "toms": "Tom1_1_toms.m4a",
-      "hihat": "Tom1_1_hihat.m4a",
-      "ride": "Tom1_1_ride.m4a",
-      "overheads": "Tom1_1_overheads.m4a",
-      "room": "Tom1_1_room.m4a"
+      "hihat": "Tom1_1_hihat.flac",
+      "ride": "Tom1_1_ride.flac",
+      "overheads": "Tom1_1_overheads.flac",
+      "room": "Tom1_1_room.flac"
      }
     },
     {
      "power": 1.24085,
      "files": {
       "toms": "Tom1_2_toms.m4a",
-      "hihat": "Tom1_2_hihat.m4a",
-      "ride": "Tom1_2_ride.m4a",
-      "overheads": "Tom1_2_overheads.m4a",
-      "room": "Tom1_2_room.m4a"
+      "hihat": "Tom1_2_hihat.flac",
+      "ride": "Tom1_2_ride.flac",
+      "overheads": "Tom1_2_overheads.flac",
+      "room": "Tom1_2_room.flac"
      }
     },
     {
      "power": 1.92656,
      "files": {
       "toms": "Tom1_3_toms.m4a",
-      "hihat": "Tom1_3_hihat.m4a",
-      "ride": "Tom1_3_ride.m4a",
-      "overheads": "Tom1_3_overheads.m4a",
-      "room": "Tom1_3_room.m4a"
+      "hihat": "Tom1_3_hihat.flac",
+      "ride": "Tom1_3_ride.flac",
+      "overheads": "Tom1_3_overheads.flac",
+      "room": "Tom1_3_room.flac"
      }
     },
     {
      "power": 2.47295,
      "files": {
       "toms": "Tom1_4_toms.m4a",
-      "hihat": "Tom1_4_hihat.m4a",
-      "ride": "Tom1_4_ride.m4a",
-      "overheads": "Tom1_4_overheads.m4a",
-      "room": "Tom1_4_room.m4a"
+      "hihat": "Tom1_4_hihat.flac",
+      "ride": "Tom1_4_ride.flac",
+      "overheads": "Tom1_4_overheads.flac",
+      "room": "Tom1_4_room.flac"
      }
     },
     {
      "power": 3.37619,
      "files": {
       "toms": "Tom1_5_toms.m4a",
-      "hihat": "Tom1_5_hihat.m4a",
-      "ride": "Tom1_5_ride.m4a",
-      "overheads": "Tom1_5_overheads.m4a",
-      "room": "Tom1_5_room.m4a"
+      "hihat": "Tom1_5_hihat.flac",
+      "ride": "Tom1_5_ride.flac",
+      "overheads": "Tom1_5_overheads.flac",
+      "room": "Tom1_5_room.flac"
      }
     },
     {
      "power": 3.99882,
      "files": {
       "toms": "Tom1_6_toms.m4a",
-      "hihat": "Tom1_6_hihat.m4a",
-      "ride": "Tom1_6_ride.m4a",
-      "overheads": "Tom1_6_overheads.m4a",
-      "room": "Tom1_6_room.m4a"
+      "hihat": "Tom1_6_hihat.flac",
+      "ride": "Tom1_6_ride.flac",
+      "overheads": "Tom1_6_overheads.flac",
+      "room": "Tom1_6_room.flac"
      }
     },
     {
      "power": 5.37378,
      "files": {
       "toms": "Tom1_7_toms.m4a",
-      "hihat": "Tom1_7_hihat.m4a",
-      "ride": "Tom1_7_ride.m4a",
-      "overheads": "Tom1_7_overheads.m4a",
-      "room": "Tom1_7_room.m4a"
+      "hihat": "Tom1_7_hihat.flac",
+      "ride": "Tom1_7_ride.flac",
+      "overheads": "Tom1_7_overheads.flac",
+      "room": "Tom1_7_room.flac"
      }
     }
    ]
@@ -308,80 +308,80 @@
      "power": 0.0424079,
      "files": {
       "toms": "Tom2_0_toms.m4a",
-      "hihat": "Tom2_0_hihat.m4a",
-      "ride": "Tom2_0_ride.m4a",
-      "overheads": "Tom2_0_overheads.m4a",
-      "room": "Tom2_0_room.m4a"
+      "hihat": "Tom2_0_hihat.flac",
+      "ride": "Tom2_0_ride.flac",
+      "overheads": "Tom2_0_overheads.flac",
+      "room": "Tom2_0_room.flac"
      }
     },
     {
      "power": 0.204162,
      "files": {
       "toms": "Tom2_1_toms.m4a",
-      "hihat": "Tom2_1_hihat.m4a",
-      "ride": "Tom2_1_ride.m4a",
-      "overheads": "Tom2_1_overheads.m4a",
-      "room": "Tom2_1_room.m4a"
+      "hihat": "Tom2_1_hihat.flac",
+      "ride": "Tom2_1_ride.flac",
+      "overheads": "Tom2_1_overheads.flac",
+      "room": "Tom2_1_room.flac"
      }
     },
     {
      "power": 0.670448,
      "files": {
       "toms": "Tom2_2_toms.m4a",
-      "hihat": "Tom2_2_hihat.m4a",
-      "ride": "Tom2_2_ride.m4a",
-      "overheads": "Tom2_2_overheads.m4a",
-      "room": "Tom2_2_room.m4a"
+      "hihat": "Tom2_2_hihat.flac",
+      "ride": "Tom2_2_ride.flac",
+      "overheads": "Tom2_2_overheads.flac",
+      "room": "Tom2_2_room.flac"
      }
     },
     {
      "power": 1.09052,
      "files": {
       "toms": "Tom2_3_toms.m4a",
-      "hihat": "Tom2_3_hihat.m4a",
-      "ride": "Tom2_3_ride.m4a",
-      "overheads": "Tom2_3_overheads.m4a",
-      "room": "Tom2_3_room.m4a"
+      "hihat": "Tom2_3_hihat.flac",
+      "ride": "Tom2_3_ride.flac",
+      "overheads": "Tom2_3_overheads.flac",
+      "room": "Tom2_3_room.flac"
      }
     },
     {
      "power": 1.82434,
      "files": {
       "toms": "Tom2_4_toms.m4a",
-      "hihat": "Tom2_4_hihat.m4a",
-      "ride": "Tom2_4_ride.m4a",
-      "overheads": "Tom2_4_overheads.m4a",
-      "room": "Tom2_4_room.m4a"
+      "hihat": "Tom2_4_hihat.flac",
+      "ride": "Tom2_4_ride.flac",
+      "overheads": "Tom2_4_overheads.flac",
+      "room": "Tom2_4_room.flac"
      }
     },
     {
      "power": 2.25762,
      "files": {
       "toms": "Tom2_5_toms.m4a",
-      "hihat": "Tom2_5_hihat.m4a",
-      "ride": "Tom2_5_ride.m4a",
-      "overheads": "Tom2_5_overheads.m4a",
-      "room": "Tom2_5_room.m4a"
+      "hihat": "Tom2_5_hihat.flac",
+      "ride": "Tom2_5_ride.flac",
+      "overheads": "Tom2_5_overheads.flac",
+      "room": "Tom2_5_room.flac"
      }
     },
     {
      "power": 2.5454,
      "files": {
       "toms": "Tom2_6_toms.m4a",
-      "hihat": "Tom2_6_hihat.m4a",
-      "ride": "Tom2_6_ride.m4a",
-      "overheads": "Tom2_6_overheads.m4a",
-      "room": "Tom2_6_room.m4a"
+      "hihat": "Tom2_6_hihat.flac",
+      "ride": "Tom2_6_ride.flac",
+      "overheads": "Tom2_6_overheads.flac",
+      "room": "Tom2_6_room.flac"
      }
     },
     {
      "power": 3.70421,
      "files": {
       "toms": "Tom2_7_toms.m4a",
-      "hihat": "Tom2_7_hihat.m4a",
-      "ride": "Tom2_7_ride.m4a",
-      "overheads": "Tom2_7_overheads.m4a",
-      "room": "Tom2_7_room.m4a"
+      "hihat": "Tom2_7_hihat.flac",
+      "ride": "Tom2_7_ride.flac",
+      "overheads": "Tom2_7_overheads.flac",
+      "room": "Tom2_7_room.flac"
      }
     }
    ]
@@ -396,79 +396,79 @@
      "power": 0.0110128,
      "files": {
       "toms": "FTom1_0_toms.m4a",
-      "ride": "FTom1_0_ride.m4a",
-      "overheads": "FTom1_0_overheads.m4a",
-      "room": "FTom1_0_room.m4a"
+      "ride": "FTom1_0_ride.flac",
+      "overheads": "FTom1_0_overheads.flac",
+      "room": "FTom1_0_room.flac"
      }
     },
     {
      "power": 0.0657158,
      "files": {
       "toms": "FTom1_1_toms.m4a",
-      "hihat": "FTom1_1_hihat.m4a",
-      "ride": "FTom1_1_ride.m4a",
-      "overheads": "FTom1_1_overheads.m4a",
-      "room": "FTom1_1_room.m4a"
+      "hihat": "FTom1_1_hihat.flac",
+      "ride": "FTom1_1_ride.flac",
+      "overheads": "FTom1_1_overheads.flac",
+      "room": "FTom1_1_room.flac"
      }
     },
     {
      "power": 0.16129,
      "files": {
       "toms": "FTom1_2_toms.m4a",
-      "hihat": "FTom1_2_hihat.m4a",
-      "ride": "FTom1_2_ride.m4a",
-      "overheads": "FTom1_2_overheads.m4a",
-      "room": "FTom1_2_room.m4a"
+      "hihat": "FTom1_2_hihat.flac",
+      "ride": "FTom1_2_ride.flac",
+      "overheads": "FTom1_2_overheads.flac",
+      "room": "FTom1_2_room.flac"
      }
     },
     {
      "power": 0.291009,
      "files": {
       "toms": "FTom1_3_toms.m4a",
-      "hihat": "FTom1_3_hihat.m4a",
-      "ride": "FTom1_3_ride.m4a",
-      "overheads": "FTom1_3_overheads.m4a",
-      "room": "FTom1_3_room.m4a"
+      "hihat": "FTom1_3_hihat.flac",
+      "ride": "FTom1_3_ride.flac",
+      "overheads": "FTom1_3_overheads.flac",
+      "room": "FTom1_3_room.flac"
      }
     },
     {
      "power": 0.512053,
      "files": {
       "toms": "FTom1_4_toms.m4a",
-      "hihat": "FTom1_4_hihat.m4a",
-      "ride": "FTom1_4_ride.m4a",
-      "overheads": "FTom1_4_overheads.m4a",
-      "room": "FTom1_4_room.m4a"
+      "hihat": "FTom1_4_hihat.flac",
+      "ride": "FTom1_4_ride.flac",
+      "overheads": "FTom1_4_overheads.flac",
+      "room": "FTom1_4_room.flac"
      }
     },
     {
      "power": 0.799002,
      "files": {
       "toms": "FTom1_5_toms.m4a",
-      "hihat": "FTom1_5_hihat.m4a",
-      "ride": "FTom1_5_ride.m4a",
-      "overheads": "FTom1_5_overheads.m4a",
-      "room": "FTom1_5_room.m4a"
+      "hihat": "FTom1_5_hihat.flac",
+      "ride": "FTom1_5_ride.flac",
+      "overheads": "FTom1_5_overheads.flac",
+      "room": "FTom1_5_room.flac"
      }
     },
     {
      "power": 1.14736,
      "files": {
       "toms": "FTom1_6_toms.m4a",
-      "hihat": "FTom1_6_hihat.m4a",
-      "ride": "FTom1_6_ride.m4a",
-      "overheads": "FTom1_6_overheads.m4a",
-      "room": "FTom1_6_room.m4a"
+      "hihat": "FTom1_6_hihat.flac",
+      "ride": "FTom1_6_ride.flac",
+      "overheads": "FTom1_6_overheads.flac",
+      "room": "FTom1_6_room.flac"
      }
     },
     {
      "power": 1.82642,
      "files": {
       "toms": "FTom1_7_toms.m4a",
-      "hihat": "FTom1_7_hihat.m4a",
-      "ride": "FTom1_7_ride.m4a",
-      "overheads": "FTom1_7_overheads.m4a",
-      "room": "FTom1_7_room.m4a"
+      "hihat": "FTom1_7_hihat.flac",
+      "ride": "FTom1_7_ride.flac",
+      "overheads": "FTom1_7_overheads.flac",
+      "room": "FTom1_7_room.flac"
      }
     }
    ]
@@ -481,78 +481,78 @@
     {
      "power": 0.00163766,
      "files": {
-      "hihat": "HihatClosed_0_hihat.m4a",
-      "overheads": "HihatClosed_0_overheads.m4a",
-      "room": "HihatClosed_0_room.m4a"
+      "hihat": "HihatClosed_0_hihat.flac",
+      "overheads": "HihatClosed_0_overheads.flac",
+      "room": "HihatClosed_0_room.flac"
      }
     },
     {
      "power": 0.0188049,
      "files": {
-      "hihat": "HihatClosed_1_hihat.m4a",
-      "ride": "HihatClosed_1_ride.m4a",
-      "overheads": "HihatClosed_1_overheads.m4a",
-      "room": "HihatClosed_1_room.m4a"
+      "hihat": "HihatClosed_1_hihat.flac",
+      "ride": "HihatClosed_1_ride.flac",
+      "overheads": "HihatClosed_1_overheads.flac",
+      "room": "HihatClosed_1_room.flac"
      }
     },
     {
      "power": 0.0548271,
      "files": {
-      "snare": "HihatClosed_2_snare.m4a",
-      "hihat": "HihatClosed_2_hihat.m4a",
-      "ride": "HihatClosed_2_ride.m4a",
-      "overheads": "HihatClosed_2_overheads.m4a",
-      "room": "HihatClosed_2_room.m4a"
+      "snare": "HihatClosed_2_snare.flac",
+      "hihat": "HihatClosed_2_hihat.flac",
+      "ride": "HihatClosed_2_ride.flac",
+      "overheads": "HihatClosed_2_overheads.flac",
+      "room": "HihatClosed_2_room.flac"
      }
     },
     {
      "power": 0.0915195,
      "files": {
-      "snare": "HihatClosed_3_snare.m4a",
-      "hihat": "HihatClosed_3_hihat.m4a",
-      "ride": "HihatClosed_3_ride.m4a",
-      "overheads": "HihatClosed_3_overheads.m4a",
-      "room": "HihatClosed_3_room.m4a"
+      "snare": "HihatClosed_3_snare.flac",
+      "hihat": "HihatClosed_3_hihat.flac",
+      "ride": "HihatClosed_3_ride.flac",
+      "overheads": "HihatClosed_3_overheads.flac",
+      "room": "HihatClosed_3_room.flac"
      }
     },
     {
      "power": 0.10769,
      "files": {
-      "snare": "HihatClosed_4_snare.m4a",
-      "hihat": "HihatClosed_4_hihat.m4a",
-      "ride": "HihatClosed_4_ride.m4a",
-      "overheads": "HihatClosed_4_overheads.m4a",
-      "room": "HihatClosed_4_room.m4a"
+      "snare": "HihatClosed_4_snare.flac",
+      "hihat": "HihatClosed_4_hihat.flac",
+      "ride": "HihatClosed_4_ride.flac",
+      "overheads": "HihatClosed_4_overheads.flac",
+      "room": "HihatClosed_4_room.flac"
      }
     },
     {
      "power": 0.137801,
      "files": {
-      "snare": "HihatClosed_5_snare.m4a",
-      "hihat": "HihatClosed_5_hihat.m4a",
-      "ride": "HihatClosed_5_ride.m4a",
-      "overheads": "HihatClosed_5_overheads.m4a",
-      "room": "HihatClosed_5_room.m4a"
+      "snare": "HihatClosed_5_snare.flac",
+      "hihat": "HihatClosed_5_hihat.flac",
+      "ride": "HihatClosed_5_ride.flac",
+      "overheads": "HihatClosed_5_overheads.flac",
+      "room": "HihatClosed_5_room.flac"
      }
     },
     {
      "power": 0.190687,
      "files": {
-      "snare": "HihatClosed_6_snare.m4a",
-      "hihat": "HihatClosed_6_hihat.m4a",
-      "ride": "HihatClosed_6_ride.m4a",
-      "overheads": "HihatClosed_6_overheads.m4a",
-      "room": "HihatClosed_6_room.m4a"
+      "snare": "HihatClosed_6_snare.flac",
+      "hihat": "HihatClosed_6_hihat.flac",
+      "ride": "HihatClosed_6_ride.flac",
+      "overheads": "HihatClosed_6_overheads.flac",
+      "room": "HihatClosed_6_room.flac"
      }
     },
     {
      "power": 0.255038,
      "files": {
-      "snare": "HihatClosed_7_snare.m4a",
-      "hihat": "HihatClosed_7_hihat.m4a",
-      "ride": "HihatClosed_7_ride.m4a",
-      "overheads": "HihatClosed_7_overheads.m4a",
-      "room": "HihatClosed_7_room.m4a"
+      "snare": "HihatClosed_7_snare.flac",
+      "hihat": "HihatClosed_7_hihat.flac",
+      "ride": "HihatClosed_7_ride.flac",
+      "overheads": "HihatClosed_7_overheads.flac",
+      "room": "HihatClosed_7_room.flac"
      }
     }
    ],
@@ -567,80 +567,80 @@
     {
      "power": 0.00142699,
      "files": {
-      "hihat": "HihatOpen_0_hihat.m4a",
-      "ride": "HihatOpen_0_ride.m4a",
-      "overheads": "HihatOpen_0_overheads.m4a",
-      "room": "HihatOpen_0_room.m4a"
+      "hihat": "HihatOpen_0_hihat.flac",
+      "ride": "HihatOpen_0_ride.flac",
+      "overheads": "HihatOpen_0_overheads.flac",
+      "room": "HihatOpen_0_room.flac"
      }
     },
     {
      "power": 0.022082,
      "files": {
-      "snare": "HihatOpen_1_snare.m4a",
-      "hihat": "HihatOpen_1_hihat.m4a",
-      "ride": "HihatOpen_1_ride.m4a",
-      "overheads": "HihatOpen_1_overheads.m4a",
-      "room": "HihatOpen_1_room.m4a"
+      "snare": "HihatOpen_1_snare.flac",
+      "hihat": "HihatOpen_1_hihat.flac",
+      "ride": "HihatOpen_1_ride.flac",
+      "overheads": "HihatOpen_1_overheads.flac",
+      "room": "HihatOpen_1_room.flac"
      }
     },
     {
      "power": 0.0334429,
      "files": {
-      "snare": "HihatOpen_2_snare.m4a",
-      "hihat": "HihatOpen_2_hihat.m4a",
-      "ride": "HihatOpen_2_ride.m4a",
-      "overheads": "HihatOpen_2_overheads.m4a",
-      "room": "HihatOpen_2_room.m4a"
+      "snare": "HihatOpen_2_snare.flac",
+      "hihat": "HihatOpen_2_hihat.flac",
+      "ride": "HihatOpen_2_ride.flac",
+      "overheads": "HihatOpen_2_overheads.flac",
+      "room": "HihatOpen_2_room.flac"
      }
     },
     {
      "power": 0.0809567,
      "files": {
-      "snare": "HihatOpen_3_snare.m4a",
-      "hihat": "HihatOpen_3_hihat.m4a",
-      "ride": "HihatOpen_3_ride.m4a",
-      "overheads": "HihatOpen_3_overheads.m4a",
-      "room": "HihatOpen_3_room.m4a"
+      "snare": "HihatOpen_3_snare.flac",
+      "hihat": "HihatOpen_3_hihat.flac",
+      "ride": "HihatOpen_3_ride.flac",
+      "overheads": "HihatOpen_3_overheads.flac",
+      "room": "HihatOpen_3_room.flac"
      }
     },
     {
      "power": 0.109417,
      "files": {
-      "snare": "HihatOpen_4_snare.m4a",
-      "hihat": "HihatOpen_4_hihat.m4a",
-      "ride": "HihatOpen_4_ride.m4a",
-      "overheads": "HihatOpen_4_overheads.m4a",
-      "room": "HihatOpen_4_room.m4a"
+      "snare": "HihatOpen_4_snare.flac",
+      "hihat": "HihatOpen_4_hihat.flac",
+      "ride": "HihatOpen_4_ride.flac",
+      "overheads": "HihatOpen_4_overheads.flac",
+      "room": "HihatOpen_4_room.flac"
      }
     },
     {
      "power": 0.133859,
      "files": {
-      "snare": "HihatOpen_5_snare.m4a",
-      "hihat": "HihatOpen_5_hihat.m4a",
-      "ride": "HihatOpen_5_ride.m4a",
-      "overheads": "HihatOpen_5_overheads.m4a",
-      "room": "HihatOpen_5_room.m4a"
+      "snare": "HihatOpen_5_snare.flac",
+      "hihat": "HihatOpen_5_hihat.flac",
+      "ride": "HihatOpen_5_ride.flac",
+      "overheads": "HihatOpen_5_overheads.flac",
+      "room": "HihatOpen_5_room.flac"
      }
     },
     {
      "power": 0.151215,
      "files": {
-      "snare": "HihatOpen_6_snare.m4a",
-      "hihat": "HihatOpen_6_hihat.m4a",
-      "ride": "HihatOpen_6_ride.m4a",
-      "overheads": "HihatOpen_6_overheads.m4a",
-      "room": "HihatOpen_6_room.m4a"
+      "snare": "HihatOpen_6_snare.flac",
+      "hihat": "HihatOpen_6_hihat.flac",
+      "ride": "HihatOpen_6_ride.flac",
+      "overheads": "HihatOpen_6_overheads.flac",
+      "room": "HihatOpen_6_room.flac"
      }
     },
     {
      "power": 0.204311,
      "files": {
-      "snare": "HihatOpen_7_snare.m4a",
-      "hihat": "HihatOpen_7_hihat.m4a",
-      "ride": "HihatOpen_7_ride.m4a",
-      "overheads": "HihatOpen_7_overheads.m4a",
-      "room": "HihatOpen_7_room.m4a"
+      "snare": "HihatOpen_7_snare.flac",
+      "hihat": "HihatOpen_7_hihat.flac",
+      "ride": "HihatOpen_7_ride.flac",
+      "overheads": "HihatOpen_7_overheads.flac",
+      "room": "HihatOpen_7_room.flac"
      }
     }
    ],
@@ -654,70 +654,70 @@
     {
      "power": 7.43172e-05,
      "files": {
-      "hihat": "HihatPedal_0_hihat.m4a"
+      "hihat": "HihatPedal_0_hihat.flac"
      }
     },
     {
      "power": 0.00081805,
      "files": {
-      "hihat": "HihatPedal_1_hihat.m4a",
-      "overheads": "HihatPedal_1_overheads.m4a",
-      "room": "HihatPedal_1_room.m4a"
+      "hihat": "HihatPedal_1_hihat.flac",
+      "overheads": "HihatPedal_1_overheads.flac",
+      "room": "HihatPedal_1_room.flac"
      }
     },
     {
      "power": 0.00191475,
      "files": {
-      "hihat": "HihatPedal_2_hihat.m4a",
-      "overheads": "HihatPedal_2_overheads.m4a"
+      "hihat": "HihatPedal_2_hihat.flac",
+      "overheads": "HihatPedal_2_overheads.flac"
      }
     },
     {
      "power": 0.00391885,
      "files": {
-      "hihat": "HihatPedal_3_hihat.m4a",
-      "ride": "HihatPedal_3_ride.m4a",
-      "overheads": "HihatPedal_3_overheads.m4a",
-      "room": "HihatPedal_3_room.m4a"
+      "hihat": "HihatPedal_3_hihat.flac",
+      "ride": "HihatPedal_3_ride.flac",
+      "overheads": "HihatPedal_3_overheads.flac",
+      "room": "HihatPedal_3_room.flac"
      }
     },
     {
      "power": 0.00413788,
      "files": {
-      "snare": "HihatPedal_4_snare.m4a",
-      "hihat": "HihatPedal_4_hihat.m4a",
-      "ride": "HihatPedal_4_ride.m4a",
-      "overheads": "HihatPedal_4_overheads.m4a",
-      "room": "HihatPedal_4_room.m4a"
+      "snare": "HihatPedal_4_snare.flac",
+      "hihat": "HihatPedal_4_hihat.flac",
+      "ride": "HihatPedal_4_ride.flac",
+      "overheads": "HihatPedal_4_overheads.flac",
+      "room": "HihatPedal_4_room.flac"
      }
     },
     {
      "power": 0.00426045,
      "files": {
-      "snare": "HihatPedal_5_snare.m4a",
-      "hihat": "HihatPedal_5_hihat.m4a",
-      "ride": "HihatPedal_5_ride.m4a",
-      "overheads": "HihatPedal_5_overheads.m4a",
-      "room": "HihatPedal_5_room.m4a"
+      "snare": "HihatPedal_5_snare.flac",
+      "hihat": "HihatPedal_5_hihat.flac",
+      "ride": "HihatPedal_5_ride.flac",
+      "overheads": "HihatPedal_5_overheads.flac",
+      "room": "HihatPedal_5_room.flac"
      }
     },
     {
      "power": 0.01031,
      "files": {
-      "snare": "HihatPedal_6_snare.m4a",
-      "hihat": "HihatPedal_6_hihat.m4a",
-      "ride": "HihatPedal_6_ride.m4a",
-      "overheads": "HihatPedal_6_overheads.m4a",
-      "room": "HihatPedal_6_room.m4a"
+      "snare": "HihatPedal_6_snare.flac",
+      "hihat": "HihatPedal_6_hihat.flac",
+      "ride": "HihatPedal_6_ride.flac",
+      "overheads": "HihatPedal_6_overheads.flac",
+      "room": "HihatPedal_6_room.flac"
      }
     },
     {
      "power": 0.0128564,
      "files": {
-      "hihat": "HihatPedal_7_hihat.m4a",
-      "ride": "HihatPedal_7_ride.m4a",
-      "overheads": "HihatPedal_7_overheads.m4a",
-      "room": "HihatPedal_7_room.m4a"
+      "hihat": "HihatPedal_7_hihat.flac",
+      "ride": "HihatPedal_7_ride.flac",
+      "overheads": "HihatPedal_7_overheads.flac",
+      "room": "HihatPedal_7_room.flac"
      }
     }
    ],
@@ -735,73 +735,73 @@
     {
      "power": 0.00138077,
      "files": {
-      "hihat": "CrashL_0_hihat.m4a",
-      "ride": "CrashL_0_ride.m4a",
-      "overheads": "CrashL_0_overheads.m4a",
-      "room": "CrashL_0_room.m4a"
+      "hihat": "CrashL_0_hihat.flac",
+      "ride": "CrashL_0_ride.flac",
+      "overheads": "CrashL_0_overheads.flac",
+      "room": "CrashL_0_room.flac"
      }
     },
     {
      "power": 0.0105716,
      "files": {
-      "hihat": "CrashL_1_hihat.m4a",
-      "ride": "CrashL_1_ride.m4a",
-      "overheads": "CrashL_1_overheads.m4a",
-      "room": "CrashL_1_room.m4a"
+      "hihat": "CrashL_1_hihat.flac",
+      "ride": "CrashL_1_ride.flac",
+      "overheads": "CrashL_1_overheads.flac",
+      "room": "CrashL_1_room.flac"
      }
     },
     {
      "power": 0.0282476,
      "files": {
-      "hihat": "CrashL_2_hihat.m4a",
-      "ride": "CrashL_2_ride.m4a",
-      "overheads": "CrashL_2_overheads.m4a",
-      "room": "CrashL_2_room.m4a"
+      "hihat": "CrashL_2_hihat.flac",
+      "ride": "CrashL_2_ride.flac",
+      "overheads": "CrashL_2_overheads.flac",
+      "room": "CrashL_2_room.flac"
      }
     },
     {
      "power": 0.0414128,
      "files": {
-      "hihat": "CrashL_3_hihat.m4a",
-      "ride": "CrashL_3_ride.m4a",
-      "overheads": "CrashL_3_overheads.m4a",
-      "room": "CrashL_3_room.m4a"
+      "hihat": "CrashL_3_hihat.flac",
+      "ride": "CrashL_3_ride.flac",
+      "overheads": "CrashL_3_overheads.flac",
+      "room": "CrashL_3_room.flac"
      }
     },
     {
      "power": 0.0626806,
      "files": {
-      "hihat": "CrashL_4_hihat.m4a",
-      "ride": "CrashL_4_ride.m4a",
-      "overheads": "CrashL_4_overheads.m4a",
-      "room": "CrashL_4_room.m4a"
+      "hihat": "CrashL_4_hihat.flac",
+      "ride": "CrashL_4_ride.flac",
+      "overheads": "CrashL_4_overheads.flac",
+      "room": "CrashL_4_room.flac"
      }
     },
     {
      "power": 0.124218,
      "files": {
-      "hihat": "CrashL_5_hihat.m4a",
-      "ride": "CrashL_5_ride.m4a",
-      "overheads": "CrashL_5_overheads.m4a",
-      "room": "CrashL_5_room.m4a"
+      "hihat": "CrashL_5_hihat.flac",
+      "ride": "CrashL_5_ride.flac",
+      "overheads": "CrashL_5_overheads.flac",
+      "room": "CrashL_5_room.flac"
      }
     },
     {
      "power": 0.261799,
      "files": {
-      "hihat": "CrashL_6_hihat.m4a",
-      "ride": "CrashL_6_ride.m4a",
-      "overheads": "CrashL_6_overheads.m4a",
-      "room": "CrashL_6_room.m4a"
+      "hihat": "CrashL_6_hihat.flac",
+      "ride": "CrashL_6_ride.flac",
+      "overheads": "CrashL_6_overheads.flac",
+      "room": "CrashL_6_room.flac"
      }
     },
     {
      "power": 0.44145,
      "files": {
-      "hihat": "CrashL_7_hihat.m4a",
-      "ride": "CrashL_7_ride.m4a",
-      "overheads": "CrashL_7_overheads.m4a",
-      "room": "CrashL_7_room.m4a"
+      "hihat": "CrashL_7_hihat.flac",
+      "ride": "CrashL_7_ride.flac",
+      "overheads": "CrashL_7_overheads.flac",
+      "room": "CrashL_7_room.flac"
      }
     }
    ]
@@ -815,69 +815,69 @@
     {
      "power": 0.00529176,
      "files": {
-      "ride": "RideR_0_ride.m4a"
+      "ride": "RideR_0_ride.flac"
      }
     },
     {
      "power": 0.0163973,
      "files": {
-      "ride": "RideR_1_ride.m4a",
-      "overheads": "RideR_1_overheads.m4a",
-      "room": "RideR_1_room.m4a"
+      "ride": "RideR_1_ride.flac",
+      "overheads": "RideR_1_overheads.flac",
+      "room": "RideR_1_room.flac"
      }
     },
     {
      "power": 0.0450747,
      "files": {
-      "hihat": "RideR_2_hihat.m4a",
-      "ride": "RideR_2_ride.m4a",
-      "overheads": "RideR_2_overheads.m4a",
-      "room": "RideR_2_room.m4a"
+      "hihat": "RideR_2_hihat.flac",
+      "ride": "RideR_2_ride.flac",
+      "overheads": "RideR_2_overheads.flac",
+      "room": "RideR_2_room.flac"
      }
     },
     {
      "power": 0.0633181,
      "files": {
-      "hihat": "RideR_3_hihat.m4a",
-      "ride": "RideR_3_ride.m4a",
-      "overheads": "RideR_3_overheads.m4a",
-      "room": "RideR_3_room.m4a"
+      "hihat": "RideR_3_hihat.flac",
+      "ride": "RideR_3_ride.flac",
+      "overheads": "RideR_3_overheads.flac",
+      "room": "RideR_3_room.flac"
      }
     },
     {
      "power": 0.137506,
      "files": {
-      "hihat": "RideR_4_hihat.m4a",
-      "ride": "RideR_4_ride.m4a",
-      "overheads": "RideR_4_overheads.m4a",
-      "room": "RideR_4_room.m4a"
+      "hihat": "RideR_4_hihat.flac",
+      "ride": "RideR_4_ride.flac",
+      "overheads": "RideR_4_overheads.flac",
+      "room": "RideR_4_room.flac"
      }
     },
     {
      "power": 0.159953,
      "files": {
-      "hihat": "RideR_5_hihat.m4a",
-      "ride": "RideR_5_ride.m4a",
-      "overheads": "RideR_5_overheads.m4a",
-      "room": "RideR_5_room.m4a"
+      "hihat": "RideR_5_hihat.flac",
+      "ride": "RideR_5_ride.flac",
+      "overheads": "RideR_5_overheads.flac",
+      "room": "RideR_5_room.flac"
      }
     },
     {
      "power": 0.202844,
      "files": {
-      "hihat": "RideR_6_hihat.m4a",
-      "ride": "RideR_6_ride.m4a",
-      "overheads": "RideR_6_overheads.m4a",
-      "room": "RideR_6_room.m4a"
+      "hihat": "RideR_6_hihat.flac",
+      "ride": "RideR_6_ride.flac",
+      "overheads": "RideR_6_overheads.flac",
+      "room": "RideR_6_room.flac"
      }
     },
     {
      "power": 0.270579,
      "files": {
-      "hihat": "RideR_7_hihat.m4a",
-      "ride": "RideR_7_ride.m4a",
-      "overheads": "RideR_7_overheads.m4a",
-      "room": "RideR_7_room.m4a"
+      "hihat": "RideR_7_hihat.flac",
+      "ride": "RideR_7_ride.flac",
+      "overheads": "RideR_7_overheads.flac",
+      "room": "RideR_7_room.flac"
      }
     }
    ]
@@ -890,71 +890,71 @@
     {
      "power": 0.0147614,
      "files": {
-      "ride": "RideRBell_0_ride.m4a",
-      "overheads": "RideRBell_0_overheads.m4a",
-      "room": "RideRBell_0_room.m4a"
+      "ride": "RideRBell_0_ride.flac",
+      "overheads": "RideRBell_0_overheads.flac",
+      "room": "RideRBell_0_room.flac"
      }
     },
     {
      "power": 0.0286793,
      "files": {
-      "ride": "RideRBell_1_ride.m4a",
-      "overheads": "RideRBell_1_overheads.m4a",
-      "room": "RideRBell_1_room.m4a"
+      "ride": "RideRBell_1_ride.flac",
+      "overheads": "RideRBell_1_overheads.flac",
+      "room": "RideRBell_1_room.flac"
      }
     },
     {
      "power": 0.0437487,
      "files": {
-      "hihat": "RideRBell_2_hihat.m4a",
-      "ride": "RideRBell_2_ride.m4a",
-      "overheads": "RideRBell_2_overheads.m4a",
-      "room": "RideRBell_2_room.m4a"
+      "hihat": "RideRBell_2_hihat.flac",
+      "ride": "RideRBell_2_ride.flac",
+      "overheads": "RideRBell_2_overheads.flac",
+      "room": "RideRBell_2_room.flac"
      }
     },
     {
      "power": 0.140782,
      "files": {
-      "hihat": "RideRBell_3_hihat.m4a",
-      "ride": "RideRBell_3_ride.m4a",
-      "overheads": "RideRBell_3_overheads.m4a",
-      "room": "RideRBell_3_room.m4a"
+      "hihat": "RideRBell_3_hihat.flac",
+      "ride": "RideRBell_3_ride.flac",
+      "overheads": "RideRBell_3_overheads.flac",
+      "room": "RideRBell_3_room.flac"
      }
     },
     {
      "power": 0.233708,
      "files": {
-      "hihat": "RideRBell_4_hihat.m4a",
-      "ride": "RideRBell_4_ride.m4a",
-      "overheads": "RideRBell_4_overheads.m4a",
-      "room": "RideRBell_4_room.m4a"
+      "hihat": "RideRBell_4_hihat.flac",
+      "ride": "RideRBell_4_ride.flac",
+      "overheads": "RideRBell_4_overheads.flac",
+      "room": "RideRBell_4_room.flac"
      }
     },
     {
      "power": 0.292983,
      "files": {
-      "hihat": "RideRBell_5_hihat.m4a",
-      "ride": "RideRBell_5_ride.m4a",
-      "overheads": "RideRBell_5_overheads.m4a",
-      "room": "RideRBell_5_room.m4a"
+      "hihat": "RideRBell_5_hihat.flac",
+      "ride": "RideRBell_5_ride.flac",
+      "overheads": "RideRBell_5_overheads.flac",
+      "room": "RideRBell_5_room.flac"
      }
     },
     {
      "power": 0.55383,
      "files": {
-      "hihat": "RideRBell_6_hihat.m4a",
-      "ride": "RideRBell_6_ride.m4a",
-      "overheads": "RideRBell_6_overheads.m4a",
-      "room": "RideRBell_6_room.m4a"
+      "hihat": "RideRBell_6_hihat.flac",
+      "ride": "RideRBell_6_ride.flac",
+      "overheads": "RideRBell_6_overheads.flac",
+      "room": "RideRBell_6_room.flac"
      }
     },
     {
      "power": 0.588279,
      "files": {
-      "hihat": "RideRBell_7_hihat.m4a",
-      "ride": "RideRBell_7_ride.m4a",
-      "overheads": "RideRBell_7_overheads.m4a",
-      "room": "RideRBell_7_room.m4a"
+      "hihat": "RideRBell_7_hihat.flac",
+      "ride": "RideRBell_7_ride.flac",
+      "overheads": "RideRBell_7_overheads.flac",
+      "room": "RideRBell_7_room.flac"
      }
     }
    ]

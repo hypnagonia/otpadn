@@ -5,7 +5,7 @@
 export interface Playable {
   ready: Promise<void>;
   /** Schedules a note; returns a release function (for live input) when the source supports it. */
-  start(ev: { note: number; time: number; duration: number; velocity: number }): ((at?: number) => void) | void;
+  start(ev: { note: number; time: number; duration: number; velocity: number; slide?: import("../model/types").NoteSlide }): ((at?: number) => void) | void;
   stopAll(): void;
   /** Multi-out instruments: route named outputs (e.g. kit mic groups) to track inputs. */
   setOutputs?(dests: Record<string, AudioNode>, fallback: AudioNode): void;
