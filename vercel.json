@@ -31,5 +31,6 @@
         }
       ]
     }
-  ]
+  ],
+  "cleanUrls": true
 }

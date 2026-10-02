@@ -31,7 +31,7 @@ export const PART_KINDS: { id: PartKind; label: string; hint: string; role: Role
 ];
 
 interface ChordAt { start: number; end: number; root: number; minor: boolean; tones: number[] }
-interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[] }
+interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[]; melody: Note[] }
 
 const MAJOR = [0, 2, 4, 5, 7, 9, 11], MINOR = [0, 2, 3, 5, 7, 8, 10];
 const pcOf = (p: number) => ((p % 12) + 12) % 12;
@@ -50,7 +50,12 @@ function rng(seed: number) {
 function context(p: Project): Ctx {
   const hasPitched = p.tracks.some((t) => t.kind === "midi" && t.role !== "drums" && !t.dp && t.clips.some((c) => c.kind === "midi" && c.notes.length));
   if (!hasPitched && !p.chords.length) throw new Error("no chords to follow yet — convert a stem to MIDI (or split stems so the song is analysed) first");
-  const end = Math.max(16, p.lengthBeats);
+  // where the music actually ends (the project length carries 8 beats of padding after it)
+  const spb = 60 / p.bpm;
+  let end = 0;
+  for (const t of p.tracks) if (!t.name.startsWith("Gen ·")) for (const cl of t.clips) end = Math.max(end, cl.start + (cl.kind === "midi" ? cl.length : cl.duration / spb));
+  for (const cs of p.chords) end = Math.max(end, cs.start + cs.length);
+  end = Math.max(4, Math.ceil(end / 4) * 4);
   const { key, chords } = songContext(p, end);
   const ch: ChordAt[] = chords.filter((c) => c.tones.length).map((c) => ({ start: c.start, end: Math.min(c.end, end), root: c.tones[0], minor: pcOf(c.tones[1] - c.tones[0]) === 3, tones: c.tones }));
   // kick hits from drum MIDI (GM 35/36), absolute beats
@@ -58,7 +63,11 @@ function context(p: Project): Ctx {
   for (const t of p.tracks) if (t.kind === "midi" && t.role === "drums") for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if ((n.pitch === 35 || n.pitch === 36) && n.start < c.length) kicks.push(c.start + n.start);
   kicks.sort((a, b) => a - b);
   const sections = p.sections.length ? p.sections : [{ start: 0, length: end, label: "Song", group: "A", energy: 2 } as Section];
-  return { key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12) };
+  // the melody (vocal / lead MIDI, absolute beats): accompaniment must not rub against it
+  const melody: Note[] = [];
+  for (const t of p.tracks) if (t.kind === "midi" && (t.role === "vocals" || t.role === "lead") && !t.name.startsWith("Gen ·")) for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) melody.push({ ...n, start: c.start + n.start });
+  melody.sort((a, b) => a.start - b.start);
+  return { key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12), melody };
 }
 
 const sectionAt = (c: Ctx, beat: number) => c.sections.find((s) => beat >= s.start && beat < s.start + s.length) ?? c.sections[c.sections.length - 1];
@@ -105,6 +114,29 @@ function voiceLead(pcs: number[], prev: number[] | null, lo: number, hi: number,
   return cands.reduce((b, v) => (cost(v) < cost(b) ? v : b));
 }
 
+/** Melody notes sounding at a beat (pitches). */
+const melodyAt = (c: Ctx, b: number) => c.melody.filter((m) => m.start <= b + 1e-6 && m.start + m.dur > b + 0.02).map((m) => m.pitch);
+/** Lowest melody note in a span (accompaniment stays under it), or null. */
+const melodyLow = (c: Ctx, a: number, z: number) => {
+  const ps = c.melody.filter((m) => m.start < z && m.start + m.dur > a).map((m) => m.pitch);
+  return ps.length ? Math.min(...ps) : null;
+};
+/** A semitone / tritone against a sounding melody note → the nearest chord tone that doesn't. */
+function avoidClash(c: Ctx, pitch: number, b: number, chordPcs: number[]): number {
+  const mel = melodyAt(c, b);
+  const clashes = (p: number) => mel.some((m) => [1, 6, 11].includes(pcOf(p - m)));
+  if (!clashes(pitch)) return pitch;
+  for (const d of [1, -1, 2, -2, 3, -3, 4, -4]) if (chordPcs.includes(pcOf(pitch + d)) && !clashes(pitch + d)) return pitch + d;
+  return pitch;
+}
+/** Notes per beat that stay musical at this tempo (≈ 4–7 notes a second at most). */
+const rateFor = (bpm: number, energy: number) => {
+  const wanted = energy >= 3 ? 4 : energy >= 2 ? 2 : 2; // 16ths when loud, 8ths otherwise
+  let step = 1 / wanted;
+  while ((bpm / 60) / step > 7.5 && step < 1) step *= 2; // too fast → halve the rate
+  return step;
+};
+
 const velFor = (sec: Section, base: number) => Math.max(30, Math.min(124, Math.round(base + (sec.energy - 1.5) * 12)));
 
 function genPad(c: Ctx): Note[] {
@@ -123,16 +155,25 @@ function genPad(c: Ctx): Note[] {
 function genArp(c: Ctx, seed: number): Note[] {
   const out: Note[] = [];
   let prev: number[] | null = null;
-  const r = rng(seed);
+  void seed;
   for (const s of spans(c)) {
-    const v = voiceLead(s.tones, prev, 52, 72, 67);
+    const e = Math.round(s.sec.energy);
+    // colour from the key: the diatonic 7th (and 9th when loud) on top of the triad
+    const seventh = [10, 11].map((iv) => (s.root + iv) % 12).find((pc) => c.scale.includes(pc));
+    const ninth = (s.root + 2) % 12;
+    const pcs = [...s.tones, ...(e >= 2 && seventh !== undefined ? [seventh] : []), ...(e >= 3 && c.scale.includes(ninth) ? [ninth] : [])];
+    // stay under the melody (a 3rd below its lowest note in this span), never above C5
+    const ml = melodyLow(c, s.start, s.end);
+    const hi = Math.min(72, ml !== null ? ml - 3 : 72), lo = Math.min(52, hi - 14);
+    const v = voiceLead(pcs.slice(0, 4), prev, lo, hi, hi - 5);
     prev = v;
-    const e = s.sec.energy, step = e >= 3 || c.bpm < 100 ? 0.25 : 0.5;
-    const shape = e <= 1 ? [...v, v[0] + 12] : e === 2 ? [...v, v[0] + 12, ...[...v].reverse().slice(1, -1)] : [v[0], v[1], v[2], v[0] + 12, v[2], v[1]];
-    let i = Math.floor(r() * 0); // phrase starts on the root
+    const step = rateFor(c.bpm, e);
+    const shape = e <= 1 ? [...v, v[0] + 12] : e === 2 ? [...v, ...[...v].reverse().slice(1, -1)] : [v[0], v[1], v[2], v[0] + 12, v[2], v[1]];
+    let i = 0;
     for (let b = s.start; b < s.end - 1e-6; b += step, i++) {
       const onBeat = Math.abs(b - Math.round(b)) < 1e-6;
-      out.push({ pitch: shape[i % shape.length], start: b, dur: step * 0.92, vel: velFor(s.sec, onBeat ? 84 : 70) });
+      const pitch = avoidClash(c, shape[i % shape.length], b, pcs);
+      out.push({ pitch, start: b, dur: Math.min(step * 0.92, s.end - b), vel: velFor(s.sec, onBeat ? 84 : 70) });
     }
   }
   return out;
@@ -162,12 +203,18 @@ function genStrum(c: Ctx, seed: number): Note[] {
   const out: Note[] = [], r = rng(seed), spb = 60 / c.bpm;
   for (const s of spans(c)) {
     const shape = guitarShape(s.root, s.minor);
-    const pats = STRUMS[Math.max(0, Math.min(3, Math.round(s.sec.energy)))];
+    // tempo: above ~150 bpm the 8th-note patterns become a blur → one step calmer
+    const lvl = Math.max(0, Math.min(3, Math.round(s.sec.energy) - (c.bpm > 150 ? 1 : 0)));
+    const pats = STRUMS[lvl];
     const pat = pats[Math.floor(r() * pats.length) % pats.length];
     for (let b = Math.ceil(s.start * 2) / 2; b < s.end - 1e-6; b += 0.5) {
       const ch = pat[Math.round((b % 4) * 2) % 8];
       if (ch === ".") continue;
-      const down = ch === "D", strings = down ? shape : shape.slice(-4).reverse();
+      const down = ch === "D";
+      // strings that would rub (semitone / tritone) against the sung note are left out of this stroke
+      const mel = melodyAt(c, b);
+      const ok = (p: number) => !mel.some((m) => [1, 6, 11].includes(pcOf(p - m)));
+      const strings = (down ? shape : shape.slice(-4).reverse()).filter(ok);
       const spread = (down ? 0.012 : 0.008) / spb; // stroke speed (s → beats)
       const len = Math.max(0.2, Math.min(s.end, b + 0.5 * (pat.slice(Math.round((b % 4) * 2) % 8 + 1).search(/[DU]/) + 1 || 2)) - b);
       strings.forEach((p, k) => out.push({ pitch: p, start: b + k * spread, dur: len - k * spread, vel: velFor(s.sec, (down ? 88 : 66) - k * 2 + (Math.abs(b - Math.round(b)) < 1e-6 ? 6 : 0)) }));

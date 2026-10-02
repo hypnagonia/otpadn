@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Otpadn — free browser DAW with AI stem splitting, audio to MIDI and part generation</title>
+    <meta name="description" content="Otpadn is a free digital audio workstation that runs in your browser. Split songs into stems with AI, convert audio to MIDI, write chord-aware harmonies, generate bass and guitar parts, and mix with automation and pro plug-ins. Nothing is uploaded." />
+    <link rel="canonical" href="https://daw.jenyadoesapps.com/about" />
+    <meta name="theme-color" content="#1f2023" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Otpadn" />
+    <meta property="og:title" content="About Otpadn — a free DAW in your browser" />
+    <meta property="og:description" content="AI stems, audio to MIDI, harmonies, generated parts, automation and mixing — in the browser, nothing uploaded." />
+    <meta property="og:url" content="https://daw.jenyadoesapps.com/about" />
+    <meta property="og:image" content="https://daw.jenyadoesapps.com/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://daw.jenyadoesapps.com/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is Otpadn free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Otpadn is free to use in the browser, with no account and no install." } },
+          { "@type": "Question", "name": "Is my audio uploaded anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Stem splitting, audio to MIDI, dereverb and mixing all run on your own computer, in the browser. Your session is saved in your browser and can be saved to disk as a project file." } },
+          { "@type": "Question", "name": "How do I remove vocals or split a song into stems?", "acceptedAnswer": { "@type": "Answer", "text": "Drop the song into Otpadn and press stems. An AI model (HTDemucs) separates drums, bass, vocals, guitar, piano and other onto their own tracks; mute the vocal track for an instrumental." } },
+          { "@type": "Question", "name": "Can it convert audio to MIDI?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Any audio track or stem can be transcribed to MIDI (bass, guitar, keys, vocals, drums) and edited in the piano roll or as tablature." } },
+          { "@type": "Question", "name": "Can it write harmonies or generate parts?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The harmony writer adds chord-aware, singable harmonies to a vocal or lead line, and the part generator writes bass guitar, pad, arpeggio, acoustic strum and double-tracked metal riff tracks that follow the song's chords and kick drum." } },
+          { "@type": "Question", "name": "Which browsers are supported?", "acceptedAnswer": { "@type": "Answer", "text": "Recent Chrome, Edge and Safari work best (the AI features use WebGPU). Firefox runs the DAW; AI stem splitting falls back to the CPU." } }
+        ]
+      }
+    </script>
+    <style>
+      :root { --bg: #1f2023; --panel: #2a2b2f; --line: #4a4d54; --text: #ececec; --body: #c9cbcf; --muted: #9a9da3; --accent: #4a9eff; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--body); font: 15px/1.65 "Courier New", Courier, monospace; }
+      main { max-width: 820px; margin: 0 auto; padding: 56px 20px 80px; }
+      h1 { color: var(--text); font-size: 26px; line-height: 1.3; margin: 0 0 12px; }
+      h2 { color: var(--text); font-size: 18px; margin: 40px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+      h3 { color: var(--text); font-size: 15px; margin: 22px 0 4px; }
+      a { color: var(--accent); }
+      .cta { display: inline-block; margin: 18px 0 8px; padding: 10px 18px; background: var(--accent); color: #fff; text-decoration: none; font-weight: bold; }
+      .muted { color: var(--muted); }
+      img { width: 100%; height: auto; border: 1px solid var(--line); margin: 24px 0 8px; display: block; }
+      ul { padding-left: 20px; }
+      footer { margin-top: 56px; color: var(--muted); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Otpadn — a free DAW that runs in your browser</h1>
+      <p>Otpadn takes a song from idea to mix without installing anything: split it into stems, turn parts into MIDI, write harmonies, generate new parts and mix it with automation and pro plug-ins. Everything runs on your own computer — your audio is never uploaded.</p>
+      <a class="cta" href="/">Open the DAW</a>
+      <img src="/og.png" alt="Otpadn arrangement view with drums, bass, guitar, keys, pad and vocal tracks above a mixer" width="1200" height="630" loading="lazy" />
+
+      <h2>From a finished song to editable parts</h2>
+      <h3>AI stem splitter and vocal remover</h3>
+      <p>Split any song into drums, bass, vocals, guitar, piano and other with HTDemucs running on your GPU, or use the fast DSP split. Mute the vocals for a karaoke or practice track, or solo the bass to learn it.</p>
+      <h3>Audio to MIDI</h3>
+      <p>Transcribe vocals, bass, guitar, keys and drums into MIDI and edit them in the piano roll or as guitar tablature.</p>
+      <h3>Dereverb and denoise</h3>
+      <p>Clean up a recording or a stem in one pass with a neural dereverb / denoise model.</p>
+
+      <h2>Write and arrange</h2>
+      <h3>Chord-aware harmony writer</h3>
+      <p>Add harmonies to a vocal or lead line: singable, in key, following the song's chords — 3rds, 6ths, stacks above and below.</p>
+      <h3>Part generator</h3>
+      <p>Generate a bass guitar line locked to the kick drum, voice-led pads, arpeggios, acoustic strums or double-tracked metal riffs in a drop tuning — all following the song's chords and sections. Bass lines get natural slides into notes and finger falls before rests.</p>
+      <h3>Drum and part producers, auto-arrange</h3>
+      <p>Clean up and rework drum and instrument MIDI, and build a section-aware arrangement automatically.</p>
+
+      <h2>Mix like a record</h2>
+      <ul>
+        <li>A real multitrack acoustic drum kit with separate kick, snare, tom, hi-hat, ride, overhead and room channels, sample layers and a modern metal mix.</li>
+        <li>Inserts, sends, buses, sidechain compression, automation with latch write, clip fades and crossfades, track freeze.</li>
+        <li>Compressor, multiband, delay, plate reverb, saturator, limiter, match EQ, transient designer, amp sim, and ports of the Airwindows ButterComp2, Density2, Galactic and ClipOnly2.</li>
+        <li>Count-in recording, metronome, WAV and stem bounce, MIDI export, save and open project files.</li>
+      </ul>
+
+      <h2>FAQ</h2>
+      <h3>Is it free?</h3>
+      <p>Yes — no account, no install.</p>
+      <h3>Is my audio uploaded?</h3>
+      <p>No. All processing happens in your browser; sessions are saved locally and can be saved to disk as project files.</p>
+      <h3>Which browsers work?</h3>
+      <p>Recent Chrome, Edge and Safari work best (AI features use WebGPU). Firefox runs the DAW; AI stem splitting falls back to the CPU.</p>
+
+      <a class="cta" href="/">Open the DAW</a>
+      <footer>Otpadn is made by <a href="https://jenyadoesapps.com/">jenyadoesapps</a>. Audio-to-MIDI model: MuScriptor (Kyutai &amp; Mirelo, CC BY-NC 4.0). Stem separation: HTDemucs (MIT). Drum kit: CrocellKit by DrumGizmo (CC BY 4.0). Airwindows plug-in ports: MIT © Chris Johnson.</footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "Otpadn — browser DAW",
+  "short_name": "Otpadn",
+  "description": "A free DAW in your browser: AI stems, audio to MIDI, harmonies, generated parts and mixing.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2023",
+  "theme_color": "#1f2023",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

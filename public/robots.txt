@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /models/
+Disallow: /kits/
+Disallow: /instruments/
+
+Sitemap: https://daw.jenyadoesapps.com/sitemap.xml

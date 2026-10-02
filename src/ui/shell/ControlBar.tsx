@@ -86,6 +86,7 @@ export default function ControlBar() {
               <button onClick={() => { setMenu(null); runTask(() => exportStems()); }} disabled={!p.tracks.length || busy}>bounce stems (one wav per track)…</button>
               <button onClick={() => { setMenu(null); runTask(exportMidi); }} disabled={!p.tracks.some((t) => t.kind === "midi") || busy}>export midi…</button>
               <div className="menu-sep" />
+              <button onClick={() => { setMenu(null); window.open("/about", "_blank", "noopener"); }}>about otpadn ↗</button>
               <button onClick={() => { setMenu(null); void confirmDialog({ title: "credits & licences", body: "audio → midi model: MuScriptor by Kyutai & Mirelo — weights licensed CC BY-NC 4.0 (non-commercial use only). stem separation: HTDemucs (MIT). airwindows ButterComp2 / Density2 / Galactic / ClipOnly2 ports: MIT © Chris Johnson. acoustic drum samples: Virtuosity Drums (CC0). everything else: Otpadn's own code.", ok: "close" }); }}>credits &amp; licences…</button>
               <div className="menu-title" style={{ borderTop: "1px solid var(--line-2)", borderBottom: 0, marginTop: 2 }}>autosaved in this browser · ⌘S saves a .otpadn file with all audio</div>
             </div>

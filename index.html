@@ -3,14 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Otpadn</title>
-    <meta name="description" content="Otpadn — a browser DAW: AI stem split, audio to MIDI, auto-arrange and mix." />
-    <meta name="theme-color" content="#0f0f0f" />
+    <title>Otpadn — free online DAW: AI stem splitter, audio to MIDI, mixing in your browser</title>
+    <meta name="description" content="Otpadn is a free browser DAW. Split any song into 6 AI stems, convert audio to MIDI, write chord-aware harmonies, generate bass, guitar and pad parts, record, automate and mix with pro plug-ins — no install, your audio never leaves your computer." />
+    <meta name="keywords" content="online DAW, browser DAW, free DAW, AI stem splitter, vocal remover, audio to MIDI, music production online, mixing, metal drums, multitrack drum kit, harmony generator" />
+    <link rel="canonical" href="https://daw.jenyadoesapps.com/" />
+    <meta name="theme-color" content="#1f2023" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Otpadn" />
+    <meta property="og:title" content="Otpadn — a free DAW in your browser" />
+    <meta property="og:description" content="AI stem splitting, audio to MIDI, chord-aware harmonies, generated parts, automation and pro mixing — all in the browser, nothing uploaded." />
+    <meta property="og:url" content="https://daw.jenyadoesapps.com/" />
+    <meta property="og:image" content="https://daw.jenyadoesapps.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Otpadn arrangement view with drums, bass, guitar, keys, pad and vocal tracks above a mixer" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Otpadn — a free DAW in your browser" />
+    <meta name="twitter:description" content="Split songs into stems, audio → MIDI, harmonies, generated parts, automation and mixing. No install." />
+    <meta name="twitter:image" content="https://daw.jenyadoesapps.com/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Otpadn",
+        "url": "https://daw.jenyadoesapps.com/",
+        "image": "https://daw.jenyadoesapps.com/og.png",
+        "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "Digital audio workstation",
+        "operatingSystem": "Any (modern browser: Chrome, Edge, Safari, Firefox)",
+        "browserRequirements": "Requires JavaScript, Web Audio and WebAssembly; WebGPU for AI features",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "A free browser DAW: AI stem separation (6 stems), audio to MIDI, dereverb and denoise, chord-aware harmony writer, generated bass, guitar, pad and metal riff parts, multitrack drum kit, automation, clip fades, freeze, Airwindows plug-ins, project files.",
+        "featureList": ["AI stem splitter (drums, bass, vocals, guitar, piano, other)", "Audio to MIDI transcription", "Dereverb and denoise", "Chord-aware vocal harmony writer", "Bass, guitar, pad and metal riff generator", "Multitrack acoustic drum kit", "Automation with latch write", "Clip fades and crossfades", "Track freeze", "Compressor, multiband, delay, reverb, saturator, limiter, match EQ, transient designer", "Recording with count-in", "Save and open project files"],
+        "creator": { "@type": "Person", "name": "Jenya", "url": "https://jenyadoesapps.com/" }
+      }
+    </script>
+    <style>
+      body { margin: 0; background: #1f2023; color: #c9cbcf; font: 14px/1.6 "Courier New", Courier, monospace; }
+      .seo { max-width: 760px; margin: 0 auto; padding: 48px 20px; }
+      .seo h1 { color: #ececec; font-size: 22px; } .seo h2 { color: #ececec; font-size: 16px; margin-top: 28px; }
+      .seo a { color: #4a9eff; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Crawlable description; replaced by the app as soon as it starts. -->
+      <main class="seo">
+        <h1>Otpadn — a free DAW in your browser</h1>
+        <p>Drop a song, split it into stems with AI, turn any part into MIDI, write harmonies, generate new parts and mix it like a record — without installing anything. Your audio is processed on your own computer and never uploaded.</p>
+        <h2>What you can do</h2>
+        <ul>
+          <li><strong>AI stem splitter</strong> — drums, bass, vocals, guitar, piano and other (HTDemucs, on your GPU), plus a fast DSP split.</li>
+          <li><strong>Audio to MIDI</strong> — transcribe vocals, bass, guitar, keys and drums into editable MIDI.</li>
+          <li><strong>Harmony writer</strong> — chord-aware, singable 3rds, 6ths and stacks for vocal and lead lines.</li>
+          <li><strong>Part generator</strong> — bass guitar, pads, arpeggios, acoustic strums and double-tracked metal riffs that follow the song's chords and kick drum.</li>
+          <li><strong>Multitrack drum kit</strong> — a real acoustic kit with separate mic channels, sample layers and a modern metal mix.</li>
+          <li><strong>Pro mixing</strong> — inserts, sends, sidechain, automation, clip fades, freeze, Airwindows plug-ins, match EQ, transient designer.</li>
+          <li><strong>Record, arrange and export</strong> — count-in recording, piano roll and tablature, auto-arrange, WAV and MIDI export, project files.</li>
+        </ul>
+        <p><a href="/about">More about Otpadn</a></p>
+        <noscript><p>Otpadn needs JavaScript to run.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
