@@ -424,7 +424,7 @@ function TracksArea() {
             <span className="global-label">ruler</span>
             <span className="global-label">markers</span>
           </div>
-          <div className="headers-list" onContextMenu={(e) => { e.preventDefault(); const t = store.project.tracks[Math.floor((e.clientY - e.currentTarget.getBoundingClientRect().top + (scrollRef.current?.scrollTop ?? 0)) / store.ui.trackHeight)]; if (t) store.setUi({ selectedTrackId: t.id, contextMenu: { x: e.clientX, y: e.clientY, trackId: t.id, clipId: null, beat: engine.beat } }); }}>
+          <div className="headers-list" onContextMenu={(e) => e.preventDefault() /* each TrackHeader opens its own menu */}>
             <div className="headers-inner" ref={headersRef}>
               {p.tracks.map((t, i) => (
                 <TrackHeader key={t.id} t={t} index={i} height={rowH} selected={s.ui.selectedTrackId === t.id || s.ui.selectedTrackIds.includes(t.id)} />

@@ -8,6 +8,7 @@ import Select from "../common/Select";
 import { useState } from "react";
 import { INSTRUMENTS } from "../../instruments/catalog";
 import { store } from "../../model/store";
+import { engine } from "../../engine/transport";
 import TrackMeter from "./TrackMeter";
 import type { Track } from "../../model/types";
 
@@ -27,6 +28,15 @@ export default function TrackHeader({ t, index, selected, height }: { t: Track; 
       className={`trk ${selected ? "sel" : ""} ${t.kind === "aux" ? "aux" : ""} ${t.frozen ? "frozen" : ""}`}
       style={{ height }}
       onMouseDown={(e) => selectTrack(t.id, e)}
+      onContextMenu={(e) => {
+        // The header knows its own track: no guessing from the mouse position (that picked the
+        // neighbouring row — right-click on a stem converted the full mix).
+        e.preventDefault();
+        e.stopPropagation();
+        if (!store.ui.selectedTrackIds.includes(t.id)) store.setUi({ selectedTrackId: t.id, selectedTrackIds: [t.id] });
+        else store.setUi({ selectedTrackId: t.id });
+        store.setUi({ contextMenu: { x: e.clientX, y: e.clientY, trackId: t.id, clipId: null, beat: engine.beat } });
+      }}
       onDoubleClick={() => t.kind === "midi" && store.setUi({ showLibrary: true })}
     >
       <div className="num">{index + 1}</div>
