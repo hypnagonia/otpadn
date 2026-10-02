@@ -70,13 +70,47 @@ function drift(note: number, time: number, u: number) {
   return (h >>> 0) / 4294967296;
 }
 
+interface Voice {
+  note: number;
+  start: number;
+  end: number; // when the release tail is over
+  stop: (t: number) => void;
+}
+
+/**
+ * Polyphony per instrument, like a hardware synth: beyond it the oldest voice is stolen (10 ms
+ * fade). Transcribed parts stack dozens of overlapping notes, and an unlimited supersaw pad
+ * overloaded the audio thread (playback went silent, bounces ran slower than realtime).
+ */
+const MAX_VOICES = 16;
+const MAX_PAD_VOICES = 12;
+
 export class Synth implements Playable {
   ready = Promise.resolve();
-  private voices = new Set<{ stop: (t: number) => void }>();
-  constructor(private ctx: BaseAudioContext, private dest: AudioNode, private p: SynthPreset) {}
+  private voices = new Set<Voice>();
+  private maxVoices: number;
+  constructor(private ctx: BaseAudioContext, private dest: AudioNode, private p: SynthPreset) {
+    this.maxVoices = p.a >= 0.3 ? MAX_PAD_VOICES : MAX_VOICES;
+  }
+
+  /** Make room for a note at `time`: retrigger the same pitch, then steal the oldest beyond the cap. */
+  private allocate(note: number, time: number) {
+    const live = [...this.voices].filter((v) => v.end > time && v.start <= time + 1e-6);
+    for (const v of live)
+      if (v.note === note) {
+        v.stop(time);
+        v.end = time + 0.02;
+      }
+    const sounding = live.filter((v) => v.end > time + 0.02).sort((a, b) => a.start - b.start);
+    for (let i = 0; i <= sounding.length - this.maxVoices; i++) {
+      sounding[i].stop(time);
+      sounding[i].end = time + 0.02;
+    }
+  }
 
   start({ note, time, duration, velocity }: { note: number; time: number; duration: number; velocity: number }) {
     const { ctx, p } = this;
+    this.allocate(note, time);
     const freq = 440 * Math.pow(2, (note - 69) / 12);
     const vel = velocity / 127;
     const out = ctx.createGain();
@@ -86,12 +120,16 @@ export class Synth implements Playable {
     // Filter (1 or 2 stages) → optional drive → amp
     const f1 = ctx.createBiquadFilter();
     f1.type = "lowpass";
+    // Filter sweeps are slow (envelopes, LFO): coefficients once per 128-sample block instead of
+    // per sample — the biggest CPU cost of a voice otherwise.
+    f1.frequency.automationRate = "k-rate";
     f1.Q.value = p.slope === 24 ? 0.54 : p.q;
     let tail: AudioNode = f1;
     const filters = [f1];
     if (p.slope === 24) {
       const f2 = ctx.createBiquadFilter();
       f2.type = "lowpass";
+      f2.frequency.automationRate = "k-rate";
       f2.Q.value = p.q;
       f1.connect(f2);
       filters.push(f2);
@@ -148,7 +186,10 @@ export class Synth implements Playable {
         osc.type = o.type;
         osc.frequency.value = freq * Math.pow(2, o.octave ?? 0);
         osc.detune.value = o.detune + pos * (o.spread ?? 0) + (drift(note, time, u + 16 * p.oscs.indexOf(o)) - 0.5) * 3; // analog drift (seeded: renders are reproducible)
-        if (vibGain) vibGain.connect(osc.detune);
+        if (vibGain) {
+          osc.detune.automationRate = "k-rate"; // vibrato is a few Hz: block rate keeps the oscillator on its fast path
+          vibGain.connect(osc.detune);
+        }
         osc.connect(side(pos));
         osc.start(time);
         sources.push(osc);
@@ -180,9 +221,13 @@ export class Synth implements Playable {
     }
     const end = time + Math.max(duration, p.a);
     g.setTargetAtTime(0, end, p.r / 3 + 1e-4);
-    const stopAt = end + p.r * 2 + 0.05;
+    // 1.6 × release ≈ 4.8 time constants ≈ −42 dB: inaudible, and voices free up sooner.
+    const stopAt = end + p.r * 1.6 + 0.05;
     sources.forEach((s) => s.stop(stopAt));
-    const voice = {
+    const voice: Voice = {
+      note,
+      start: time,
+      end: stopAt,
       stop: (t: number) => {
         g.cancelScheduledValues(t);
         g.setTargetAtTime(0, t, 0.01);
@@ -199,7 +244,8 @@ export class Synth implements Playable {
       g.cancelScheduledValues(at);
       g.setValueAtTime(g.value, at);
       g.setTargetAtTime(0, at, p.r / 3 + 1e-4);
-      sources.forEach((s) => { try { s.stop(at + p.r * 2 + 0.05); } catch { /* already stopped */ } });
+      sources.forEach((s) => { try { s.stop(at + p.r * 1.6 + 0.05); } catch { /* already stopped */ } });
+      voice.end = Math.min(voice.end, at + p.r * 1.6 + 0.05);
     };
   }
   stopAll() {

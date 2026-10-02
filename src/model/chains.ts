@@ -6,7 +6,8 @@
  */
 import { isMultiKit } from "../instruments/multikit";
 import { defaultParams, type Insert, type PluginType } from "../plugins/defs";
-import { BUS_CH, busInserts, KIT_MIX, PAN } from "./auxTracks";
+import { kitStyle, PAN } from "./auxTracks";
+import { CYMBAL_BLEED, DEFAULT_STYLE, METAL_BASS, MIX_VERSION, type MixStyle } from "./mixStyles";
 import { defaultChannel, uid, type ChannelSettings, type Project, type Track } from "./types";
 import type { KitGroup } from "../instruments/multikit";
 
@@ -34,7 +35,9 @@ export const CHAINS: Record<string, Chain> = {
   },
 };
 
-export const chainFor = (instrument?: string) => (instrument ? CHAINS[instrument] : undefined);
+/** Style variants of a chain (falls back to the base chain). */
+const STYLED: Partial<Record<MixStyle, Record<string, Chain>>> = { metal: { "sampled:bass-fingered": METAL_BASS } };
+export const chainFor = (instrument?: string, style: MixStyle = "rock") => (instrument ? STYLED[style]?.[instrument] ?? CHAINS[instrument] : undefined);
 /** Whether a track's channel is (still) the pro-mix chain of its instrument. */
 export const hasChain = (t: Track) => !!t.instrument && t.chain === t.instrument && (!!chainFor(t.instrument) || isMultiKit(t.instrument));
 
@@ -52,8 +55,12 @@ function setChannel(t: Track, c: Chain, replaceAll: boolean) {
 export function syncChains(p: Project) {
   for (const t of p.tracks) {
     if (t.kind !== "midi" || t.pp || isMultiKit(t.instrument) || t.chain === t.instrument) continue;
-    const c = chainFor(t.instrument), prev = chainFor(t.chain);
-    if (c) setChannel(t, c, false);
+    const c = chainFor(t.instrument, t.mixStyle ?? DEFAULT_STYLE), prev = chainFor(t.chain);
+    if (c) {
+      t.mixStyle ??= DEFAULT_STYLE;
+      t.mixVersion = MIX_VERSION[t.mixStyle];
+      setChannel(t, c, false);
+    }
     else {
       // Leaving a chained instrument: its EQ and inserts don't fit the new sound.
       if (prev) setChannel(t, { ch: { volumeDb: t.ch.volumeDb }, inserts: () => [] }, false);
@@ -62,22 +69,59 @@ export function syncChains(p: Project) {
   }
 }
 
+/** The track a pro mix applies to: kit mics act on their kit (owner) track. */
+function proMixTarget(p: Project, t: Track | undefined): Track | undefined {
+  return t?.kind === "aux" ? p.tracks.find((x) => x.id === t.auxOf) : t;
+}
+/** A bass chain for any bass track (other bass instruments, bass audio stems), by style. */
+const bassChain = (style: MixStyle) => (style === "metal" ? METAL_BASS : CHAINS["sampled:bass-fingered"]);
+
+/** Whether "pro mix" can be applied to this track (or, for a kit mic, to its kit). */
+export function canProMix(p: Project, track: Track): boolean {
+  const t = proMixTarget(p, track);
+  if (!t || t.pp || t.kind === "bus") return false;
+  return isMultiKit(t.instrument) || !!chainFor(t.instrument) || t.role === "bass";
+}
+/** The pro-mix target's current style (✓ in menus), or null when its channel isn't a pro mix. */
+export function proMixStyle(p: Project, track: Track): MixStyle | null {
+  const t = proMixTarget(p, track);
+  return t && t.chain !== undefined && (t.chain === t.instrument || t.chain === "bass") ? t.mixStyle ?? "rock" : null;
+}
+
+/** The pro mix on this track (or its kit) is an older version of its style. */
+export function proMixOutdated(p: Project, track: Track): boolean {
+  const t = proMixTarget(p, track), st = proMixStyle(p, track);
+  return !!t && !!st && (t.mixVersion ?? 0) < MIX_VERSION[st];
+}
+
 /** "Reset to pro mix": the instrument's chain (kit: every mic channel + the drum bus), replacing all inserts. */
-export function applyProMix(p: Project, trackId: string): boolean {
-  const t = p.tracks.find((x) => x.id === trackId);
-  if (!t || t.kind !== "midi") return false;
+export function applyProMix(p: Project, trackId: string, style?: MixStyle): boolean {
+  const t = proMixTarget(p, p.tracks.find((x) => x.id === trackId));
+  if (!t || t.pp || t.kind === "bus") return false;
+  if (t.kind !== "midi" || (!isMultiKit(t.instrument) && !chainFor(t.instrument))) {
+    if (t.role !== "bass") return false;
+    t.mixStyle = style ?? t.mixStyle ?? DEFAULT_STYLE;
+    t.mixVersion = MIX_VERSION[t.mixStyle];
+    setChannel(t, bassChain(t.mixStyle), true);
+    t.chain = t.kind === "midi" ? t.instrument : "bass"; // midi: keeps syncChains from re-applying
+    return true;
+  }
+  t.mixStyle = style ?? t.mixStyle ?? DEFAULT_STYLE;
+  t.mixVersion = MIX_VERSION[t.mixStyle];
   if (isMultiKit(t.instrument)) {
-    setChannel(t, { ch: BUS_CH, inserts: busInserts }, true);
+    const ks = kitStyle(t.mixStyle);
+    t.kitCymbalBleed = CYMBAL_BLEED[t.mixStyle];
+    setChannel(t, { ch: ks.busCh, inserts: ks.bus }, true);
     for (const a of p.tracks) {
       if (a.kind !== "aux" || a.auxOf !== t.id) continue;
       const g = a.auxOut as KitGroup;
       const keep = { mute: a.ch.mute, solo: a.ch.solo, sends: a.ch.sends };
-      a.ch = { ...defaultChannel(), pan: PAN[g] ?? 0, ...KIT_MIX[g].ch, ...keep };
-      a.inserts = KIT_MIX[g].inserts();
+      a.ch = { ...defaultChannel(), pan: PAN[g] ?? 0, ...ks.mics[g].ch, ...keep };
+      a.inserts = ks.mics[g].inserts();
     }
     return true;
   }
-  const c = chainFor(t.instrument);
+  const c = chainFor(t.instrument, t.mixStyle);
   if (!c) return false;
   setChannel(t, c, true);
   return true;

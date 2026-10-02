@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { MATCH_BANDS, MATCH_FC, matchGainAt } from "../../plugins/matchEq";
+import { memo, useEffect, useRef } from "react";
 import { engine } from "../../engine/transport";
 import { useStoreQuiet } from "../../model/store";
 import type { Track } from "../../model/types";
@@ -194,6 +195,94 @@ function SatView({ ins }: { ins: Insert }) {
   return <div className="pl-graph"><canvas ref={ref} /></div>;
 }
 
+/** Airwindows plug-ins: like the originals, no graph — the controls are the interface. */
+function AwView({ ins }: { ins: Insert }) {
+  const def = PLUGINS[ins.type];
+  return (
+    <div className="pl-graph aw-panel">
+      <div className="aw-name">{def.name.replace(" (airwindows)", "")}</div>
+      <div className="aw-by">airwindows · MIT · Chris Johnson</div>
+    </div>
+  );
+}
+
+/** Transient designer: a drum hit's envelope, original (grey) and shaped by attack/sustain (accent). */
+function TransientView({ ins }: { ins: Insert }) {
+  const ref = useCanvas((g, W, H) => {
+    bg(g, W, H);
+    const ka = (ins.params.attack ?? 0) / 100, ks = (ins.params.sustain ?? 0) / 100;
+    const env = (t: number) => (t < 0.004 ? t / 0.004 : Math.exp(-(t - 0.004) / 0.06)); // 0..1
+    const shaped = (t: number) => {
+      const lead = t < 0.025 ? Math.max(0, 1 - t / 0.025) * 12 : 0; // dB the attack detector sees
+      const lag = t > 0.02 ? Math.min(24, (t - 0.02) * 60) : 0; // dB the sustain detector sees
+      return env(t) * Math.pow(10, Math.max(-24, Math.min(18, ka * lead + ks * lag * 0.8)) / 20);
+    };
+    const SPAN = 0.4, y = (v: number) => H - 8 - Math.min(1.4, v) / 1.4 * (H - 16);
+    for (const [fn, col, lw] of [[env, "#5a5d64", 1], [shaped, T.accent, 2]] as const) {
+      g.strokeStyle = col;
+      g.lineWidth = lw;
+      g.beginPath();
+      for (let x = 0; x <= W; x++) {
+        const v = fn((x / W) * SPAN);
+        if (x === 0) g.moveTo(x, y(v)); else g.lineTo(x, y(v));
+      }
+      g.stroke();
+    }
+    g.lineWidth = 1;
+  }, false);
+  return <div className="pl-graph"><canvas ref={ref} /></div>;
+}
+
+/** Match EQ: the fitted curve (× amount) over a log-frequency grid; drag a band to redraw it. */
+function MatchView({ ins, owner }: { ins: Insert; owner: InsertOwner }) {
+  const gains = MATCH_FC.map((_, k) => ins.params[`b${k}`] ?? 0);
+  const amt = (ins.params.amount ?? 100) / 100;
+  const R = 18; // ±dB shown
+  const xOf = (f: number, W: number) => (Math.log10(f / 20) / 3) * W;
+  const ref = useCanvas((g, W, H) => {
+    bg(g, W, H);
+    g.strokeStyle = "#34373d";
+    g.fillStyle = T.faint;
+    g.font = `9px ${T.font}`;
+    for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+      const x = xOf(f, W);
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+      g.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 2, H - 3);
+    }
+    for (const d of [-12, -6, 0, 6, 12]) {
+      const y = H / 2 - (d / R) * (H / 2);
+      g.strokeStyle = d === 0 ? "#4a4d54" : "#2c2e33";
+      g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    }
+    g.strokeStyle = T.accent;
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let x = 0; x <= W; x += 2) {
+      const f = 20 * Math.pow(10, (x / W) * 3);
+      const y = H / 2 - ((matchGainAt(gains, f) * amt) / R) * (H / 2);
+      if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+    g.lineWidth = 1;
+    g.fillStyle = T.accent;
+    MATCH_FC.forEach((f, k) => { const y = H / 2 - ((gains[k] * amt) / R) * (H / 2); g.fillRect(xOf(f, W) - 1.5, y - 1.5, 3, 3); });
+  }, false);
+  const drag = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget, r = el.getBoundingClientRect();
+    const move = (ev: MouseEvent) => {
+      const f = 20 * Math.pow(10, ((ev.clientX - r.left) / r.width) * 3);
+      const k = Math.max(0, Math.min(MATCH_BANDS - 1, Math.round(Math.log2(f / 1000) * 3 + 17)));
+      const db = Math.max(-24, Math.min(24, ((r.height / 2 - (ev.clientY - r.top)) / (r.height / 2)) * R / Math.max(0.01, amt)));
+      setParam(owner, ins.id, `b${k}`, Math.round(db * 10) / 10);
+    };
+    move(e.nativeEvent);
+    const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  return <div className="pl-graph" onMouseDown={drag} data-tip="fitted curve · drag to redraw bands"><canvas ref={ref} /></div>;
+}
+
 /** Limiter: scrolling gain-reduction trace (last ~6 s) with the ceiling. */
 function LimiterView({ ins, owner }: { ins: Insert; owner: InsertOwner }) {
   const hist = useRef<number[]>([]);
@@ -242,14 +331,14 @@ function sidechainCandidates(tracks: Track[], owner: string): Track[] {
 }
 
 /** Plugin editor pane: visual + knobs for the selected insert. */
-export default function PluginEditor() {
+function PluginEditor() {
   const s = useStoreQuiet();
   const sel = s.ui.selectedInsert;
   const ins = sel ? findInsert(sel.owner, sel.id) : undefined;
   if (!sel || !ins) return <div className="hint">click an insert slot on a channel strip (or add one with “+”) to edit it</div>;
   const def = PLUGINS[ins.type];
   const ownerName = sel.owner === "master" ? "master" : s.project.tracks.find((t) => t.id === sel.owner)?.name ?? "";
-  const view = ins.type === "compressor" ? <CompView ins={ins} owner={sel.owner} /> : ins.type === "multiband" ? <MbView ins={ins} owner={sel.owner} /> : ins.type === "delay" ? <DelayView ins={ins} bpm={s.project.bpm} /> : ins.type === "saturator" ? <SatView ins={ins} /> : ins.type === "amp" ? <SatView ins={{ ...ins, params: { ...ins.params, drive: (ins.params.gain ?? 6) * 4.5 } }} /> : ins.type === "limiter" ? <LimiterView ins={ins} owner={sel.owner} /> : <ReverbView ins={ins} />;
+  const view = ins.type === "compressor" ? <CompView ins={ins} owner={sel.owner} /> : ins.type === "multiband" ? <MbView ins={ins} owner={sel.owner} /> : ins.type === "delay" ? <DelayView ins={ins} bpm={s.project.bpm} /> : ins.type === "saturator" ? <SatView ins={ins} /> : ins.type === "amp" ? <SatView ins={{ ...ins, params: { ...ins.params, drive: (ins.params.gain ?? 6) * 4.5 } }} /> : ins.type === "limiter" ? <LimiterView ins={ins} owner={sel.owner} /> : ins.type === "match" ? <MatchView ins={ins} owner={sel.owner} /> : ins.type === "transient" ? <TransientView ins={ins} /> : ins.type === "reverb" ? <ReverbView ins={ins} /> : <AwView ins={ins} />;
   return (
     <div className={`plugin-editor ${ins.on ? "" : "bypassed"}`}>
       <div className="pl-head">
@@ -274,7 +363,7 @@ export default function PluginEditor() {
       <div className="pl-body">
         {view}
         <div className="pl-knobs">
-          {def.params.map((ps) => (
+          {def.params.filter((ps) => !ps.hidden).map((ps) => (
             <Knob key={ps.key} spec={ps} value={ins.params[ps.key] ?? ps.def} onChange={(v) => setParam(sel.owner, ins.id, ps.key, v)} />
           ))}
         </div>
@@ -282,3 +371,6 @@ export default function PluginEditor() {
     </div>
   );
 }
+
+/** memo: a prop-less panel only re-renders through its own store subscription. */
+export default memo(PluginEditor);

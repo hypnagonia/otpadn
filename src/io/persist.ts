@@ -8,7 +8,7 @@ import { dspPool } from "../dsp/pool";
 import { migrateChains } from "../model/chains";
 import { memory } from "../system/memory";
 import { bufferSources, emptyProject, pendingBuffers, store, type BufferSource, type UiState } from "../model/store";
-import { defaultChannel, type Project } from "../model/types";
+import { defaultChannel, type Project, OLD_ROLE_COLORS } from "../model/types";
 import { defaultParams } from "../plugins/defs";
 
 const DB = "stemdaw";
@@ -69,7 +69,7 @@ async function loadPcm(id: string): Promise<AudioBuffer | null> {
   return b;
 }
 
-const VIEW_KEYS = ["pxPerBeat", "trackHeight", "showInspector", "showLibrary", "showEditor", "editorTab", "editorHeight", "snap", "follow", "rollMode", "selectedTrackId", "dpSession", "ppSession"] as const;
+const VIEW_KEYS = ["pxPerBeat", "trackHeight", "showInspector", "showLibrary", "showEditor", "editorTab", "editorHeight", "snap", "follow", "showAutomation", "rollMode", "selectedTrackId", "dpSession", "ppSession"] as const;
 
 interface Session {
   project: Project;
@@ -79,7 +79,7 @@ interface Session {
 }
 
 /** Buffer ids needed to rebuild everything the project references (including stem ancestors). */
-function neededSources(p: Project): Map<string, BufferSource> {
+function neededSources(p: Project, withHistory = true): Map<string, BufferSource> {
   const need = new Map<string, BufferSource>();
   const visit = (id: string) => {
     const src = bufferSources.get(id);
@@ -88,8 +88,10 @@ function neededSources(p: Project): Map<string, BufferSource> {
     if (src.type === "stem" || src.type === "processed") visit(src.parent);
   };
   for (const t of p.tracks) for (const c of t.clips) if (c.kind === "audio") visit(c.bufferId);
+  for (const t of p.tracks) for (const l of Object.values(t.kitLayers ?? {})) if (l) visit(l.bufferId);
+  for (const t of p.tracks) if (t.frozen) visit(t.frozen.bufferId);
   // Audio an undo step can bring back must stay on disk too.
-  for (const id of store.historyBuffers()) visit(id);
+  if (withHistory) for (const id of store.historyBuffers()) visit(id);
   return need;
 }
 
@@ -137,6 +139,11 @@ async function rebuild(sources: Map<string, BufferSource>, decode: (b: ArrayBuff
         const rec = await tx<{ bytes: ArrayBuffer }>("files", "readonly", (s) => s.get(id));
         if (!rec) throw new Error(`missing audio file for ${src.name}`);
         return decode(rec.bytes.slice(0));
+      }
+      if (src.type === "frozen") {
+        const pcm = await loadPcm(id);
+        if (!pcm) throw new Error("a frozen track's audio is missing (it was unfrozen)");
+        return pcm;
       }
       if (src.type === "recorded") {
         const pcm = await loadPcm(id);
@@ -189,6 +196,7 @@ function migrate(p: Project) {
   p.partSessions ??= {};
   for (const t of p.tracks) {
     t.inserts ??= [];
+    t.color = OLD_ROLE_COLORS[t.color] ?? t.color;
     if (t.ch.compOn) {
       t.inserts.push({ id: `ins_m_${t.id}`, type: "compressor", on: true, params: { ...defaultParams("compressor"), threshold: t.ch.compThreshold, ratio: t.ch.compRatio } });
       t.ch.compOn = false;
@@ -212,7 +220,10 @@ export async function startPersistence(decode: (b: ArrayBuffer) => Promise<Audio
       await tx("session", "readwrite", (st) => void st.put(s, "backup"));
       const sources = new Map(s.sources);
       const failed = new Set(await rebuild(sources, decode));
-      if (failed.size) for (const t of s.project.tracks) t.clips = t.clips.filter((c) => c.kind !== "audio" || !failed.has(c.bufferId));
+      if (failed.size) for (const t of s.project.tracks) {
+        t.clips = t.clips.filter((c) => c.kind !== "audio" || !failed.has(c.bufferId));
+        if (t.frozen && failed.has(t.frozen.bufferId)) delete t.frozen;
+      }
       store.setUi(s.view);
       migrate(s.project);
       store.setProject(s.project);
@@ -247,3 +258,102 @@ export async function startPersistence(decode: (b: ArrayBuffer) => Promise<Audio
   window.addEventListener("pagehide", flush);
 }
 
+
+/* ── project files (.otpadn): the project + every audio source it needs, in one file ──────────
+ * Layout: "OTPADN\x01\n" · u32 header length (LE) · header JSON · raw blobs back to back.
+ * Blobs: original files (compressed bytes as imported) and 16-bit PCM (recordings, AI stems,
+ * cleaned audio). Quick-split (DSP) stems aren't stored: they're re-split from their parent on
+ * load, exactly like a session restore. Opening writes the blobs into IndexedDB and runs the
+ * normal restore, so an opened project behaves like the autosaved session.
+ */
+const MAGIC = "OTPADN\u0001\n";
+interface BlobEntry { id: string; store: "files" | "pcm"; size: number; name?: string; sampleRate?: number; lengths?: number[] }
+interface ProjectFileHeader { format: "otpadn"; version: 1; savedAt: number; project: Project; view: Partial<UiState>; sources: [string, BufferSource][]; blobs: BlobEntry[] }
+
+const toPcm16 = (buf: AudioBuffer) => Array.from({ length: buf.numberOfChannels }, (_, c) => {
+  const f = buf.getChannelData(c), i16 = new Int16Array(f.length);
+  for (let i = 0; i < f.length; i++) i16[i] = Math.max(-32768, Math.min(32767, Math.round(f[i] * 32767)));
+  return i16;
+});
+
+export async function exportProjectFile(): Promise<Blob> {
+  const { buffers } = await import("../model/store");
+  const p = store.project;
+  await saveSession().catch(() => undefined); // storage holds the current audio
+  const parts: BlobPart[] = [], blobs: BlobEntry[] = [], sources: [string, BufferSource][] = [];
+  for (const [id, src] of neededSources(p, false)) {
+    if (src.type === "stem" && src.engine !== "ai") { sources.push([id, src]); continue; } // re-split on load
+    if (src.type === "file") {
+      const rec = await tx<{ bytes: ArrayBuffer; name: string }>("files", "readonly", (s) => s.get(id));
+      if (rec) {
+        parts.push(rec.bytes);
+        blobs.push({ id, store: "files", size: rec.bytes.byteLength, name: rec.name });
+        sources.push([id, src]);
+        continue;
+      }
+    } else {
+      const rec = await tx<{ sampleRate: number; channels: Int16Array[] }>("pcm", "readonly", (s) => s.get(id));
+      if (rec) {
+        rec.channels.forEach((c) => parts.push(c as Int16Array<ArrayBuffer>));
+        blobs.push({ id, store: "pcm", size: rec.channels.reduce((a, c) => a + c.byteLength, 0), sampleRate: rec.sampleRate, lengths: rec.channels.map((c) => c.length) });
+        sources.push([id, src]);
+        continue;
+      }
+    }
+    // Not in storage (quota skipped it): write the decoded audio as PCM; it opens as a plain recording.
+    const buf = buffers.get(id);
+    if (!buf) continue;
+    const ch = toPcm16(buf);
+    ch.forEach((c) => parts.push(c as Int16Array<ArrayBuffer>));
+    blobs.push({ id, store: "pcm", size: ch.reduce((a, c) => a + c.byteLength, 0), sampleRate: buf.sampleRate, lengths: ch.map((c) => c.length) });
+    sources.push([id, { type: "recorded" }]);
+  }
+  const view = Object.fromEntries(VIEW_KEYS.map((k) => [k, store.ui[k]])) as Partial<UiState>;
+  const header: ProjectFileHeader = { format: "otpadn", version: 1, savedAt: Date.now(), project: p, view, sources, blobs };
+  const head = new TextEncoder().encode(JSON.stringify(header));
+  const len = new Uint8Array(4);
+  new DataView(len.buffer).setUint32(0, head.length, true);
+  return new Blob([MAGIC, len, head, ...parts], { type: "application/x-otpadn" });
+}
+
+export async function importProjectFile(file: File, decode: (b: ArrayBuffer) => Promise<AudioBuffer>) {
+  const lead = new Uint8Array(await file.slice(0, MAGIC.length + 4).arrayBuffer());
+  if (new TextDecoder().decode(lead.subarray(0, MAGIC.length)) !== MAGIC) throw new Error(`${file.name} is not an Otpadn project file.`);
+  const hlen = new DataView(lead.buffer).getUint32(MAGIC.length, true);
+  const header = JSON.parse(await file.slice(MAGIC.length + 4, MAGIC.length + 4 + hlen).text()) as ProjectFileHeader;
+  if (header.format !== "otpadn") throw new Error(`${file.name} is not an Otpadn project file.`);
+  await memory.ensure(file.size * 3, `opening ${file.name}`); // decoded audio is larger than the file
+  store.busy(`Opening ${file.name}…`, 0);
+  try {
+    // Replace the stored session with the file's audio.
+    await tx("files", "readwrite", (s) => void s.clear());
+    await tx("pcm", "readwrite", (s) => void s.clear());
+    bufferSources.clear();
+    let off = MAGIC.length + 4 + hlen;
+    for (const b of header.blobs) {
+      const bytes = await file.slice(off, off + b.size).arrayBuffer();
+      off += b.size;
+      if (b.store === "files") await tx("files", "readwrite", (s) => void s.put({ bytes, name: b.name ?? "audio" }, b.id));
+      else {
+        let o = 0;
+        const channels = (b.lengths ?? []).map((n) => { const c = new Int16Array(bytes, o, n); o += n * 2; return c; });
+        await tx("pcm", "readwrite", (s) => void s.put({ sampleRate: b.sampleRate ?? 48000, channels }, b.id));
+      }
+    }
+    const failed = new Set(await rebuild(new Map(header.sources), decode));
+    const p = header.project;
+    if (failed.size) for (const t of p.tracks) {
+      t.clips = t.clips.filter((c) => c.kind !== "audio" || !failed.has(c.bufferId));
+      if (t.frozen && failed.has(t.frozen.bufferId)) delete t.frozen;
+    }
+    store.setUi(header.view);
+    migrate(p);
+    store.setProject(p);
+    pendingBuffers.clear();
+    restoreFailedAt = null;
+    await saveSession();
+    store.log(`Opened project "${p.name}" (saved ${new Date(header.savedAt).toLocaleString()})${failed.size ? ` — ${failed.size} audio source(s) couldn't be restored` : ""}`);
+  } finally {
+    store.busy(null);
+  }
+}

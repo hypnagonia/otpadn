@@ -1,5 +1,5 @@
 /** Insert-plugin catalogue: parameters, ranges, defaults. DSP lives in nodes.ts + worklets.ts. */
-export type PluginType = "compressor" | "multiband" | "delay" | "reverb" | "saturator" | "limiter" | "amp";
+export type PluginType = "compressor" | "multiband" | "delay" | "reverb" | "saturator" | "limiter" | "amp" | "match" | "transient" | "buttercomp" | "density" | "galactic" | "cliponly";
 
 export interface Insert {
   id: string;
@@ -20,6 +20,7 @@ export interface ParamSpec {
   unit?: string;
   log?: boolean; // logarithmic knob travel (frequencies, times)
   options?: string[]; // discrete choice (value = index)
+  hidden?: boolean; // edited through the plugin's graph, not a knob
 }
 
 export interface PluginDef {
@@ -63,6 +64,75 @@ export const PLUGINS: Record<PluginType, PluginDef> = {
       { key: "presence", label: "presence", min: 0, max: 10, step: 0.1, def: 5.5 },
       { key: "cab", label: "cab", min: 0, max: 3, step: 1, def: 0, options: ["4×12 V30", "4×12 blend", "4×12 DV-77", "no cab"] },
       { key: "level", label: "level", min: -24, max: 12, step: 0.5, def: 0, unit: "dB" },
+    ],
+  },
+  // ── Airwindows (MIT, © Chris Johnson): ports of loved, lightweight originals ──
+  buttercomp: {
+    type: "buttercomp",
+    name: "ButterComp2 (airwindows)",
+    short: "butter",
+    desc: "airwindows ButterComp2 · smooth program-dependent glue compressor · no threshold: just how much",
+    params: [
+      { key: "compress", label: "compress", min: 0, max: 1, step: 0.01, def: 0.3 },
+      { key: "output", label: "output", min: 0, max: 1, step: 0.01, def: 0.5 },
+      { key: "mix", label: "dry/wet", min: 0, max: 1, step: 0.01, def: 1 },
+    ],
+  },
+  density: {
+    type: "density",
+    name: "Density2 (airwindows)",
+    short: "density",
+    desc: "airwindows Density2 · musical saturation / thickening (below 0.2 = 'starved', lighter) · highpass",
+    params: [
+      { key: "density", label: "density", min: 0, max: 1, step: 0.01, def: 0.35 },
+      { key: "highpass", label: "highpass", min: 0, max: 1, step: 0.01, def: 0 },
+      { key: "output", label: "output", min: 0, max: 1, step: 0.01, def: 1 },
+      { key: "mix", label: "dry/wet", min: 0, max: 1, step: 0.01, def: 1 },
+    ],
+  },
+  galactic: {
+    type: "galactic",
+    name: "Galactic (airwindows)",
+    short: "galactic",
+    desc: "airwindows Galactic · huge lush stereo reverb (feedback delay network, vibrato pre-delay)",
+    params: [
+      { key: "replace", label: "replace", min: 0, max: 1, step: 0.01, def: 0.5 },
+      { key: "brightness", label: "brightness", min: 0, max: 1, step: 0.01, def: 0.5 },
+      { key: "detune", label: "detune", min: 0, max: 1, step: 0.01, def: 0.5 },
+      { key: "bigness", label: "bigness", min: 0, max: 1, step: 0.01, def: 0.7 },
+      { key: "mix", label: "dry/wet", min: 0, max: 1, step: 0.01, def: 1 },
+    ],
+  },
+  cliponly: {
+    type: "cliponly",
+    name: "ClipOnly2 (airwindows)",
+    short: "clip",
+    desc: "airwindows ClipOnly2 · transparent soft clipper at −0.2 dB, only touches overs · drive pushes into it",
+    params: [
+      { key: "drive", label: "drive", min: 0, max: 18, step: 0.5, def: 0, unit: "dB" },
+      { key: "output", label: "output", min: -12, max: 0, step: 0.5, def: 0, unit: "dB" },
+    ],
+  },
+  transient: {
+    type: "transient",
+    name: "transient designer",
+    short: "trans",
+    desc: "attack / sustain shaping, level independent (SPL-style) · stretch or tighten hits",
+    params: [
+      { key: "attack", label: "attack", min: -100, max: 100, step: 1, def: 0, unit: "%" },
+      { key: "sustain", label: "sustain", min: -100, max: 100, step: 1, def: 0, unit: "%" },
+      { key: "output", label: "output", min: -12, max: 12, step: 0.5, def: 0, unit: "dB" },
+    ],
+  },
+  match: {
+    type: "match",
+    name: "match eq",
+    short: "match",
+    desc: "31-band 1/3-octave curve · minimum phase (no pre-ring) · fitted to a reference · amount",
+    params: [
+      { key: "amount", label: "amount", min: 0, max: 150, step: 1, def: 100, unit: "%" },
+      { key: "output", label: "output", min: -12, max: 12, step: 0.5, def: 0, unit: "dB" },
+      ...Array.from({ length: 31 }, (_, k) => ({ key: `b${k}`, label: `band ${k}`, min: -24, max: 24, step: 0.1, def: 0, unit: "dB", hidden: true })),
     ],
   },
   limiter: {
@@ -118,11 +188,12 @@ export const PLUGINS: Record<PluginType, PluginDef> = {
     type: "saturator",
     name: "saturator",
     short: "sat",
-    desc: "soft / tape / tube / hard character · 4× oversampled · tone filter · auto gain · parallel mix",
+    desc: "soft / tape / tube / hard character · 4× oversampled · tone filter · grit low cut (distort only the highs; high settings = exciter) · auto gain · parallel mix",
     params: [
       { key: "mode", label: "character", min: 0, max: 3, step: 1, def: 0, options: ["soft", "tape", "tube", "hard"] },
-      { key: "drive", label: "drive", min: 0, max: 24, step: 0.5, def: 6, unit: "dB" },
+      { key: "drive", label: "drive", min: 0, max: 40, step: 0.5, def: 6, unit: "dB" },
       { key: "tone", label: "tone", min: 1000, max: 20000, step: 10, def: 12000, unit: "Hz", log: true },
+      { key: "lowcut", label: "grit low cut", min: 20, max: 12000, step: 10, def: 20, unit: "Hz", log: true },
       { key: "mix", label: "mix", min: 0, max: 100, step: 1, def: 100, unit: "%" },
       { key: "output", label: "output", min: -12, max: 6, step: 0.5, def: 0, unit: "dB" },
     ],

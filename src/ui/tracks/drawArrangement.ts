@@ -1,3 +1,6 @@
+import { clipFades } from "../../engine/schedule";
+import type { AudioClip } from "../../model/types";
+import { automatableParams, laneValue, toPos } from "../../engine/automation";
 import { isAudible } from "../../engine/schedule";
 import { buffers, PEAK_BLOCK, peaksCache } from "../../model/store";
 import type { Project } from "../../model/types";
@@ -17,7 +20,13 @@ export interface View {
   loopDraft: [number, number] | null;
   /** Range-tool selection (time slice on some tracks). */
   range?: { start: number; end: number; trackIds: string[] } | null;
+  /** Automation view: draw each track's shown lane over its row. */
+  auto?: boolean;
 }
+
+export const AUTO_COLOR = "#f4c95d";
+/** Vertical extent of the automation curve inside a track row (also used for hit testing). */
+export const autoBand = (rowTop: number, rowH: number) => ({ top: rowTop + 5, bottom: rowTop + rowH - 5 });
 
 /** Static layer: lanes, grid, clips (waveforms / note thumbnails), ruler, markers, cycle range. */
 export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
@@ -92,7 +101,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
         const buf = buffers.get(c.bufferId);
         if (pk && buf) {
           const top = cy + nameH, hh = ch - nameH;
-          const mid = top + hh / 2, amp = hh / 2 - 2;
+          const mid = top + hh / 2, amp = Math.min(hh / 2, (hh / 2 - 2) * Math.pow(10, (c.gain ?? 0) / 20)); // clip gain is visible
           g.fillStyle = T.regionInk;
           const secPerPx = spb / ppb;
           for (let px = Math.max(0, Math.floor(x0)); px < Math.min(W, x1); px++) {
@@ -107,6 +116,37 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
             g.fillRect(px, mid - mx * amp, 1, Math.max(1, (mx - mn) * amp));
           }
         }
+        // Fades (incl. automatic crossfades): shade above the equal-power curve, handles at the top.
+        const ac = t.clips.filter((x): x is AudioClip => x.kind === "audio").sort((x, y) => x.start - y.start);
+        const k = ac.indexOf(c);
+        const { fi, fo } = clipFades(c, ac[k - 1], ac[k + 1], spb);
+        const fiPx = (fi / spb) * ppb, foPx = (fo / spb) * ppb;
+        const ftop = cy + nameH, fbot = cy + ch;
+        g.fillStyle = "rgba(10,11,14,0.38)";
+        for (const [startX, len, rising] of [[x0, fiPx, true], [x1 - foPx, foPx, false]] as const) {
+          if (len < 2) continue;
+          g.beginPath();
+          g.moveTo(startX, ftop);
+          for (let i = 0; i <= 24; i++) {
+            const u = i / 24, e = rising ? Math.sin((Math.PI / 2) * u) : Math.cos((Math.PI / 2) * u);
+            g.lineTo(startX + u * len, fbot - e * (fbot - ftop));
+          }
+          g.lineTo(startX + len, ftop);
+          g.closePath();
+          g.fill();
+        }
+        if (x1 - x0 > 24 && ROW_H >= 30) {
+          g.fillStyle = "rgba(255,255,255,0.85)";
+          g.fillRect(x0 + fiPx - 3, ftop, 6, 5);
+          g.fillRect(x1 - foPx - 3, ftop, 6, 5);
+        }
+        if (c.gain && nameH && x1 - x0 > 90) {
+          g.fillStyle = T.regionText;
+          g.font = `10px ${T.font}`;
+          g.textAlign = "right";
+          g.fillText(`${c.gain > 0 ? "+" : ""}${c.gain.toFixed(1)} dB`, x1 - 5, cy + nameH / 2 + 0.5);
+          g.textAlign = "left";
+        }
       } else if (c.notes.length) {
         let lo = 127, hi = 0;
         for (const n of c.notes) {
@@ -115,7 +155,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
         }
         const range = Math.max(12, hi - lo + 1);
         const top = cy + nameH + 3, hh = ch - nameH - 6;
-        const nh = Math.max(1.5, Math.min(5, hh / range));
+        const nh = Math.max(2, Math.min(7, hh / range));
         g.fillStyle = T.regionInk;
         for (const n of c.notes) {
           if (n.start >= c.length) continue;
@@ -135,6 +175,60 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
       }
     }
   });
+
+  // Automation view: the shown lane of each track over its regions.
+  if (v.auto) {
+    const busName = (id: string) => p.tracks.find((x) => x.id === id)?.name ?? "bus";
+    p.tracks.forEach((t, i) => {
+      const y = TOP_H + i * ROW_H - sy;
+      if (y + ROW_H < TOP_H || y > H) return;
+      const param = t.autoView ?? "volume";
+      const info = automatableParams(t, busName).find((x) => x.param === param);
+      if (!info) return;
+      g.fillStyle = "rgba(12,13,16,0.42)"; // regions recede; the curve is what's edited
+      g.fillRect(0, y + 1, W, ROW_H - 2);
+      const { top, bottom } = autoBand(y, ROW_H);
+      const Y = (val: number) => bottom - toPos(info, val) * (bottom - top);
+      const pts = t.automation?.find((l) => l.param === param)?.points ?? [];
+      g.font = `10px ${T.font}`;
+      g.fillStyle = AUTO_COLOR;
+      g.fillText(info.label, 6, y + ROW_H - 7);
+      if (!pts.length) {
+        g.strokeStyle = AUTO_COLOR;
+        g.globalAlpha = 0.55;
+        g.setLineDash([4, 4]);
+        g.beginPath();
+        g.moveTo(0, Math.round(Y(info.def)) + 0.5);
+        g.lineTo(W, Math.round(Y(info.def)) + 0.5);
+        g.stroke();
+        g.setLineDash([]);
+        g.globalAlpha = 1;
+        return;
+      }
+      const path = new Path2D();
+      path.moveTo(0, Y(laneValue(pts, b0)));
+      for (const pt of pts) path.lineTo(X(pt.beat), Y(pt.value));
+      path.lineTo(W, Y(pts[pts.length - 1].value));
+      const fill = new Path2D(path);
+      fill.lineTo(W, bottom);
+      fill.lineTo(0, bottom);
+      fill.closePath();
+      g.fillStyle = "rgba(244,201,93,0.13)";
+      g.fill(fill);
+      g.strokeStyle = AUTO_COLOR;
+      g.lineWidth = 1.6;
+      g.stroke(path);
+      g.lineWidth = 1;
+      for (const pt of pts) {
+        const px = X(pt.beat), py = Y(pt.value);
+        if (px < -6 || px > W + 6) continue;
+        g.fillStyle = "#16171a";
+        g.fillRect(px - 3.5, py - 3.5, 7, 7);
+        g.fillStyle = AUTO_COLOR;
+        g.fillRect(px - 2.5, py - 2.5, 5, 5);
+      }
+    });
+  }
 
   // Range selection: a translucent band on each selected track
   if (v.range) {

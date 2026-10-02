@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { useStoreQuiet } from "../../model/store";
 import ChannelStrip, { MasterStrip } from "./ChannelStrip";
 
 /** Mixer window (X): every track strip left→right, master pinned on the right. */
-export default function Mixer() {
+function Mixer() {
   const s = useStoreQuiet();
   return (
     <div className="mixer">
@@ -18,3 +19,6 @@ export default function Mixer() {
     </div>
   );
 }
+
+/** memo: a prop-less panel only re-renders through its own store subscription. */
+export default memo(Mixer);

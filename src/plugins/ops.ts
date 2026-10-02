@@ -1,4 +1,5 @@
 /** Insert-slot commands. Owner is a track id or "master". */
+import { controlChanged } from "../edit/automation";
 import { store } from "../model/store";
 import { uid } from "../model/types";
 import { defaultParams, type Insert, type PluginType } from "./defs";
@@ -38,10 +39,12 @@ export const toggleInsert = (owner: InsertOwner, id: string) =>
     if (ins) ins.on = !ins.on;
   });
 
-export const setParam = (owner: InsertOwner, id: string, key: string, value: number) =>
+export const setParam = (owner: InsertOwner, id: string, key: string, value: number) => {
   store.update(() => {
     const ins = findInsert(owner, id);
     if (ins) ins.params[key] = value;
   });
+  if (owner !== "master") controlChanged(owner, `ins:${id}:${key}`, value);
+};
 
 export const openInsert = (owner: InsertOwner, id: string) => store.setUi({ selectedInsert: { owner, id }, showEditor: true, editorTab: "plugin" });

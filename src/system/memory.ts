@@ -68,6 +68,10 @@ export const memory = {
   untrack(key: string) {
     ledger.delete(key);
   },
+  /** Bytes currently tracked under a key (0 if none). */
+  byKey(key: string): number {
+    return ledger.get(key)?.bytes ?? 0;
+  },
 
   /** Register something that can be freed under pressure. */
   reclaimer(name: string, priority: number, run: Reclaimer["run"]) {

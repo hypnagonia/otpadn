@@ -1,4 +1,5 @@
 import { engine } from "../../engine/transport";
+import { controlChanged } from "../../edit/automation";
 import { INSTRUMENTS } from "../../instruments/catalog";
 import { store } from "../../model/store";
 import type { ChannelSettings, Track } from "../../model/types";
@@ -19,7 +20,12 @@ function Param({ label, value, min, max, step, reset = 0, fmt, onChange }: { lab
 
 /** One channel: insert/EQ section, sends, pan, fader + meter, M/S/C. Used in Mixer and Inspector. */
 export default function ChannelStrip({ t, selected, wide }: { t: Track; selected?: boolean; wide?: boolean }) {
-  const set = (patch: Partial<ChannelSettings>) => store.update((p) => Object.assign(p.tracks.find((x) => x.id === t.id)!.ch, patch));
+  const set = (patch: Partial<ChannelSettings>) => {
+    store.update((p) => Object.assign(p.tracks.find((x) => x.id === t.id)!.ch, patch));
+    if (patch.volumeDb !== undefined) controlChanged(t.id, "volume", patch.volumeDb);
+    if (patch.pan !== undefined) controlChanged(t.id, "pan", patch.pan);
+    if (patch.reverbSend !== undefined) controlChanged(t.id, "verb", patch.reverbSend);
+  };
   const ch = t.ch;
   const inst = t.kind === "midi" ? INSTRUMENTS.find((i) => i.id === t.instrument)?.name : t.kind === "aux" ? `${t.auxOut} mic → bus` : t.kind === "bus" ? "bus (return)" : "audio";
   return (

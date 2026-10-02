@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { useStore } from "../../model/store";
+import { useStore, useStoreQuiet } from "../../model/store";
 import EditorPane from "../editors/EditorPane";
 import Inspector from "../inspector/Inspector";
 import Library from "../library/Library";
@@ -20,13 +20,13 @@ import StatusBar from "./StatusBar";
  *   status bar
  */
 export default function App() {
-  const s = useStore();
+  const s = useStoreQuiet(); // busy progress / log lines don't re-render the whole window
   const [dropping, setDropping] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const openFile = useCallback(() => fileRef.current?.click(), []);
   useShortcuts(openFile);
 
-  const { busy, showInspector, showLibrary, showEditor } = s.ui;
+  const { showInspector, showLibrary, showEditor } = s.ui;
   const empty = !s.project.tracks.length;
 
   return (
@@ -36,7 +36,7 @@ export default function App() {
       onDragLeave={(e) => e.currentTarget === e.target && setDropping(false)}
       onDrop={(e) => { e.preventDefault(); setDropping(false); const f = e.dataTransfer.files?.[0]; if (f) openFileWith(f); }}
     >
-      <input ref={fileRef} type="file" accept="audio/*" hidden onChange={(e) => e.target.files?.[0] && openFileWith(e.target.files[0])} />
+      <input ref={fileRef} type="file" accept="audio/*,.otpadn" hidden onChange={(e) => e.target.files?.[0] && openFileWith(e.target.files[0])} />
       <ControlBar />
       <div className="workspace" style={{ gridTemplateColumns: `${showLibrary ? "250px " : ""}${showInspector ? "250px " : ""}1fr` }}>
         {showLibrary && <Library />}
@@ -54,12 +54,7 @@ export default function App() {
               </div>
             </div>
           )}
-          {busy && (
-            <div className="busy">
-              <div>{busy.label}</div>
-              <div className="track"><div className="fill" style={{ width: `${Math.round(busy.progress * 100)}%` }} /></div>
-            </div>
-          )}
+          <BusyOverlay />
         </main>
       </div>
       {showEditor && <Splitter />}
@@ -67,6 +62,18 @@ export default function App() {
       <StatusBar />
       <ContextMenu />
       <DialogHost />
+    </div>
+  );
+}
+
+/** Progress overlay: the only part of the window that follows busy updates (~12/s). */
+function BusyOverlay() {
+  const busy = useStore().ui.busy;
+  if (!busy) return null;
+  return (
+    <div className="busy">
+      <div>{busy.label}</div>
+      <div className="track"><div className="fill" style={{ width: `${Math.round(busy.progress * 100)}%` }} /></div>
     </div>
   );
 }

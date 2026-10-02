@@ -45,7 +45,7 @@ export default function InsertSlots({ owner, inserts }: { owner: InsertOwner; in
         >
           <button className="fx-pwr" onClick={() => toggleInsert(owner, ins.id)} data-tip={ins.on ? "bypass" : "enable"}>⏻</button>
           <button className="fx-name" onClick={() => openInsert(owner, ins.id)} data-tip={`${PLUGINS[ins.type].name}${ins.sidechain ? " · sidechain" : ""} · click to edit, right-click to remove`}>
-            {PLUGINS[ins.type].name}
+            {PLUGINS[ins.type].name.length > 11 ? PLUGINS[ins.type].short : PLUGINS[ins.type].name}
             {ins.sidechain && <span className="fx-sc">sc</span>}
           </button>
         </div>

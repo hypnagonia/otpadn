@@ -6,8 +6,11 @@ import { deleteClip, deleteClips, deleteTrack, duplicateClip, duplicateClips, du
 import { engine } from "../../engine/transport";
 import { store, useStore } from "../../model/store";
 import { runTask } from "../common/runTask";
-import { applyProMix, chainFor } from "../../model/chains";
-import { isMultiKit } from "../../instruments/multikit";
+import { canProMix, proMixStyle } from "../../model/chains";
+import { applyProMixCmd } from "../../edit/proMix";
+import { MIX_STYLE_LABEL } from "../../model/mixStyles";
+import { addHarmonyTracks, HARMONY_PRESETS } from "../../assist/harmony";
+import { canFreeze, freezeTrack, unfreezeTrack } from "../../edit/freeze";
 
 /** Right-click menu for regions and tracks (Logic / Ableton conventions). */
 export default function ContextMenu() {
@@ -88,11 +91,33 @@ export default function ContextMenu() {
             </>
           )}
           {track.kind === "midi" && <button onClick={act(() => store.setUi({ showLibrary: true }))}>choose instrument… <kbd>Y</kbd></button>}
-          {track.kind === "midi" && !track.pp && (chainFor(track.instrument) || isMultiKit(track.instrument)) && (
-            <button onClick={act(() => { store.update((pp) => void applyProMix(pp, track.id)); store.log(`Pro mix applied to "${track.name}"${isMultiKit(track.instrument) ? " (all mic channels + drum bus)" : ""}`); })}>
-              reset to pro mix<small>{isMultiKit(track.instrument) ? "mic eq · comp · drum bus" : "eq · comp · saturation"}</small>
-            </button>
+          {canProMix(s.project, track) && (
+            <>
+              {(["metal", "rock"] as const).map((st) => (
+                <button key={st} onClick={act(() => applyProMixCmd(track.id, st))}>
+                  {proMixStyle(s.project, track) === st ? "✓ " : ""}pro mix · {MIX_STYLE_LABEL[st]}<small>{st === "metal" ? "stabbing the drama-style" : "eq · comp · saturation"}</small>
+                </button>
+              ))}
+            </>
           )}
+          {track.kind === "midi" && track.role !== "drums" && !track.dp && (
+            <>
+              <div className="menu-sep" />
+              <div className="menu-title">write harmony<small>chord-aware · C3–C5</small></div>
+              {HARMONY_PRESETS.map((h) => (
+                <button key={h.id} onClick={act(() => addHarmonyTracks(track.id, h.id))}>{h.label}</button>
+              ))}
+              <div className="menu-sep" />
+            </>
+          )}
+          {track.kind === "audio" && (track.role === "vocals" || track.role === "lead") && (
+            <button disabled data-tip="harmonies are written as MIDI: use “to midi” on this track first, then write harmony on the MIDI track">write harmony<small>convert to midi first</small></button>
+          )}
+          {canFreeze(track) && (track.frozen ? (
+            <button onClick={act(() => unfreezeTrack(track.id))}>unfreeze track<small>instrument + plug-ins live again</small></button>
+          ) : (
+            <button disabled={busy} onClick={act(() => runTask(() => freezeTrack(track.id)))}>freeze track<small>render to audio · frees the cpu</small></button>
+          ))}
           <button onClick={act(() => store.setUi({ showEditor: true, editorTab: "eq" }))}>channel eq</button>
           <button onClick={act(() => duplicateTrack(track.id))}>duplicate track</button>
           <button onClick={act(() => deleteTrack(track.id))}>delete track</button>

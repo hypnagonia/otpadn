@@ -126,29 +126,67 @@ class KitStore {
   }
 }
 
-const stores = new WeakMap<BaseAudioContext, Map<string, Promise<KitStore>>>();
+/*
+ * Stores are keyed by kit + sample rate, not by context: AudioBuffers aren't tied to a context,
+ * so live playback and every offline render at the same rate (auto-mix runs N+2 of them) share
+ * one decode. A store no context uses any more is released after a minute, or at once under
+ * memory pressure; the live context's store stays.
+ */
+const stores = new Map<string, Promise<KitStore>>();
+const users = new Map<string, { live: boolean; offline: number; timer?: number }>();
 const live = new Set<KitStore>();
-let ctxSeq = 0;
-const ctxIds = new WeakMap<BaseAudioContext, number>();
-memory.reclaimer("drum kit playback cache", 25, () => [...live].reduce((n, k) => n + k.dropCache(), 0));
+const seen = new WeakMap<BaseAudioContext, Set<string>>();
+
+function dropStore(key: string) {
+  const u = users.get(key);
+  if (!u || u.live || u.offline > 0) return 0;
+  const p = stores.get(key);
+  stores.delete(key);
+  users.delete(key);
+  const freed = memory.byKey(`kit:${key}`);
+  p?.then((ks) => ks.release());
+  return freed;
+}
+memory.reclaimer("drum kit playback cache", 25, async () => {
+  let n = 0;
+  for (const k of [...stores.keys()]) n += dropStore(k);
+  for (const ks of live) n += ks.dropCache();
+  return n;
+});
 
 function kitStore(ctx: BaseAudioContext, id: string): Promise<KitStore> {
-  let m = stores.get(ctx);
-  if (!m) stores.set(ctx, (m = new Map()));
-  let p = m.get(id);
+  const key = `${id}:${ctx.sampleRate}`;
+  // Count each context once per kit.
+  let mine = seen.get(ctx);
+  if (!mine) seen.set(ctx, (mine = new Set()));
+  if (!mine.has(key)) {
+    mine.add(key);
+    let u = users.get(key);
+    if (!u) users.set(key, (u = { live: false, offline: 0 }));
+    clearTimeout(u.timer);
+    if (ctx instanceof AudioContext) u.live = true;
+    else {
+      u.offline++;
+      ctx.addEventListener?.("complete", () => {
+        const cur = users.get(key);
+        if (!cur) return;
+        cur.offline--;
+        if (!cur.live && cur.offline <= 0) cur.timer = window.setTimeout(() => dropStore(key), 60_000);
+      });
+    }
+  }
+  let p = stores.get(key);
   if (!p) {
-    if (!ctxIds.has(ctx)) ctxIds.set(ctx, ++ctxSeq);
     p = (async () => {
       await memory.ensure(220 * 1024 * 1024, "loading the multitrack drum kit");
       const { files } = await fetchKit(id);
-      const ks = new KitStore(ctx, `kit:${id}:${ctxIds.get(ctx)}`, files);
+      const ks = new KitStore(ctx, `kit:${key}`, files);
       await ks.ready;
       if (ctx instanceof AudioContext) live.add(ks);
-      else ctx.addEventListener?.("complete", () => ks.release()); // offline renders free theirs
       return ks;
     })();
-    p.catch(() => m!.delete(id));
-    m.set(id, p);
+    p.catch(() => stores.delete(key));
+    stores.set(key, p);
   }
   return p;
 }
@@ -161,6 +199,12 @@ function hash01(note: number, time: number) {
   return (h >>> 0) / 4294967296;
 }
 
+/** Kit pieces that trigger a sample layer slot (slot name = the mic group it plays into). */
+const LAYER_SLOT: Record<string, string> = { KDrumR: "kick", Snare: "snare" };
+/** Drum pieces (vs cymbals) and the mic groups that are meant for cymbals. */
+const DRUM_PIECES = new Set(["KDrumR", "Snare", "Tom1", "Tom2", "FTom1"]);
+const CYMBAL_MICS = new Set<KitGroup>(["hihat", "ride", "overheads"]);
+
 export class MultiKit implements Playable {
   ready: Promise<void>;
   /** One output bus per mic group; the engine routes them to the kit's aux tracks. */
@@ -168,6 +212,14 @@ export class MultiKit implements Playable {
   private pieces = new Map<number, { name: string; choke?: string; group?: string; layers: { power: number; files: [KitGroup, string][] }[] }>();
   private store: KitStore | null = null;
   private ringing = new Map<string, { src: AudioBufferSourceNode; g: GainNode; t: number }[]>();
+  private layers: Partial<Record<string, { buffer: AudioBuffer; level: number }>> = {};
+  setLayers(layers: Partial<Record<string, { buffer: AudioBuffer; level: number }>>) {
+    this.layers = layers;
+  }
+  private cymbalBleed = 1; // linear gain of drum hits in the cymbal mics
+  setCymbalBleed(db: number) {
+    this.cymbalBleed = db <= -60 ? 0 : Math.pow(10, db / 20);
+  }
   private all = new Set<AudioBufferSourceNode>();
   /** Hits still ringing per piece, for the voice limit. */
   private hits = new Map<string, { t: number; parts: { src: AudioBufferSourceNode; g: GainNode }[] }[]>();
@@ -245,14 +297,18 @@ export class MultiKit implements Playable {
         try { r.src.stop(time + 0.1); } catch { /* not started */ }
       }
     const parts: { src: AudioBufferSourceNode; g: GainNode }[] = [];
+    const drum = DRUM_PIECES.has(piece.name);
     for (const [g, file] of layer.files) {
+      // Cymbal mics hearing the drums: scaled (modern metal keeps them cymbals-only).
+      const bleed = drum && CYMBAL_MICS.has(g as KitGroup) ? this.cymbalBleed : 1;
+      if (bleed === 0) continue;
       const buf = this.store?.get(file);
       if (!buf) continue;
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
       src.playbackRate.value = rate;
       const gain = this.ctx.createGain();
-      gain.gain.value = level;
+      gain.gain.value = level * bleed;
       src.connect(gain).connect(this.outputs[g]);
       src.start(time);
       this.all.add(src);
@@ -262,6 +318,23 @@ export class MultiKit implements Playable {
         arr.push({ src, g: gain, t: time });
         this.ringing.set(piece.group, arr.slice(-14));
       }
+      src.onended = () => {
+        gain.disconnect();
+        this.all.delete(src);
+      };
+    }
+    // Sample layer (reinforcement): one-shot into the same mic group, following the hit's velocity.
+    const slot = LAYER_SLOT[piece.name], lay = slot && this.layers[slot];
+    const out = slot && this.outputs[slot as KitGroup];
+    if (lay && out) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = lay.buffer;
+      const gain = this.ctx.createGain();
+      gain.gain.value = Math.pow(10, lay.level / 20) * Math.pow(v, 1.3) * (1 + (h3 - 0.5) * 0.1);
+      src.connect(gain).connect(out);
+      src.start(time);
+      this.all.add(src);
+      parts.push({ src, g: gain });
       src.onended = () => {
         gain.disconnect();
         this.all.delete(src);

@@ -1,4 +1,5 @@
 /** Buses (FX returns), sends and sidechains. */
+import { controlChanged } from "./automation";
 import { store } from "../model/store";
 import { defaultChannel, uid, type Send, type Track } from "../model/types";
 import { defaultParams } from "../plugins/defs";
@@ -12,12 +13,12 @@ export function createBus(preset: BusPreset = "reverb", name?: string): Track {
     name: name ?? (preset === "reverb" ? "Reverb bus" : preset === "delay" ? "Delay bus" : "Bus"),
     kind: "bus",
     role: "other",
-    color: preset === "delay" ? "#57b26a" : "#7d8fb3",
+    color: preset === "delay" ? "#7cc68a" : "#8fa3d6",
     clips: [],
     ch: defaultChannel(),
     inserts:
       preset === "reverb"
-        ? [{ id: uid("ins"), type: "reverb", on: true, params: { ...defaultParams("reverb"), mix: 100 } }]
+        ? [{ id: uid("ins"), type: "galactic", on: true, params: { ...defaultParams("galactic"), bigness: 0.5, mix: 1 } }]
         : preset === "delay"
           ? [{ id: uid("ins"), type: "delay", on: true, params: { ...defaultParams("delay"), mix: 100 } }]
           : [],
@@ -40,6 +41,7 @@ export function updateSend(trackId: string, sendId: string, patch: Partial<Send>
     const s = p.tracks.find((x) => x.id === trackId)?.ch.sends?.find((x) => x.id === sendId);
     if (s) Object.assign(s, patch);
   });
+  if (patch.level !== undefined) controlChanged(trackId, `send:${sendId}`, patch.level);
 }
 
 export function removeSend(trackId: string, sendId: string) {

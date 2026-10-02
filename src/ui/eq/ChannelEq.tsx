@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { bandParams, eqResponse, type EqBandId } from "../../engine/eqResponse";
 import { engine } from "../../engine/transport";
 import { store, useStoreQuiet } from "../../model/store";
@@ -172,7 +172,7 @@ export function EqThumb({ t }: { t: Track }) {
 }
 
 /** Full Channel EQ editor for the selected track. */
-export default function ChannelEq() {
+function ChannelEq() {
   const s = useStoreQuiet();
   const track = s.project.tracks.find((t) => t.id === s.ui.selectedTrackId);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -293,3 +293,6 @@ export default function ChannelEq() {
     </div>
   );
 }
+
+/** memo: a prop-less panel only re-renders through its own store subscription. */
+export default memo(ChannelEq);

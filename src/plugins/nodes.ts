@@ -1,4 +1,5 @@
 /** Instantiate insert plugins on any (realtime/offline) audio context. */
+import { MATCH_BANDS, matchImpulse } from "./matchEq";
 import workletUrl from "./worklets.ts?worker&url";
 import { DELAY_DIV_BEATS, type Insert, type PluginType } from "./defs";
 import { createAmp, type AmpParams } from "../instruments/ampsim";
@@ -133,7 +134,11 @@ const SAT_CURVES = [
 ];
 const satCurve = SAT_CURVES[0];
 
-/** Saturator: drive → tanh shaper (4× oversampled) → tone low-pass, auto gain compensation, dry/wet. */
+/**
+ * Saturator: [grit low cut] → drive → tanh shaper (4× oversampled) → tone low-pass, auto gain
+ * compensation, dry/wet. The low cut high-passes only the distorted path before it clips (the
+ * split-bass trick: clean lows from the dry path, distortion adds only growl/fizz above it).
+ */
 function saturator(ctx: BaseAudioContext): PluginInstance {
   const input = ctx.createGain(), output = ctx.createGain();
   const pre = ctx.createGain(), sh = ctx.createWaveShaper(), lp = ctx.createBiquadFilter(), post = ctx.createGain(), wet = ctx.createGain(), dry = ctx.createGain();
@@ -144,8 +149,15 @@ function saturator(ctx: BaseAudioContext): PluginInstance {
   dc.type = "highpass";
   dc.frequency.value = 12;
   dc.Q.value = 0.707;
+  // 24 dB/oct, so low notes don't leak into the clipper and intermodulate into mud
+  const hp1 = ctx.createBiquadFilter(), hp2 = ctx.createBiquadFilter();
+  for (const h of [hp1, hp2]) {
+    h.type = "highpass";
+    h.Q.value = 0.707;
+    h.frequency.value = 10;
+  }
   let mode = 0;
-  input.connect(pre).connect(sh).connect(dc).connect(lp).connect(post).connect(wet).connect(output);
+  input.connect(hp1).connect(hp2).connect(pre).connect(sh).connect(dc).connect(lp).connect(post).connect(wet).connect(output);
   input.connect(dry).connect(output);
   return {
     input,
@@ -161,8 +173,40 @@ function saturator(ctx: BaseAudioContext): PluginInstance {
       pre.gain.value = drive / 3; // the curve itself has ×3 gain at the origin
       post.gain.value = 1 / Math.sqrt(drive); // roughly level-matched so drive ≠ louder
       lp.frequency.value = p.tone;
+      const lc = (p.lowcut ?? 20) > 25 ? p.lowcut : 10; // 20 = off
+      hp1.frequency.value = lc;
+      hp2.frequency.value = lc;
       wet.gain.value = (p.mix / 100) * Math.pow(10, p.output / 20);
       dry.gain.value = (1 - p.mix / 100) * Math.pow(10, p.output / 20);
+    },
+    dispose() {
+      input.disconnect();
+      output.disconnect();
+    },
+  };
+}
+
+/** Match EQ: the 31-band curve as one minimum-phase FIR in a ConvolverNode (rebuilt on change). */
+function matchEq(ctx: BaseAudioContext): PluginInstance {
+  const input = ctx.createGain(), output = ctx.createGain(), conv = ctx.createConvolver();
+  conv.normalize = false;
+  input.connect(conv).connect(output);
+  let sig = "";
+  return {
+    input,
+    output,
+    gr: [],
+    set(p) {
+      const amt = (p.amount ?? 100) / 100;
+      const gains = Array.from({ length: MATCH_BANDS }, (_, k) => (p[`b${k}`] ?? 0) * amt);
+      output.gain.value = Math.pow(10, (p.output ?? 0) / 20);
+      const s = gains.map((g) => g.toFixed(2)).join(",");
+      if (s === sig) return;
+      sig = s;
+      const ir = matchImpulse(ctx.sampleRate, gains);
+      const b = ctx.createBuffer(1, ir.length, ctx.sampleRate);
+      b.copyToChannel(ir as Float32Array<ArrayBuffer>, 0);
+      conv.buffer = b;
     },
     dispose() {
       input.disconnect();
@@ -179,6 +223,12 @@ export function createPlugin(ctx: BaseAudioContext, type: PluginType, params?: R
     case "reverb": return worklet(ctx, "otpadn-plate", 0, 1, params);
     case "delay": return delay(ctx);
     case "saturator": return saturator(ctx);
+    case "match": return matchEq(ctx);
+    case "transient": return worklet(ctx, "otpadn-transient", 1, 1, params);
+    case "buttercomp": return worklet(ctx, "aw-buttercomp2", 0, 1, params);
+    case "density": return worklet(ctx, "aw-density2", 0, 1, params);
+    case "galactic": return worklet(ctx, "aw-galactic", 0, 1, params);
+    case "cliponly": return worklet(ctx, "aw-cliponly2", 0, 1, params);
     case "limiter": return worklet(ctx, "otpadn-limiter", 1, 1, params);
     case "amp": {
       const a = createAmp(ctx, { gain: 6, bass: 5.5, mid: 5, treble: 6, presence: 5.5, cab: 0, level: 0 });
@@ -201,7 +251,12 @@ export class InsertChain {
   private sc = new Map<string, { src: AudioNode; dst: AudioNode }>();
   /** Returns a promise that resolves when the chain is wired (worklets loaded). */
   async apply(inserts: Insert[], bpm: number, sidechainOf?: (trackId: string) => AudioNode | undefined): Promise<void> {
-    const paramsOf = (ins: Insert) => (ins.type === "compressor" ? { ...ins.params, sc: ins.sidechain && sidechainOf?.(ins.sidechain) ? 1 : 0 } : ins.params);
+    const paramsOf = (ins: Insert) => {
+      if (ins.type !== "compressor") return ins.params;
+      const sc = ins.sidechain && sidechainOf?.(ins.sidechain) ? 1 : 0;
+      this.scFlag.set(ins.id, sc);
+      return { ...ins.params, sc };
+    };
     const sig = inserts.map((i) => `${i.id}:${i.type}:${i.on ? 1 : 0}`).join("|");
     if (sig !== this.sig) {
       this.sig = sig;
@@ -246,6 +301,12 @@ export class InsertChain {
       }
     // Async resources (amp cabinet IRs): renders must not start before they're loaded.
     await Promise.all(inserts.filter((i) => i.on).map((i) => this.instances.get(i.id)?.ready ?? Promise.resolve()));
+  }
+  private scFlag = new Map<string, number>();
+  /** Automation: push parameter values to one running plug-in (no rebuild). */
+  setLive(id: string, params: Record<string, number>, bpm: number) {
+    const sc = this.scFlag.get(id);
+    this.instances.get(id)?.set(sc === undefined ? params : { ...params, sc }, bpm);
   }
   dispose() {
     for (const cur of this.sc.values()) {

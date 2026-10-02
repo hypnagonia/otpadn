@@ -1,5 +1,5 @@
 import type { Insert } from "../plugins/defs";
-import { InsertChain } from "../plugins/nodes";
+import { ensureWorklets, InsertChain } from "../plugins/nodes";
 import type { ChannelSettings, Send } from "../model/types";
 
 const dbToGain = (db: number) => Math.pow(10, db / 20);
@@ -17,6 +17,12 @@ export interface Strip {
   /** Wire sends to bus inputs. */
   setSends(sends: Send[] | undefined, busInput: (busId: string) => AudioNode | undefined, audible: boolean): void;
   inserts: InsertChain;
+  /** AudioParams an automation lane drives ("volume" | "pan" | "verb" | "send:<id>"), or [] if none. */
+  autoTargets(param: string): import("./automation").AutoTarget[];
+  /** Params currently driven by automation: apply()/setSends() leave them alone. */
+  setAutomated(params: Set<string>): void;
+  /** Frozen track: input goes straight to the fader (EQ + inserts are baked into the audio). */
+  setFrozen(on: boolean): void;
   dispose(): void;
 }
 
@@ -50,6 +56,8 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
   const chain = new InsertChain(ctx);
   const sends = new Map<string, { gain: GainNode; bus: string; pre: boolean; dest: AudioNode }>();
   const fader = ctx.createGain();
+  const autoVol = ctx.createGain(); // volume automation (after the static fader)
+  let automated = new Set<string>();
   // Stereo pan, constant power: unity at centre, the kept side +3 dB at the extremes (a dual-mono
   // source keeps its loudness wherever it's panned). Web Audio's StereoPannerNode is equal-power
   // for mono input but a +6 dB-summing balance for stereo input — levels jumped with the source.
@@ -72,13 +80,18 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     [high, (ch) => Math.abs(ch.eqHigh) > 0.01],
     [lpf, (ch) => ch.lpf > 0],
   ];
-  let wired = "-";
+  let wired = "-", frozen = false, lastOn: BiquadFilterNode[] = [];
   const wire = (on: BiquadFilterNode[]) => {
-    const sig = on.map((n) => bands.findIndex((b) => b[0] === n)).join(",");
+    lastOn = on;
+    const sig = frozen ? "frozen" : on.map((n) => bands.findIndex((b) => b[0] === n)).join(",");
     if (sig === wired) return;
     wired = sig;
     input.disconnect();
     for (const [n] of bands) n.disconnect();
+    if (frozen) {
+      input.connect(fader);
+      return;
+    }
     let prev: AudioNode = input;
     for (const n of on) {
       prev.connect(n);
@@ -87,11 +100,11 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     prev.connect(chain.input);
   };
   wire([]);
-  chain.output.connect(fader).connect(panSplit);
+  chain.output.connect(fader).connect(autoVol).connect(panSplit);
   pan.connect(out);
   pan.connect(analyser);
   pan.connect(meter);
-  fader.connect(send).connect(reverbIn);
+  autoVol.connect(send).connect(reverbIn); // post-fader taps sit after the volume automation
 
   const set = (p: AudioParam, v: number) => {
     if (ctx instanceof AudioContext) p.setTargetAtTime(v, ctx.currentTime, 0.015);
@@ -130,21 +143,25 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
       set(high.gain, ch.eqHigh);
       set(high.frequency, ch.eqHighFreq);
       set(lpf.frequency, ch.lpf > 0 ? ch.lpf : 22000);
-      set(fader.gain, audible ? dbToGain(ch.volumeDb) : 0);
-      const th = ((Math.max(-1, Math.min(1, ch.pan)) + 1) * Math.PI) / 4;
-      set(panL.gain, Math.SQRT2 * Math.cos(th));
-      set(panR.gain, Math.SQRT2 * Math.sin(th));
-      set(send.gain, ch.reverbSend);
+      // An automated volume rides on autoVol; the static fader then only carries mute.
+      set(fader.gain, audible ? (automated.has("volume") ? 1 : dbToGain(ch.volumeDb)) : 0);
+      if (!automated.has("volume")) set(autoVol.gain, 1);
+      if (!automated.has("pan")) {
+        const th = ((Math.max(-1, Math.min(1, ch.pan)) + 1) * Math.PI) / 4;
+        set(panL.gain, Math.SQRT2 * Math.cos(th));
+        set(panR.gain, Math.SQRT2 * Math.sin(th));
+      }
+      if (!automated.has("verb")) set(send.gain, ch.reverbSend);
     },
     inserts: chain,
     setInserts: (ins, bpm, sc) => chain.apply(ins, bpm, sc),
-    postFader: fader,
+    postFader: autoVol,
     setSends(list, busInput, audible) {
       const want = new Map((list ?? []).map((sd) => [sd.id, sd]));
       for (const [id, s] of sends)
         if (!want.has(id) || want.get(id)!.bus !== s.bus || want.get(id)!.pre !== s.pre || busInput(s.bus) !== s.dest) {
           s.gain.disconnect();
-          (s.pre ? chain.output : fader).disconnect(s.gain);
+          (s.pre ? chain.output : autoVol).disconnect(s.gain);
           sends.delete(id);
         }
       for (const sd of want.values()) {
@@ -153,18 +170,39 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
           const dest = busInput(sd.bus);
           if (!dest) continue;
           const gain = ctx.createGain();
-          (sd.pre ? chain.output : fader).connect(gain);
+          (sd.pre ? chain.output : autoVol).connect(gain);
           gain.connect(dest);
           s = { gain, bus: sd.bus, pre: sd.pre, dest };
           sends.set(sd.id, s);
         }
-        // A muted channel sends nothing, also pre-fader.
-        set(s.gain.gain, audible ? Math.pow(10, sd.level / 20) : 0);
+        // A muted channel sends nothing, also pre-fader. Automated sends are driven by their lane.
+        if (!audible) set(s.gain.gain, 0);
+        else if (!automated.has(`send:${sd.id}`)) set(s.gain.gain, Math.pow(10, sd.level / 20));
       }
+    },
+    autoTargets(param) {
+      const th = (p: number) => ((Math.max(-1, Math.min(1, p)) + 1) * Math.PI) / 4;
+      if (param === "volume") return [{ param: autoVol.gain, map: (v) => dbToGain(v) }];
+      if (param === "pan") return [{ param: panL.gain, map: (p) => Math.SQRT2 * Math.cos(th(p)) }, { param: panR.gain, map: (p) => Math.SQRT2 * Math.sin(th(p)) }];
+      if (param === "verb") return [{ param: send.gain, map: (v) => Math.max(0, v) }];
+      if (param.startsWith("send:")) {
+        const s = sends.get(param.slice(5));
+        return s ? [{ param: s.gain.gain, map: (v) => Math.pow(10, v / 20) }] : [];
+      }
+      return [];
+    },
+    setAutomated(params) {
+      automated = params;
+    },
+    setFrozen(on) {
+      if (on === frozen) return;
+      frozen = on;
+      wire(lastOn);
     },
     dispose() {
       input.disconnect();
       pan.disconnect();
+      autoVol.disconnect();
       send.disconnect();
       fader.disconnect();
       sends.forEach((sd) => sd.gain.disconnect());
@@ -202,9 +240,15 @@ export interface Master {
   reverbIn: AudioNode;
   analyser: AnalyserNode;
   apply(masterDb: number, bypass?: boolean): void;
+  /** Detach from the speakers (the watchdog rebuilds a master whose state went NaN). */
+  dispose(): void;
 }
 
 /** sum → glue comp → makeup → brickwall-ish limiter → soft clip → out */
+/** Galactic settings for the master send reverb (medium hall, slightly dark) + level vs. the old plate. */
+const SEND_VERB = { replace: 0.62, brightness: 0.45, detune: 0.35, bigness: 0.38, mix: 1 };
+const SEND_VERB_TRIM = 1.8; // ≈ +5 dB: same early/mid energy as the plate it replaced (measured)
+
 export function createMaster(ctx: BaseAudioContext): Master {
   const input = ctx.createGain();
   const glue = ctx.createDynamicsCompressor();
@@ -236,7 +280,24 @@ export function createMaster(ctx: BaseAudioContext): Master {
   const verbHp = ctx.createBiquadFilter();
   verbHp.type = "highpass";
   verbHp.frequency.value = 250;
-  verbIn.connect(verbHp).connect(verb).connect(input);
+  // Send reverb: airwindows Galactic (lush FDN) once the worklets are loaded; the generated-noise
+  // convolver only bridges the moments before that (live engine start).
+  const verbOut = ctx.createGain();
+  verbOut.connect(input);
+  verbIn.connect(verbHp).connect(verb).connect(verbOut);
+  const useGalactic = () => {
+    try {
+      const g = new AudioWorkletNode(ctx, "aw-galactic", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { params: SEND_VERB } });
+      verbHp.disconnect();
+      verb.disconnect();
+      verbHp.connect(g).connect(verbOut);
+      verbOut.gain.value = SEND_VERB_TRIM;
+      return true;
+    } catch {
+      return false; // module not loaded yet
+    }
+  };
+  if (!(globalThis as { __otpadnOldVerb?: boolean }).__otpadnOldVerb && !useGalactic()) void ensureWorklets(ctx).then(useGalactic);
 
   const chain = new InsertChain(ctx);
   input.connect(chain.input);
@@ -252,6 +313,12 @@ export function createMaster(ctx: BaseAudioContext): Master {
     inserts: chain,
     reverbIn: verbIn,
     analyser,
+    dispose() {
+      clip.disconnect();
+      bypassPath.disconnect();
+      input.disconnect();
+      verbIn.disconnect();
+    },
     apply(masterDb, bypass = false) {
       makeup.gain.value = dbToGain(masterDb);
       if (bypass === bypassed) return;

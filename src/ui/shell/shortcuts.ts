@@ -1,3 +1,4 @@
+import { isProjectFile, openProjectFile, saveProjectToDisk } from "../../io/projectFile";
 import { useEffect } from "react";
 import { importAudio } from "../../assist/import";
 import { deleteClips, duplicateClips, editRange, moveClips, selectAllClips, selectClips, selectedClips, splitClips, findClip, TOOLS } from "../../edit/ops";
@@ -103,6 +104,10 @@ export function useShortcuts(openFile: () => void) {
           if (mod) openFile();
           else handled = false;
           break;
+        case "KeyS":
+          if (mod) runTask(saveProjectToDisk);
+          else handled = false;
+          break;
         case "KeyB":
           if (mod) runTask(exportWav);
           else handled = false;
@@ -122,7 +127,7 @@ export function useShortcuts(openFile: () => void) {
           break;
         case "KeyA":
           if (mod) selectAllClips();
-          else handled = false;
+          else store.setUi({ showAutomation: !store.ui.showAutomation }); // Logic: A = show automation
           break;
         case "ArrowLeft":
         case "ArrowRight": {
@@ -163,4 +168,4 @@ export function useShortcuts(openFile: () => void) {
 }
 
 /** Import a file, then fit the whole song on screen. */
-export const openFileWith = (f: File) => runTask(() => importAudio(f)).then(() => requestAnimationFrame(zoomToFit));
+export const openFileWith = (f: File) => (isProjectFile(f) ? runTask(() => openProjectFile(f)) : runTask(() => importAudio(f))).then(() => requestAnimationFrame(zoomToFit));

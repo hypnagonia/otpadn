@@ -15,7 +15,9 @@ export type BufferSource =
   /** Result of a one-time processing op (dereverb + denoise); PCM kept in IndexedDB. */
   | { type: "processed"; parent: string; op: "dpdfnet"; mix: number }
   /** Recorded from an input; PCM kept in IndexedDB. */
-  | { type: "recorded" };
+  | { type: "recorded" }
+  /** A frozen track's render; PCM kept in IndexedDB (dropped = the track simply unfreezes). */
+  | { type: "frozen" };
 export const bufferSources = new Map<string, BufferSource>();
 export const peaksCache = new Map<string, Float32Array>(); // interleaved min/max per PEAK_BLOCK samples
 export const PEAK_BLOCK = 256;
@@ -60,6 +62,10 @@ export interface UiState {
   tool: Tool;
   snap: number; // beats, 0 = off
   follow: boolean; // catch playhead
+  /** Automation view (A): each track shows / edits one automation lane over its regions. */
+  showAutomation: boolean;
+  /** Latch write: moving a control during playback records automation. */
+  autoWrite: boolean;
   rollMode: "bricks" | "tab"; // MIDI editor view
   selectedInsert: { owner: string; id: string } | null; // plugin shown in the editor pane
   armedTrackId: string | null; // audio track that records
@@ -90,6 +96,8 @@ class Store {
     tool: "pointer",
     snap: 1,
     follow: true,
+    showAutomation: false,
+    autoWrite: false,
     rollMode: "bricks",
     selectedInsert: null,
     armedTrackId: null,
@@ -125,9 +133,7 @@ class Store {
   private static readonly MAX_HISTORY = 150;
 
   private snap(): Snap {
-    const bufs = new Set<string>();
-    for (const t of this.project.tracks) for (const c of t.clips) if (c.kind === "audio") bufs.add(c.bufferId);
-    return { json: JSON.stringify(this.project), bufs };
+    return { json: JSON.stringify(this.project), bufs: projectBuffers(this.project) };
   }
 
   /** Mutate the project in place, then notify. Records an undo step (merged with edits < 600 ms apart). */
@@ -232,9 +238,19 @@ class Store {
 }
 
 /** Drop decoded audio no clip references any more (e.g. stems from a previous analysis). */
+/** Every decoded buffer a project uses: audio clips + kit sample layers. */
+export function projectBuffers(p: Project): Set<string> {
+  const ids = new Set<string>();
+  for (const t of p.tracks) {
+    for (const c of t.clips) if (c.kind === "audio") ids.add(c.bufferId);
+    for (const l of Object.values(t.kitLayers ?? {})) if (l) ids.add(l.bufferId);
+    if (t.frozen) ids.add(t.frozen.bufferId);
+  }
+  return ids;
+}
+
 function gcBuffers(p: Project, keep: Set<string>) {
-  const used = new Set<string>(keep);
-  for (const t of p.tracks) for (const c of t.clips) if (c.kind === "audio") used.add(c.bufferId);
+  const used = new Set<string>([...keep, ...projectBuffers(p)]);
   for (const id of buffers.keys())
     if (!used.has(id) && !pendingBuffers.has(id)) {
       buffers.delete(id);

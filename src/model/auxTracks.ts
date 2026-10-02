@@ -6,9 +6,10 @@
 import { isMultiKit, KIT_GROUP_LABEL, KIT_GROUPS, type KitGroup } from "../instruments/multikit";
 import { defaultParams, type Insert, type PluginType } from "../plugins/defs";
 import { defaultChannel, uid, type ChannelSettings, type Project, type Track } from "./types";
+import { CYMBAL_BLEED, MIX_VERSION, DEFAULT_STYLE, METAL_BUS_CH, METAL_KIT, metalBusInserts, type MixStyle } from "./mixStyles";
 
 /** Starting pans for the mono mic groups (drummer's perspective); stereo groups are pre-panned. */
-export const PAN: Partial<Record<KitGroup, number>> = { hihat: -0.3, ride: 0.35 };
+export const PAN: Partial<Record<KitGroup, number>> = { hihat: -0.55, ride: 0.55 };
 
 /** Inserts made for a pro-mix chain carry a "chain" id, so re-applying replaces only them. */
 const fx = (type: PluginType, p: Partial<Record<string, number>>): Insert => ({ id: uid("chain"), type, on: true, params: { ...defaultParams(type), ...p } as Record<string, number> });
@@ -55,6 +56,11 @@ export const busInserts = (): Insert[] => [
 /** Drum bus channel: gentle low-mid scoop; fader calibrated so the processed kit keeps the plain kit's loudness. */
 export const BUS_CH: Partial<ChannelSettings> = { volumeDb: -7.3, eqMid: -3.5, eqMidFreq: 230, eqMidQ: 0.7, eqMid2: 2, eqMid2Freq: 4000, eqMid2Q: 0.8, eqHigh: 1.5, eqHighFreq: 10000 };
 
+/** The kit's mic channels + drum bus for a mix style. */
+export function kitStyle(style: MixStyle) {
+  return style === "metal" ? { mics: METAL_KIT, bus: metalBusInserts, busCh: METAL_BUS_CH } : { mics: KIT_MIX, bus: busInserts, busCh: BUS_CH };
+}
+
 export function syncAuxTracks(p: Project): boolean {
   const owners = new Set(p.tracks.filter((t) => t.kind === "midi" && isMultiKit(t.instrument)).map((t) => t.id));
   const aux = p.tracks.filter((t) => t.kind === "aux");
@@ -65,9 +71,13 @@ export function syncAuxTracks(p: Project): boolean {
     out.push(t);
     if (!owners.has(t.id)) continue;
     const fresh = !aux.some((a) => a.auxOf === t.id);
+    const style = kitStyle(t.mixStyle ?? (fresh ? DEFAULT_STYLE : "rock"));
     if (fresh && !(t.inserts ?? []).length) {
-      t.inserts = busInserts();
-      Object.assign(t.ch, BUS_CH);
+      t.mixStyle ??= DEFAULT_STYLE;
+      t.mixVersion = MIX_VERSION[t.mixStyle];
+      t.kitCymbalBleed = CYMBAL_BLEED[t.mixStyle];
+      t.inserts = style.bus();
+      Object.assign(t.ch, style.busCh);
       t.chain = t.instrument;
     }
     for (const g of KIT_GROUPS) {
@@ -80,8 +90,8 @@ export function syncAuxTracks(p: Project): boolean {
           role: "drums",
           color: t.color,
           clips: [],
-          ch: { ...defaultChannel(), pan: PAN[g] ?? 0, ...KIT_MIX[g].ch },
-          inserts: KIT_MIX[g].inserts(),
+          ch: { ...defaultChannel(), pan: PAN[g] ?? 0, ...style.mics[g].ch },
+          inserts: style.mics[g].inserts(),
           auxOf: t.id,
           auxOut: g,
         },

@@ -399,6 +399,313 @@ class Recorder extends AudioWorkletProcessor {
   }
 }
 
+/**
+ * Transient designer (SPL-style, level independent): attack = where a fast envelope leads a slow
+ * one (the first ~20 ms of a hit), sustain = where a long-release envelope leads a short-release
+ * one (the decay). gain(dB) = attack% × lead + sustain% × lag, stereo-linked, smoothed.
+ */
+class Transient extends AudioWorkletProcessor {
+  p = { attack: 0, sustain: 0, output: 0 };
+  fast = 0; slow = 0; susLong = 0; susShort = 0; g = 0; minGr = 0; maxGr = 0; blocks = 0;
+  constructor(o?: Init) {
+    super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
+    this.port.onmessage = (e) => Object.assign(this.p, e.data);
+  }
+  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+    const inp = inputs[0], out = outputs[0];
+    const n = out[0].length;
+    if (!inp.length) {
+      for (const o of out) o.fill(0);
+      return true;
+    }
+    const L = inp[0], R = inp[1] ?? inp[0];
+    const fa = coef(0.3), fr = coef(20), sa = coef(20), sr = coef(20);
+    const la = coef(0.3), lr = coef(250), ha = coef(0.3), hr = coef(25), gs = coef(1);
+    const ka = this.p.attack / 100, ks = this.p.sustain / 100, outG = dbToLin(this.p.output);
+    for (let i = 0; i < n; i++) {
+      const x = Math.max(Math.abs(L[i]), Math.abs(R[i]));
+      this.fast = x > this.fast ? fa * this.fast + (1 - fa) * x : fr * this.fast + (1 - fr) * x;
+      this.slow = x > this.slow ? sa * this.slow + (1 - sa) * x : sr * this.slow + (1 - sr) * x;
+      this.susLong = x > this.susLong ? la * this.susLong + (1 - la) * x : lr * this.susLong + (1 - lr) * x;
+      this.susShort = x > this.susShort ? ha * this.susShort + (1 - ha) * x : hr * this.susShort + (1 - hr) * x;
+      let gt = 0;
+      if (this.susLong > 1e-5) {
+        const lead = Math.min(20, Math.max(0, linToDb(this.fast) - linToDb(this.slow)));
+        const lag = Math.min(24, Math.max(0, linToDb(this.susLong) - linToDb(this.susShort)));
+        gt = Math.max(-24, Math.min(18, ka * lead + ks * lag * 0.8));
+      }
+      this.g = gs * this.g + (1 - gs) * gt;
+      if (this.g < this.minGr) this.minGr = this.g;
+      if (this.g > this.maxGr) this.maxGr = this.g;
+      const gl = dbToLin(this.g) * outG;
+      out[0][i] = L[i] * gl;
+      if (out[1]) out[1][i] = R[i] * gl;
+    }
+    if (++this.blocks >= 12) {
+      this.port.postMessage({ gr: [Math.abs(this.minGr) > this.maxGr ? this.minGr : this.maxGr] });
+      this.blocks = 0;
+      this.minGr = 0;
+      this.maxGr = 0;
+    }
+    return true;
+  }
+}
+
+/* ── Airwindows ports (MIT, © Chris Johnson — github.com/airwindows/airwindows) ──────────────
+ * Line-for-line from the float processReplacing paths; Airwindows' denormal noise and 32-bit
+ * dither are left out (not needed in Web Audio's float pipeline). Parameters are Airwindows'
+ * own 0…1 controls. */
+const awIn = (inputs: Float32Array[][]) => {
+  const i = inputs[0];
+  return i.length ? [i[0], i[1] ?? i[0]] : null;
+};
+
+/** ButterComp2: program-dependent "bi-polar, interleaved" compressor. A compress · B output · C dry/wet. */
+class ButterComp2 extends AudioWorkletProcessor {
+  p = { compress: 0.3, output: 0.5, mix: 1 };
+  s = [0, 1].map(() => ({ cAp: 1, cAn: 1, cBp: 1, cBn: 1, tp: 1, tn: 1, last: 0 }));
+  flip = false;
+  constructor(o?: Init) {
+    super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
+    this.port.onmessage = (e) => Object.assign(this.p, e.data);
+  }
+  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+    const inp = awIn(inputs), out = outputs[0];
+    if (!inp) { for (const o of out) o.fill(0); return true; }
+    const overallscale = sampleRate / 44100, A = this.p.compress;
+    const inputgain = Math.pow(10, (A * 14) / 20), compfactor = 0.012 * (A / 135), output = this.p.output * 2, wet = this.p.mix;
+    const outputgain = (inputgain - 1) / 1.5 + 1;
+    for (let i = 0; i < out[0].length; i++) {
+      for (let c = 0; c < 2; c++) {
+        const st = this.s[c], dry = inp[c][i];
+        let x = dry * inputgain;
+        let divisor = compfactor / (1 + Math.abs(st.last)) / overallscale;
+        const remainder = divisor;
+        divisor = 1 - divisor;
+        let inputpos = x + 1; if (inputpos < 0) inputpos = 0;
+        let outputpos = inputpos / 2; if (outputpos > 1) outputpos = 1;
+        inputpos *= inputpos;
+        st.tp = st.tp * divisor + inputpos * remainder;
+        const calcpos = Math.pow(1 / st.tp, 2);
+        let inputneg = -x + 1; if (inputneg < 0) inputneg = 0;
+        let outputneg = inputneg / 2; if (outputneg > 1) outputneg = 1;
+        inputneg *= inputneg;
+        st.tn = st.tn * divisor + inputneg * remainder;
+        const calcneg = Math.pow(1 / st.tn, 2);
+        if (x > 0) {
+          if (this.flip) st.cAp = st.cAp * divisor + calcpos * remainder;
+          else st.cBp = st.cBp * divisor + calcpos * remainder;
+        } else if (this.flip) st.cAn = st.cAn * divisor + calcneg * remainder;
+        else st.cBn = st.cBn * divisor + calcneg * remainder;
+        const total = this.flip ? st.cAp * outputpos + st.cAn * outputneg : st.cBp * outputpos + st.cBn * outputneg;
+        x = (x * total) / outputgain;
+        if (output !== 1) x *= output;
+        if (wet !== 1) x = x * wet + dry * (1 - wet);
+        st.last = x;
+        if (out[c]) out[c][i] = x;
+      }
+      this.flip = !this.flip;
+    }
+    return true;
+  }
+}
+
+/** Density2: density/drive (negative = "starved"), highpass, output, dry/wet. */
+class Density2 extends AudioWorkletProcessor {
+  p = { density: 0.2, highpass: 0, output: 1, mix: 1 };
+  s = [0, 1].map(() => ({ ataA: 0, ataB: 0, ataC: 0, lastDiff: 0, iirA: 0, iirB: 0, l1: 0, l2: 0, l3: 0 }));
+  constructor(o?: Init) {
+    super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
+    this.port.onmessage = (e) => Object.assign(this.p, e.data);
+  }
+  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+    const inp = awIn(inputs), out = outputs[0];
+    if (!inp) { for (const o of out) o.fill(0); return true; }
+    const overallscale = sampleRate / 44100;
+    let density = this.p.density * 5 - 1;
+    let o = Math.abs(density);
+    while (o > 1) o -= 1;
+    density = density * Math.abs(density);
+    const iirAmount = Math.pow(this.p.highpass, 3) / overallscale, output = this.p.output, wet = this.p.mix;
+    const shape = (v: number) => {
+      let count = density;
+      while (count > 1) {
+        let b = Math.abs(v) * 1.57079633; if (b > 1.57079633) b = 1.57079633;
+        b = Math.sin(b);
+        v = v > 0 ? b : -b;
+        count -= 1;
+      }
+      let b = Math.abs(v) * 1.57079633; if (b > 1.57079633) b = 1.57079633;
+      b = density > 0 ? Math.sin(b) : 1 - Math.cos(b);
+      return v > 0 ? v * (1 - o) + b * o : v * (1 - o) - b * o;
+    };
+    for (let i = 0; i < out[0].length; i++)
+      for (let c = 0; c < 2; c++) {
+        const st = this.s[c], dry = inp[c][i];
+        let x = dry;
+        let half = (x + st.l1 + (-st.l2 + st.l3) * 0.0414213562373095) / 2;
+        const halfDry = half;
+        st.l3 = st.l2; st.l2 = st.l1; st.l1 = x;
+        st.iirB = st.iirB * (1 - iirAmount) + half * iirAmount; half -= st.iirB;
+        half = shape(half);
+        st.ataC = half - halfDry;
+        st.ataA *= 0.915965594177219; st.ataB *= 0.915965594177219;
+        st.ataB += st.ataC; st.ataA -= st.ataC; st.ataC = st.ataB;
+        const halfDiff = st.ataC * 0.915965594177219;
+        st.iirA = st.iirA * (1 - iirAmount) + x * iirAmount; x -= st.iirA;
+        x = shape(x);
+        st.ataC = x - dry;
+        st.ataA *= 0.915965594177219; st.ataB *= 0.915965594177219;
+        st.ataA += st.ataC; st.ataB -= st.ataC; st.ataC = st.ataA;
+        const diff = st.ataC * 0.915965594177219;
+        x = dry + (diff + halfDiff + st.lastDiff) / 1.187;
+        st.lastDiff = diff / 2;
+        x *= output;
+        x = dry * (1 - wet) + x * wet;
+        if (out[c]) out[c][i] = x;
+      }
+    return true;
+  }
+}
+
+/** Galactic: huge lush reverb (3 × 4-line FDN, vibrato pre-delay). A replace · B brightness · C detune · D bigness · E dry/wet. */
+class Galactic extends AudioWorkletProcessor {
+  p = { replace: 0.5, brightness: 0.5, detune: 0.5, bigness: 1, mix: 1 };
+  bufs = [6480, 3660, 1720, 680, 9700, 6000, 2320, 940, 15220, 8460, 4540, 3200].map((n) => [new Float64Array(n), new Float64Array(n)]); // I J K L A B C D E F G H
+  cnt = new Int32Array(12).fill(1);
+  aM = [new Float64Array(3111), new Float64Array(3111)];
+  countM = 1;
+  fb = [new Float64Array(4), new Float64Array(4)];
+  iirA = [0, 0]; iirB = [0, 0];
+  lastRef = [new Float64Array(7), new Float64Array(7)];
+  cycle = 0; vibM = 3; oldfpd = 429496.7295; fpd = 17;
+  constructor(o?: Init) {
+    super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
+    this.port.onmessage = (e) => Object.assign(this.p, e.data);
+  }
+  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+    const out = outputs[0], n = out[0].length;
+    const inp = awIn(inputs);
+    const overallscale = sampleRate / 44100;
+    const cycleEnd = Math.max(1, Math.min(4, Math.floor(overallscale)));
+    if (this.cycle > cycleEnd - 1) this.cycle = cycleEnd - 1;
+    const P = this.p, regen = 0.0625 + (1 - P.replace) * 0.0625, attenuate = (1 - regen / 0.125) * 1.333;
+    const lowpass = Math.pow(1.00001 - (1 - P.brightness), 2) / Math.sqrt(overallscale);
+    const drift = Math.pow(P.detune, 3) * 0.001, size = P.bigness * 1.77 + 0.1, wet = 1 - Math.pow(1 - P.mix, 3);
+    const D = [3407, 1823, 859, 331, 4801, 2909, 1153, 461, 7607, 4217, 2269, 1597].map((d) => Math.floor(d * size));
+    const delayM = 256;
+    const read = (k: number, ch: number) => { const c = this.cnt[k]; return this.bufs[k][ch][c - (c > D[k] ? D[k] + 1 : 0)]; };
+    const adv = (k: number) => { this.cnt[k]++; if (this.cnt[k] < 0 || this.cnt[k] > D[k]) this.cnt[k] = 0; };
+    for (let i = 0; i < n; i++) {
+      const dryL = inp ? inp[0][i] : 0, dryR = inp ? inp[1][i] : 0;
+      this.vibM += this.oldfpd * drift;
+      if (this.vibM > Math.PI * 2) {
+        this.vibM = 0;
+        this.fpd ^= this.fpd << 13; this.fpd ^= this.fpd >>> 17; this.fpd ^= this.fpd << 5; this.fpd >>>= 0;
+        this.oldfpd = 0.4294967295 + this.fpd * 0.0000000000618;
+      }
+      this.aM[0][this.countM] = dryL * attenuate;
+      this.aM[1][this.countM] = dryR * attenuate;
+      this.countM++; if (this.countM < 0 || this.countM > delayM) this.countM = 0;
+      const xs = [0, 0];
+      for (let ch = 0; ch < 2; ch++) {
+        const off = (Math.sin(this.vibM + (ch ? Math.PI / 2 : 0)) + 1) * 127;
+        const w = this.countM + Math.floor(off), fr = off - Math.floor(off), a = this.aM[ch];
+        let v = a[w - (w > delayM ? delayM + 1 : 0)] * (1 - fr) + a[w + 1 - (w + 1 > delayM ? delayM + 1 : 0)] * fr;
+        this.iirA[ch] = this.iirA[ch] * (1 - lowpass) + v * lowpass; v = this.iirA[ch];
+        xs[ch] = v;
+      }
+      this.cycle++;
+      if (this.cycle === cycleEnd) {
+        for (let ch = 0; ch < 2; ch++) {
+          const o = 1 - ch, fbo = this.fb[o]; // cross-fed: L block takes the R feedback
+          for (let k = 0; k < 4; k++) this.bufs[k][ch][this.cnt[k]] = xs[ch] + fbo[k] * regen;
+        }
+        for (let k = 0; k < 4; k++) adv(k);
+        for (let ch = 0; ch < 2; ch++) {
+          const I = read(0, ch), J = read(1, ch), K = read(2, ch), L = read(3, ch);
+          this.bufs[4][ch][this.cnt[4]] = I - (J + K + L);
+          this.bufs[5][ch][this.cnt[5]] = J - (I + K + L);
+          this.bufs[6][ch][this.cnt[6]] = K - (I + J + L);
+          this.bufs[7][ch][this.cnt[7]] = L - (I + J + K);
+        }
+        for (let k = 4; k < 8; k++) adv(k);
+        for (let ch = 0; ch < 2; ch++) {
+          const A = read(4, ch), B = read(5, ch), C = read(6, ch), Dd = read(7, ch);
+          this.bufs[8][ch][this.cnt[8]] = A - (B + C + Dd);
+          this.bufs[9][ch][this.cnt[9]] = B - (A + C + Dd);
+          this.bufs[10][ch][this.cnt[10]] = C - (A + B + Dd);
+          this.bufs[11][ch][this.cnt[11]] = Dd - (A + B + C);
+        }
+        for (let k = 8; k < 12; k++) adv(k);
+        for (let ch = 0; ch < 2; ch++) {
+          const E = read(8, ch), F = read(9, ch), G = read(10, ch), H = read(11, ch);
+          const f = this.fb[ch];
+          f[0] = E - (F + G + H); f[1] = F - (E + G + H); f[2] = G - (E + F + H); f[3] = H - (E + F + G);
+          const v = (E + F + G + H) / 8, r = this.lastRef[ch];
+          if (cycleEnd === 4) { r[0] = r[4]; r[2] = (r[0] + v) / 2; r[1] = (r[0] + r[2]) / 2; r[3] = (r[2] + v) / 2; r[4] = v; }
+          else if (cycleEnd === 3) { r[0] = r[3]; r[2] = (r[0] + r[0] + v) / 3; r[1] = (r[0] + v + v) / 3; r[3] = v; }
+          else if (cycleEnd === 2) { r[0] = r[2]; r[1] = (r[0] + v) / 2; r[2] = v; }
+          else r[0] = v;
+        }
+        this.cycle = 0;
+      }
+      for (let ch = 0; ch < 2; ch++) {
+        let v = this.lastRef[ch][this.cycle];
+        this.iirB[ch] = this.iirB[ch] * (1 - lowpass) + v * lowpass; v = this.iirB[ch];
+        const dry = ch ? dryR : dryL;
+        if (wet < 1) v = v * wet + dry * (1 - wet);
+        if (out[ch]) out[ch][i] = v;
+      }
+    }
+    return true;
+  }
+}
+
+/** ClipOnly2: transparent soft clipper at −0.2 dB (only acts on overs). Input drive + output added. */
+class ClipOnly2 extends AudioWorkletProcessor {
+  p = { drive: 0, output: 0 };
+  s = [0, 1].map(() => ({ last: 0, pos: false, neg: false, im: new Float64Array(17) }));
+  constructor(o?: Init) {
+    super();
+    if (o?.processorOptions?.params) Object.assign(this.p, o.processorOptions.params);
+    this.port.onmessage = (e) => Object.assign(this.p, e.data);
+  }
+  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+    const inp = awIn(inputs), out = outputs[0];
+    if (!inp) { for (const o of out) o.fill(0); return true; }
+    const spacing = Math.max(1, Math.min(16, Math.floor(sampleRate / 44100)));
+    const gin = dbToLin(this.p.drive), gout = dbToLin(this.p.output);
+    for (let i = 0; i < out[0].length; i++)
+      for (let c = 0; c < 2; c++) {
+        const st = this.s[c];
+        let x = inp[c][i] * gin;
+        if (x > 4) x = 4; if (x < -4) x = -4;
+        if (st.pos) st.last = x < st.last ? 0.7058208 + x * 0.2609148 : 0.2491717 + st.last * 0.7390851;
+        st.pos = false;
+        if (x > 0.9549925859) { st.pos = true; x = 0.7058208 + st.last * 0.2609148; }
+        if (st.neg) st.last = x > st.last ? -0.7058208 + x * 0.2609148 : -0.2491717 + st.last * 0.7390851;
+        st.neg = false;
+        if (x < -0.9549925859) { st.neg = true; x = -0.7058208 + st.last * 0.2609148; }
+        st.im[spacing] = x;
+        x = st.last;
+        for (let k = spacing; k > 0; k--) st.im[k - 1] = st.im[k];
+        st.last = st.im[0];
+        if (out[c]) out[c][i] = x * gout;
+      }
+    return true;
+  }
+}
+
+registerProcessor("aw-buttercomp2", ButterComp2);
+registerProcessor("aw-density2", Density2);
+registerProcessor("aw-galactic", Galactic);
+registerProcessor("aw-cliponly2", ClipOnly2);
+registerProcessor("otpadn-transient", Transient);
 registerProcessor("otpadn-comp", Comp);
 registerProcessor("otpadn-recorder", Recorder);
 registerProcessor("otpadn-limiter", Limiter);

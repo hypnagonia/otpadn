@@ -1,3 +1,5 @@
+import { resetLatch } from "../../edit/automation";
+import { saveProjectToDisk } from "../../io/projectFile";
 import { useEffect, useRef, useState } from "react";
 import { autoArrange, STYLE_INFO, type ArrangeStyle } from "../../assist/arrange/arrange";
 import { convertToMidi } from "../../assist/convert";
@@ -70,20 +72,21 @@ export default function ControlBar() {
     <header className="controlbar">
       <div className="cb-left">
         <span className="brand"><img src="/icon.svg" alt="" width={20} height={20} />Otpadn</span>
-        <input ref={fileRef} type="file" accept="audio/*" hidden onChange={(e) => e.target.files?.[0] && openFileWith(e.target.files[0])} />
+        <input ref={fileRef} type="file" accept="audio/*,.otpadn" hidden onChange={(e) => e.target.files?.[0] && openFileWith(e.target.files[0])} />
         <div className="rel">
           <button onClick={() => toggle("file")}>file ▾</button>
           {menu === "file" && (
             <div className="popover menu">
               <button onClick={() => { setMenu(null); void (async () => { if (!p.tracks.length || (await confirmDialog({ title: "start a new project?", body: "the current session will be discarded. export anything you want to keep first.", ok: "discard & start new", danger: true }))) runTask(clearSession); })(); }} disabled={busy}>new project</button>
-              <button onClick={() => { setMenu(null); fileRef.current?.click(); }} disabled={busy}>import audio… <kbd>⌘O</kbd></button>
+              <button onClick={() => { setMenu(null); fileRef.current?.click(); }} disabled={busy}>open project / import audio… <kbd>⌘O</kbd></button>
+              <button onClick={() => { setMenu(null); runTask(saveProjectToDisk); }} disabled={!p.tracks.length || busy}>save project to disk… <kbd>⌘S</kbd></button>
               <div className="menu-sep" />
               <button onClick={() => { setMenu(null); runTask(exportWav); }} disabled={!p.tracks.length || busy}>bounce mix to wav… <kbd>⌘B</kbd></button>
               <button onClick={() => { setMenu(null); runTask(() => exportStems()); }} disabled={!p.tracks.length || busy}>bounce stems (one wav per track)…</button>
               <button onClick={() => { setMenu(null); runTask(exportMidi); }} disabled={!p.tracks.some((t) => t.kind === "midi") || busy}>export midi…</button>
               <div className="menu-sep" />
-              <button onClick={() => { setMenu(null); void confirmDialog({ title: "credits & licences", body: "audio → midi model: MuScriptor by Kyutai & Mirelo — weights licensed CC BY-NC 4.0 (non-commercial use only). stem separation: HTDemucs (MIT). acoustic drum samples: Virtuosity Drums (CC0). everything else: Otpadn's own code.", ok: "close" }); }}>credits &amp; licences…</button>
-              <div className="menu-title" style={{ borderTop: "1px solid var(--line-2)", borderBottom: 0, marginTop: 2 }}>autosaved in this browser</div>
+              <button onClick={() => { setMenu(null); void confirmDialog({ title: "credits & licences", body: "audio → midi model: MuScriptor by Kyutai & Mirelo — weights licensed CC BY-NC 4.0 (non-commercial use only). stem separation: HTDemucs (MIT). airwindows ButterComp2 / Density2 / Galactic / ClipOnly2 ports: MIT © Chris Johnson. acoustic drum samples: Virtuosity Drums (CC0). everything else: Otpadn's own code.", ok: "close" }); }}>credits &amp; licences…</button>
+              <div className="menu-title" style={{ borderTop: "1px solid var(--line-2)", borderBottom: 0, marginTop: 2 }}>autosaved in this browser · ⌘S saves a .otpadn file with all audio</div>
             </div>
           )}
         </div>
@@ -162,6 +165,8 @@ export default function ControlBar() {
           <button className={`icon rec ${isRecording() ? "on" : ""}`} data-tip={isRecording() ? "stop recording (R)" : `record on ${s.project.tracks.find((t) => t.id === s.ui.armedTrackId)?.name ?? "a new audio track"} · ${engine.countInBars ? `${engine.countInBars}-bar count-in` : "no count-in"} (R)`} onClick={() => runTask(toggleRecording)}>●</button>
           <button className="icon" data-tip="forward one bar (.)" onClick={() => engine.seek(Math.floor(engine.beat / 4) * 4 + 4)}>»</button>
           <button className={`icon ${engine.metronome ? "on" : ""}`} data-tip="metronome click (K)" onClick={() => { engine.metronome = !engine.metronome; store.setUi({}); }}>♩</button>
+          <button className={`icon auto ${s.ui.showAutomation ? "on" : ""}`} data-tip="automation view (A): draw volume / pan / sends / plug-in curves on the tracks" onClick={() => store.setUi({ showAutomation: !s.ui.showAutomation })}>A</button>
+          <button className={`icon wr ${s.ui.autoWrite ? "on" : ""}`} data-tip="latch write: moving a fader, knob or plug-in control while playing records automation" onClick={() => { resetLatch(); store.setUi({ autoWrite: !s.ui.autoWrite }); }}>W</button>
           <button className={`icon ${engine.countInBars ? "on" : ""}`} data-tip="count-in before recording (1 bar)" onClick={() => { engine.countInBars = engine.countInBars ? 0 : 1; store.setUi({}); }}>1·2·</button>
           <button className={`icon ${p.loop.on ? "on" : ""}`} data-tip="cycle (c) · shift-drag the ruler to set" onClick={() => store.update((x) => (x.loop.on = !x.loop.on))}>⟲</button>
         </div>

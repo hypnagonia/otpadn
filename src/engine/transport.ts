@@ -5,7 +5,8 @@ import type { Playable } from "../instruments/types";
 import { store } from "../model/store";
 import type { Track } from "../model/types";
 import { createMaster, createStrip, type Master, type Strip } from "./graph";
-import { forNotes, isAudible, scheduleAudio } from "./schedule";
+import { forNotes, frozenAsAudio, isAudible, isFrozen, kitLayersOf, scheduleAudio } from "./schedule";
+import { holdLane, isPluginLane, lanesOf, pluginAutomation, scheduleLane } from "./automation";
 
 const LOOKAHEAD_SEC = 0.2;
 const TICK_MS = 25;
@@ -107,6 +108,7 @@ export class Engine {
         this.strips.delete(id);
         this.chSig.delete(id);
         this.insSig.delete(id);
+        this.autoSig.delete(id);
         this.insts.get(id)?.p.dispose();
         this.insts.delete(id);
       }
@@ -119,13 +121,23 @@ export class Engine {
       if (au?.unmute.has(t.id)) audible = true;
       if (au?.mute.has(t.id)) audible = false;
       const trim = au?.trimDb.get(t.id) ?? 0;
-      const chSig = `${audible}|${trim}|${JSON.stringify(t.ch)}`;
+      const auto = lanesOf(t).filter((l) => !isPluginLane(l.param)).map((l) => l.param);
+      s.setAutomated(new Set(auto));
+      const chSig = `${audible}|${trim}|${auto.join(",")}|${JSON.stringify(t.ch)}`;
       if (this.chSig.get(t.id) !== chSig) {
         this.chSig.set(t.id, chSig);
         s.apply(trim ? { ...t.ch, volumeDb: t.ch.volumeDb + trim } : t.ch, audible);
       }
       audibleOf.set(t.id, audible);
-      if (t.kind === "midi" && t.instrument) {
+      s.setFrozen(!!t.frozen);
+      if (t.frozen) {
+        // Frozen: the render plays instead — release the instrument (samples, voices, CPU).
+        const cur = this.insts.get(t.id);
+        if (cur) {
+          cur.p.dispose();
+          this.insts.delete(t.id);
+        }
+      } else if (t.kind === "midi" && t.instrument) {
         const cur = this.insts.get(t.id);
         // Lazy: muted tracks don't download samples until they're heard.
         if (cur ? cur.id !== t.instrument : audible) {
@@ -133,6 +145,8 @@ export class Engine {
           this.loadInstrument(t.id, t.instrument, s.input, true);
         }
         if (t.drumKit) this.insts.get(t.id)?.p.configure?.(t.drumKit);
+        this.insts.get(t.id)?.p.setLayers?.(kitLayersOf(t));
+        this.insts.get(t.id)?.p.setCymbalBleed?.(t.kitCymbalBleed ?? 0);
       }
     }
     // Second pass (every strip exists now): inserts with sidechain sources, and sends to buses.
@@ -142,10 +156,12 @@ export class Engine {
       const s = this.strips.get(t.id);
       if (!s) continue;
       // Only touch the insert chain / sends when they (or what they connect to) changed.
-      const insSig = `${p.bpm}|${all.length}|${JSON.stringify(t.inserts ?? [])}`;
+      // Frozen tracks (and a frozen kit's mics) run no plug-ins: they're baked into the render.
+      const frozenHere = isFrozen(p, t);
+      const insSig = `${p.bpm}|${all.length}|${frozenHere}|${JSON.stringify(t.inserts ?? [])}`;
       if (this.insSig.get(t.id) !== insSig) {
         this.insSig.set(t.id, insSig);
-        s.setInserts(t.inserts ?? [], p.bpm, sidechainOf);
+        s.setInserts(frozenHere ? [] : t.inserts ?? [], p.bpm, sidechainOf);
       }
       s.setSends(t.kind === "bus" ? [] : t.ch.sends, busInput, audibleOf.get(t.id) ?? true);
     }
@@ -163,6 +179,47 @@ export class Engine {
     }
     this.master.apply(p.masterDb);
     this.master.inserts.apply(p.masterInserts ?? [], p.bpm);
+    // Automation edited (or a strip rebuilt): reschedule from now while playing, else hold.
+    for (const t of all) {
+      const sig = JSON.stringify(lanesOf(t)) + (this.strips.get(t.id) ? "" : "-");
+      if (this.autoSig.get(t.id) === sig) continue;
+      this.autoSig.set(t.id, sig);
+      if (this.playing) this.scheduleAutomation(t, Math.max(this.beat, this.startBeat), this.ctx.currentTime + 0.01);
+      else this.holdAutomation(t, this.pausedBeat);
+    }
+  }
+
+  /* ── automation (engine/automation.ts) ── */
+  private autoSig = new Map<string, string>();
+  private pluginLast = new Map<string, string>();
+  private autoEnd(p = store.project) {
+    return p.loop.on && p.loop.end > p.loop.start && this.beat < p.loop.end ? p.loop.end : Math.max(p.lengthBeats, this.beat + 16);
+  }
+  /** Curves from `fromBeat` (at context time t0) onward. */
+  private scheduleAutomation(t: Track, fromBeat: number, t0: number) {
+    const s = this.strips.get(t.id);
+    if (!s) return;
+    for (const l of lanesOf(t)) if (!isPluginLane(l.param)) scheduleLane(l, s.autoTargets(l.param), fromBeat, this.autoEnd(), t0, this.spb);
+    this.pluginLast.delete(t.id);
+  }
+  private holdAutomation(t: Track, beat: number) {
+    const s = this.strips.get(t.id);
+    if (!s) return;
+    for (const l of lanesOf(t)) if (!isPluginLane(l.param)) holdLane(l, s.autoTargets(l.param), beat, this.ctx.currentTime);
+    this.applyPluginAutomation(t, beat);
+  }
+  /** Plug-in parameters at control rate (scheduler tick); only sends changed values. */
+  private applyPluginAutomation(t: Track, beat: number) {
+    const s = this.strips.get(t.id);
+    if (!s) return;
+    for (const [id, vals] of pluginAutomation(t, beat)) {
+      const ins = t.inserts.find((i) => i.id === id);
+      if (!ins?.on) continue;
+      const key = `${t.id}:${id}`, sig = JSON.stringify(vals);
+      if (this.pluginLast.get(key) === sig) continue;
+      this.pluginLast.set(key, sig);
+      s.inserts.setLive(id, { ...ins.params, ...vals }, store.project.bpm);
+    }
   }
 
   /** Create a track's instrument; network failures get one automatic retry. */
@@ -190,7 +247,11 @@ export class Engine {
     const to = p.loop.on && fromBeat < p.loop.end ? p.loop.end : Infinity;
     for (const t of p.tracks) {
       const s = this.strips.get(t.id);
-      if (s && t.kind === "audio") scheduleAudio(this.ctx, t, s.input, fromBeat, to, ctxStart, this.spb, this.sources);
+      if (!s) continue;
+      if (t.frozen) {
+        const fa = frozenAsAudio(t);
+        if (fa) scheduleAudio(this.ctx, fa, s.input, fromBeat, to, ctxStart, this.spb, this.sources);
+      } else if (t.kind === "audio") scheduleAudio(this.ctx, t, s.input, fromBeat, to, ctxStart, this.spb, this.sources);
     }
   }
 
@@ -217,14 +278,16 @@ export class Engine {
     this.startCtx = this.ctx.currentTime + 0.05;
     this.scheduledTo = fromBeat - pre;
     this.scheduleAudioFrom(fromBeat, this.timeOfBeat(fromBeat));
+    for (const t of this.tracks()) if (lanesOf(t).length) this.scheduleAutomation(t, this.startBeat, this.startCtx);
     this.tick();
     this.timer = window.setInterval(() => this.tick(), TICK_MS);
+    this.startWatchdog();
     store.setUi({});
   }
 
   private scheduleNotes(from: number, until: number) {
     for (const t of this.tracks()) {
-      if (t.kind !== "midi") continue;
+      if (t.kind !== "midi" || t.frozen) continue;
       const inst = this.insts.get(t.id)?.p;
       if (!inst) continue;
       forNotes(t, from, until, (beat, pitch, dur, vel) => {
@@ -234,7 +297,9 @@ export class Engine {
   }
 
   private tick() {
+    this.lastTickAt = performance.now();
     const p = store.project;
+    for (const t of this.tracks()) if (t.automation?.length) this.applyPluginAutomation(t, this.beat);
     const loop = p.loop.on && p.loop.end > p.loop.start && this.scheduledTo < p.loop.end + 1e-6;
     let horizon = this.startBeat + (this.ctx.currentTime + LOOKAHEAD_SEC - this.startCtx) / this.spb;
     if (loop && horizon >= p.loop.end) {
@@ -248,6 +313,7 @@ export class Engine {
       this.startCtx = wrapCtx;
       this.scheduledTo = p.loop.start;
       this.scheduleAudioFrom(p.loop.start, wrapCtx);
+      for (const t of this.tracks()) if (lanesOf(t).length) this.scheduleAutomation(t, p.loop.start, wrapCtx);
       // Re-anchored: the lookahead horizon must be measured against the new anchor, or a whole
       // loop pass would be scheduled in one tick.
       horizon = this.startBeat + (this.ctx.currentTime + LOOKAHEAD_SEC - this.startCtx) / this.spb;
@@ -302,12 +368,116 @@ export class Engine {
   }
 
   stop() {
+    clearInterval(this.watchTimer);
     this.pausedBeat = Math.max(0, this.beat);
+    for (const t of this.tracks()) if (lanesOf(t).length) this.holdAutomation(t, this.pausedBeat);
     this.countInUntil = -Infinity;
     this.stopVoices();
     this.playing = false;
     this.prevAnchor = null;
     store.setUi({});
+  }
+
+  /*
+   * Playback watchdog. Failures in the audio graph are silent by nature (a NaN from a filter or
+   * a compressor mutes everything downstream for good; an overloaded audio thread just drops
+   * out), so while playing we check twice a second and report to the console + the app log:
+   *  - NaN/Inf on the master → name the strips carrying it, rebuild the graph, resume
+   *  - audio thread slower than realtime (too many voices/effects for this machine)
+   *  - main thread blocking the note scheduler past its lookahead (notes dropped)
+   *  - master silent for 4 s while audible tracks have material there
+   */
+  private watchTimer: number | undefined;
+  private lastRebuild = -Infinity;
+  private lastTickAt = 0;
+  private startWatchdog() {
+    clearInterval(this.watchTimer);
+    this.lastTickAt = 0;
+    const buf = new Float32Array(2048);
+    let lastWall = performance.now(), lastAudio = this.ctx.currentTime;
+    let silentFor = 0, slowCount = 0, warnedAt = 0;
+    const warn = (msg: string, err = false) => {
+      (err ? console.error : console.warn)(`[otpadn] ${msg}`);
+      if (performance.now() - warnedAt > 5000 || err) store.log(`${err ? "Error" : "Warning"}: ${msg}`);
+      warnedAt = performance.now();
+    };
+    const nonFinite = (an: AnalyserNode) => {
+      const b = buf.length >= an.fftSize ? buf.subarray(0, an.fftSize) : new Float32Array(an.fftSize);
+      an.getFloatTimeDomainData(b);
+      let bad = false, sum = 0;
+      for (let i = 0; i < b.length; i++) {
+        const v = b[i];
+        if (!Number.isFinite(v)) bad = true;
+        else sum += v * v;
+      }
+      return { bad, rms: Math.sqrt(sum / b.length) };
+    };
+    this.watchTimer = window.setInterval(() => {
+      if (!this.playing) return;
+      const wall = performance.now(), audio = this.ctx.currentTime;
+      // 1) audio thread keeping up?
+      const ratio = (audio - lastAudio) / Math.max(1e-3, (wall - lastWall) / 1000);
+      lastWall = wall;
+      lastAudio = audio;
+      if (this.ctx.state !== "running") warn(`audio context is "${this.ctx.state}" while playing (the OS or browser paused audio) — press play again.`, true);
+      else if (ratio < 0.85) {
+        if (++slowCount >= 2) warn(`audio thread can't keep up (${Math.round(ratio * 100)} % of realtime): too many voices or effects. Freeze/bounce heavy tracks or mute some.`);
+      } else slowCount = 0;
+      // 2) scheduler starved by a busy main thread?
+      if (this.lastTickAt && wall - this.lastTickAt > LOOKAHEAD_SEC * 1000) warn(`main thread was blocked ${Math.round(wall - this.lastTickAt)} ms — some notes were scheduled late or dropped.`);
+      // 3) NaN on the master?
+      const m = nonFinite(this.master.analyser);
+      if (m.bad) {
+        const p = store.project;
+        const culprits = [...this.strips].filter(([, st]) => nonFinite(st.analyser).bad).map(([id]) => p.tracks.find((t) => t.id === id)?.name ?? id);
+        const where = culprits.length ? `in: ${culprits.join(", ")}` : "on the master bus";
+        // A source that keeps producing NaN must not rebuild forever: once per 10 s, else stop.
+        if (wall - this.lastRebuild < 10_000) {
+          warn(`audio turned invalid (NaN) again ${where} — stopped. Bypass that track's inserts or change its instrument.`, true);
+          this.stop();
+          return;
+        }
+        this.lastRebuild = wall;
+        warn(`audio turned invalid (NaN) ${where} — rebuilt the audio graph and resumed.`, true);
+        this.rebuildGraph();
+        return;
+      }
+      // 4) silent although something should sound?
+      if (m.rms < 1e-6 && this.hasMaterialAt(this.beat)) {
+        silentFor += 0.5;
+        if (silentFor === 4) warn(`no sound for 4 s although tracks have material at bar ${Math.floor(this.beat / 4) + 1} (context: ${this.ctx.state}, ${Math.round(ratio * 100)} % realtime).`, true);
+      } else silentFor = 0;
+    }, 500);
+  }
+  /** Is any audible track supposed to make sound around this beat? */
+  private hasMaterialAt(beat: number) {
+    const p = store.project;
+    for (const t of p.tracks) {
+      if (!isAudible(p, t)) continue;
+      for (const c of t.clips) {
+        if (c.kind === "audio") {
+          if (beat >= c.start && beat < c.start + c.duration / this.spb) return true;
+        } else if (beat >= c.start && beat < c.start + c.length && c.notes.some((n) => Math.abs(c.start + n.start - beat) < 4 || (c.start + n.start <= beat && c.start + n.start + n.dur >= beat))) return true;
+      }
+    }
+    return false;
+  }
+  /** Throw away every strip, instrument and the master (their DSP state may hold NaN) and rebuild. */
+  private rebuildGraph() {
+    const at = this.beat;
+    this.stop();
+    for (const st of this.strips.values()) st.dispose();
+    for (const it of this.insts.values()) it.p.dispose();
+    this.strips.clear();
+    this.insts.clear();
+    this.chSig.clear();
+    this.insSig.clear();
+    this.autoSig.clear();
+    this.master.dispose();
+    this.master = createMaster(this.ctx);
+    this.syncedVersion = -1;
+    this.sync();
+    void this.play(at);
   }
 
   /** Set by the recorder: called before the transport moves away from a running take. */
@@ -316,6 +486,7 @@ export class Engine {
   seek(beat: number) {
     this.onTransportJump?.();
     this.pausedBeat = Math.max(0, beat);
+    if (!this.playing) for (const t of this.tracks()) if (lanesOf(t).length) this.holdAutomation(t, this.pausedBeat);
     if (this.playing) this.play(this.pausedBeat);
     else store.setUi({});
   }

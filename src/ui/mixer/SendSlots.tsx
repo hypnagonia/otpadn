@@ -11,7 +11,18 @@ import MiniKnob from "../common/MiniKnob";
 export default function SendSlots({ t }: { t: Track }) {
   const s = useStoreQuiet();
   const [open, setOpen] = useState(false);
+  const [at, setAt] = useState<{ left: number; top?: number; bottom?: number; maxH: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  // position: fixed from the slot's screen position (the send list scrolls/clips inside the strip).
+  const toggleMenu = () => {
+    if (open) return setOpen(false);
+    const r = addRef.current!.getBoundingClientRect();
+    const W = 260, below = innerHeight - r.bottom - 8, above = r.top - 8;
+    const left = Math.max(8, Math.min(r.left, innerWidth - W - 8));
+    setAt(below >= 160 || below >= above ? { left, top: r.bottom + 2, maxH: below } : { left, bottom: innerHeight - r.top + 2, maxH: above });
+    setOpen(true);
+  };
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
@@ -34,9 +45,9 @@ export default function SendSlots({ t }: { t: Track }) {
           </div>
         );
       })}
-      <button className="fx empty" onClick={() => setOpen(!open)} data-tip="add a send" />
-      {open && (
-        <div className="popover menu ins-menu">
+      <button ref={addRef} className="fx empty" onClick={toggleMenu} data-tip="add a send" />
+      {open && at && (
+        <div className="popover menu ins-menu" style={{ position: "fixed", left: at.left, top: at.top, bottom: at.bottom, maxHeight: at.maxH, overflowY: "auto" }}>
           <div className="menu-title">send to bus</div>
           {buses.filter((b) => !sends.some((sd) => sd.bus === b.id)).map((b) => (
             <button key={b.id} onClick={() => { setOpen(false); addSend(t.id, b.id); }}><span>{b.name}</span></button>

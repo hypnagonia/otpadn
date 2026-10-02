@@ -30,6 +30,10 @@ export interface AudioClip {
   bufferId: string;
   offset: number; // seconds into the buffer
   duration: number; // seconds
+  /** Fades (seconds, equal-power) and clip gain (dB). Overlapping clips crossfade automatically. */
+  fadeIn?: number;
+  fadeOut?: number;
+  gain?: number;
 }
 
 export interface MidiClip {
@@ -78,6 +82,16 @@ export interface ChannelSettings {
   sends?: Send[];
 }
 
+export type KitLayerSlot = "kick" | "snare";
+
+/** One automation breakpoint: position in beats, value in the parameter's own units. */
+export interface AutoPoint { beat: number; value: number }
+/**
+ * An automation lane. param: "volume" (dB) | "pan" (−1…1) | "verb" (0…1 reverb send) |
+ * "send:<sendId>" (dB) | "ins:<insertId>:<paramKey>" (the plug-in parameter's units).
+ */
+export interface AutoLane { param: string; points: AutoPoint[] }
+
 export interface Track {
   id: string;
   name: string;
@@ -101,6 +115,26 @@ export interface Track {
   pp?: { sessionId: string };
   /** Instrument id whose pro-mix chain (model/chains.ts) this channel was set up for. */
   chain?: string;
+  /**
+   * Multitrack kit sample layers (sample reinforcement, like a trigger plug-in): a one-shot played
+   * with every kick / snare hit into that mic group's channel. `level` in dB; audio via buffers.
+   */
+  kitLayers?: Partial<Record<KitLayerSlot, { bufferId: string; name: string; level: number }>>;
+  /** Multitrack kits: drum hits in the cymbal mics, dB (unset = 0, natural bleed). */
+  kitCymbalBleed?: number;
+  /**
+   * Frozen (Logic-style): instrument + EQ + inserts (+ kit mics and bus) rendered to audio; the
+   * track plays that buffer from beat 0 straight into its fader. `sig` detects later edits.
+   */
+  frozen?: { bufferId: string; sig: string };
+  /** Automation lanes (engine/automation.ts). */
+  automation?: AutoLane[];
+  /** Which lane the arrange view shows/edits in automation view. */
+  autoView?: string;
+  /** MIX_VERSION of the style when the chain was applied (older → the inspector offers an update). */
+  mixVersion?: number;
+  /** Mix style of that chain (model/mixStyles.ts); unset on older tracks = "rock". */
+  mixStyle?: import("./mixStyles").MixStyle;
 }
 
 export interface Section {
@@ -159,17 +193,23 @@ export const defaultChannel = (): ChannelSettings => ({
   reverbSend: 0,
 });
 
+/** Track colours: mid-light, softly saturated (regions draw dark ink on them), distinct on charcoal. */
 export const ROLE_COLORS: Record<Role, string> = {
-  mix: "#8a8f98",
-  drums: "#e0a43a",
-  bass: "#d9534f",
-  vocals: "#4aa3df",
-  other: "#57b26a",
-  guitar: "#e07b39",
-  piano: "#d7d2c4",
-  lead: "#a66cd9",
-  keys: "#e2c440",
-  pad: "#3fbfb4",
+  mix: "#9aa3b2",
+  drums: "#f2b84b",
+  bass: "#ef6f6c",
+  vocals: "#6cb7f5",
+  other: "#7cc68a",
+  guitar: "#f5925c",
+  piano: "#e8dcc2",
+  lead: "#b48cf2",
+  keys: "#f28cc2",
+  pad: "#5cc9c0",
+};
+/** Previous default palette → current (sessions saved with the old defaults pick up the new ones). */
+export const OLD_ROLE_COLORS: Record<string, string> = {
+  "#8a8f98": "#9aa3b2", "#e0a43a": "#f2b84b", "#d9534f": "#ef6f6c", "#4aa3df": "#6cb7f5", "#57b26a": "#7cc68a",
+  "#e07b39": "#f5925c", "#d7d2c4": "#e8dcc2", "#a66cd9": "#b48cf2", "#e2c440": "#f28cc2", "#3fbfb4": "#5cc9c0", "#7d8fb3": "#8fa3d6",
 };
 
 export const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];

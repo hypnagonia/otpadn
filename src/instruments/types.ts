@@ -11,6 +11,10 @@ export interface Playable {
   setOutputs?(dests: Record<string, AudioNode>, fallback: AudioNode): void;
   /** Optional per-track settings (e.g. a drum kit config stored on the track). */
   configure?(cfg: unknown): void;
+  /** Multitrack kits: one-shot layers triggered with a piece (slot → buffer + level in dB). */
+  setLayers?(layers: Partial<Record<string, { buffer: AudioBuffer; level: number }>>): void;
+  /** Multitrack kits: level (dB) of drum hits (kick/snare/toms) in the cymbal mics; ≤ −60 = none. */
+  setCymbalBleed?(db: number): void;
   dispose(): void;
 }
 

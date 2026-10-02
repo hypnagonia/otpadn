@@ -7,6 +7,11 @@ import { formatPos } from "../common/format";
 import NumberField from "../common/NumberField";
 import Select from "../common/Select";
 import ChannelStrip, { MasterStrip } from "../mixer/ChannelStrip";
+import { isMultiKit } from "../../instruments/multikit";
+import KitLayers from "./KitLayers";
+import { canProMix, proMixOutdated, proMixStyle } from "../../model/chains";
+import { applyProMixCmd } from "../../edit/proMix";
+import { MIX_STYLE_LABEL } from "../../model/mixStyles";
 
 const ROLES: Role[] = ["drums", "bass", "vocals", "guitar", "piano", "lead", "keys", "pad", "other", "mix"];
 
@@ -41,7 +46,20 @@ function Inspector() {
             <Row k="length">
               <NumberField value={+((clip.kind === "midi" ? clip.length : clip.duration / spb) / 4).toFixed(3)} min={0.0625} max={9999} step={1} width={70} data-tip="length in bars" onCommit={(v) => trimClip(clip.id, "end", clip.start + v * 4)} /> <span className="muted">bars</span>
             </Row>
-            {clip.kind === "midi" ? <Row k="notes">{clip.notes.length}</Row> : <Row k="offset">{clip.offset.toFixed(2)} s</Row>}
+            {clip.kind === "midi" ? <Row k="notes">{clip.notes.length}</Row> : (
+              <>
+                <Row k="offset">{clip.offset.toFixed(2)} s</Row>
+                <Row k="gain">
+                  <NumberField value={+(clip.gain ?? 0).toFixed(1)} min={-40} max={18} step={0.5} width={60} onCommit={(v) => store.update(() => (clip.gain = v))} /> <span className="muted">dB</span>
+                </Row>
+                <Row k="fade in">
+                  <NumberField value={Math.round((clip.fadeIn ?? 0) * 1000)} min={0} max={Math.round(clip.duration * 1000)} step={10} width={60} onCommit={(v) => store.update(() => (clip.fadeIn = v / 1000))} /> <span className="muted">ms</span>
+                </Row>
+                <Row k="fade out">
+                  <NumberField value={Math.round((clip.fadeOut ?? 0) * 1000)} min={0} max={Math.round(clip.duration * 1000)} step={10} width={60} onCommit={(v) => store.update(() => (clip.fadeOut = v / 1000))} /> <span className="muted">ms</span>
+                </Row>
+              </>
+            )}
             <div className="insp-actions">
               {clip.kind === "midi" && <button onClick={() => store.setUi({ showEditor: true, editorTab: "piano" })}>edit notes</button>}
               <button onClick={() => { store.update((pp) => pp.tracks.forEach((t) => (t.clips = t.clips.filter((c) => c.id !== clip.id)))); store.setUi({ selectedClipId: null }); }}>delete</button>
@@ -64,6 +82,24 @@ function Inspector() {
               <Row k="instrument">
                 <button className="link" onClick={() => store.setUi({ showLibrary: true })}>{INSTRUMENTS.find((i) => i.id === track.instrument)?.name ?? "choose…"}</button>
               </Row>
+            )}
+            {canProMix(p, track) && (
+              <Row k="pro mix">
+                <span className="pm-btns">
+                  {proMixOutdated(p, track) && (
+                    <button className="upd" onClick={() => applyProMixCmd(track.id, proMixStyle(p, track)!)} data-tip="this mix style was improved since it was applied here · re-applies it (replaces eq + inserts)">↻ update</button>
+                  )}
+                  {(["metal", "rock"] as const).map((st) => (
+                    <button key={st} className={proMixStyle(p, track) === st ? "on" : ""} onClick={() => applyProMixCmd(track.id, st)} data-tip={st === "metal" ? "stabbing the drama-style (measured match) · replaces this channel's eq + inserts" + (track.kind === "aux" || isMultiKit(track.instrument) ? " on every kit mic + the drum bus" : "") : "classic rock chain · replaces eq + inserts"}>{MIX_STYLE_LABEL[st]}</button>
+                  ))}
+                </span>
+              </Row>
+            )}
+            {track.kind === "midi" && isMultiKit(track.instrument) && (
+              <>
+                <div className="insp-sub">sample layers</div>
+                <KitLayers t={track} />
+              </>
             )}
           </>
         ) : (

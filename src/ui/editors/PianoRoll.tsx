@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { engine } from "../../engine/transport";
 import { store, useStoreQuiet } from "../../model/store";
 import { NOTE_NAMES, type MidiClip, type Note, type Track } from "../../model/types";
@@ -9,7 +9,7 @@ import NumberField from "../common/NumberField";
 
 const KEYS_W = 46;
 const RULER = 16; // click / drag here to set the playhead
-const ROW = 10;
+const ROW_DEFAULT = 10; // note height (px); zoomable with ⌥ + pinch / ⌥⌘ + wheel
 const LO = 21, HI = 108;
 const ROWS = HI - LO + 1;
 const BLACK = new Set([1, 3, 6, 8, 10]);
@@ -31,16 +31,21 @@ type Drag =
   | { kind: "marquee"; b0: number; p0: number; b1: number; p1: number; base: Set<Note> }
   | { kind: "vel"; y0: number; orig: Map<Note, number>; hit: Note };
 
-export default function PianoRoll() {
+function PianoRoll() {
   const s = useStoreQuiet();
   const mode = s.ui.rollMode;
   const sel = findClip();
   const pianoRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
+  const ovRef = useRef<HTMLCanvasElement>(null); // playhead overlay (repainted every frame instead of all notes)
   const velRef = useRef<HTMLCanvasElement>(null);
   const [grid, setGrid] = useState(0.25);
   const [ppb, setPpb] = useState(40);
+  const [ROW, setRow] = useState(ROW_DEFAULT);
+  // Live zoom values (wheel events arrive faster than renders) + the point to keep under the cursor.
+  const zoomRef = useRef({ ppb: 40, row: ROW_DEFAULT });
+  const anchor = useRef<{ x?: { beat: number; px: number }; y?: { rows: number; py: number } }>({});
   const [size, setSize] = useState({ w: 600, h: 200 });
   const [selected, setSelected] = useState<Set<Note>>(new Set());
   const [active, setActive] = useState(false);
@@ -115,6 +120,14 @@ export default function PianoRoll() {
       }
       g.fillStyle = "rgba(0,0,0,0.45)";
       g.fillRect(x + n.dur * ppb - 3, y + 1, 2, ROW - 2);
+      // Note name on the brick when it fits (zoom in to see more).
+      if (ROW >= 9 && w >= 20) {
+        g.fillStyle = on ? "#ffffff" : "rgba(0,0,0,0.78)";
+        g.font = `${Math.min(12, ROW - 2)}px ${T.font}`;
+        g.textBaseline = "middle";
+        g.fillText(`${NOTE_NAMES[n.pitch % 12]}${Math.floor(n.pitch / 12) - 1}`, x + 3, y + ROW / 2 + 0.5, w - 6);
+        g.textBaseline = "alphabetic";
+      }
     }
     // Rubber band
     const d = drag.current;
@@ -146,17 +159,7 @@ export default function PianoRoll() {
     g.textBaseline = "alphabetic";
     g.fillStyle = T.hairline;
     g.fillRect(KEYS_W, RULER - 1, W - KEYS_W, 1);
-    // Playhead
-    const ph = X(engine.beat - clip.start);
-    if (ph >= KEYS_W && ph <= W) {
-      g.fillStyle = T.ink;
-      g.fillRect(Math.round(ph), 0, 1.5, H);
-      g.beginPath();
-      g.moveTo(ph - 5, 0);
-      g.lineTo(ph + 5, 0);
-      g.lineTo(ph, 7);
-      g.fill();
-    }
+    // (playhead lives on the overlay canvas — see drawPlayhead)
     // Keyboard
     for (let p = LO; p <= HI; p++) {
       const y = Y(p);
@@ -172,6 +175,13 @@ export default function PianoRoll() {
     }
 
     // Velocity lane (same horizontal scroll)
+    const ov = ovRef.current;
+    if (ov) {
+      ov.width = size.w * dpr;
+      ov.height = size.h * dpr;
+      ov.style.width = size.w + "px";
+      ov.style.height = size.h + "px";
+    }
     const vc = velRef.current;
     if (vc) {
       const vw = vc.width / dpr, vh = vc.height / dpr;
@@ -204,7 +214,7 @@ export default function PianoRoll() {
       v.fillStyle = "rgba(0,0,0,0.5)";
       v.fillRect(X(clip.length), 0, vw, vh);
     }
-  }, [ppb, grid]);
+  }, [ppb, grid, ROW]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -223,6 +233,13 @@ export default function PianoRoll() {
       cv.style.width = size.w + "px";
       cv.style.height = size.h + "px";
     }
+    const ov = ovRef.current;
+    if (ov) {
+      ov.width = size.w * dpr;
+      ov.height = size.h * dpr;
+      ov.style.width = size.w + "px";
+      ov.style.height = size.h + "px";
+    }
     const vc = velRef.current;
     if (vc) {
       vc.width = size.w * dpr;
@@ -233,41 +250,99 @@ export default function PianoRoll() {
     redraw();
   }, [size, redraw, mode]);
 
-  // Centre the view on the clip's notes when a new clip opens; a new clip starts with no selection.
+  // On open (new clip, or back from tab view): jump to the playhead when it's inside the clip,
+  // and centre vertically on the notes in view there (median pitch, so one stray note doesn't
+  // pull the view away); else the clip's notes; an empty clip shows middle C.
   useEffect(() => {
     setSelected(new Set());
     const el = wrapRef.current;
     const cur = findClip();
     if (!el || !cur) return;
-    const ps = cur.clip.notes.map((n) => n.pitch);
-    const mid = ps.length ? (Math.min(...ps) + Math.max(...ps)) / 2 : 60;
-    el.scrollTop = (HI - mid) * ROW - el.clientHeight / 2;
-    el.scrollLeft = 0;
-  }, [sel?.clip.id]);
+    const { clip } = cur;
+    const ph = engine.beat - clip.start;
+    const left = ph >= 0 && ph < clip.length ? Math.max(0, ph - 60 / ppb) : 0;
+    el.scrollLeft = left * ppb;
+    const span = Math.max(1, (el.clientWidth - KEYS_W) / ppb);
+    const inView = clip.notes.filter((n) => n.start < left + span && n.start + n.dur > left);
+    const ps = (inView.length ? inView : clip.notes).map((n) => n.pitch).sort((x, y) => x - y);
+    const mid = ps.length ? ps[ps.length >> 1] : 60;
+    el.scrollTop = Math.max(0, (HI - mid) * ROW - el.clientHeight / 2);
+  }, [sel?.clip.id, mode]);
 
   useEffect(() => {
     redraw();
   });
-  // Playhead: redraw whenever the position moves (playing or seeking); follow it while playing.
+  // Playhead: only the overlay repaints per frame (scrolling repaints the notes via onScroll).
   useEffect(() => {
     let raf = 0;
-    let last = -1;
+    let last = -1, lastScroll = -1;
     const loop = () => {
       const beat = engine.beat;
-      const el = wrapRef.current, cur = findClip();
-      if (beat !== last && el && cur) {
+      const el = wrapRef.current, cur = findClip(), ov = ovRef.current;
+      if (el && cur && ov && (beat !== last || el.scrollLeft !== lastScroll)) {
         last = beat;
         if (engine.playing && store.ui.follow) {
           const x = KEYS_W + (beat - cur.clip.start) * ppb;
           if (x > el.scrollLeft + el.clientWidth - 40 || x < el.scrollLeft + KEYS_W) el.scrollLeft = Math.max(0, x - KEYS_W - 60);
         }
-        redraw();
+        lastScroll = el.scrollLeft;
+        const dpr = devicePixelRatio || 1;
+        const g = ov.getContext("2d")!;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const W = ov.width / dpr, H = ov.height / dpr;
+        g.clearRect(0, 0, W, H);
+        const ph = KEYS_W + (beat - cur.clip.start) * ppb - el.scrollLeft;
+        if (ph >= KEYS_W && ph <= W) {
+          g.fillStyle = T.ink;
+          g.fillRect(Math.round(ph), 0, 1.5, H);
+          g.beginPath();
+          g.moveTo(ph - 5, 0);
+          g.lineTo(ph + 5, 0);
+          g.lineTo(ph, 7);
+          g.fill();
+        }
       }
       raf = requestAnimationFrame(loop);
     };
     loop();
     return () => cancelAnimationFrame(raf);
   }, [redraw]);
+
+  // Slider / other zoom changes keep the live values in sync; pinch keeps its anchor point in place.
+  useLayoutEffect(() => {
+    zoomRef.current = { ppb, row: ROW };
+    const el = wrapRef.current, a = anchor.current;
+    if (!el) return;
+    if (a.x) el.scrollLeft = Math.max(0, a.x.beat * ppb - a.x.px);
+    if (a.y) el.scrollTop = Math.max(0, a.y.rows * ROW - a.y.py);
+    anchor.current = {};
+  }, [ppb, ROW]);
+
+  // Pinch / ⌘ + wheel: zoom around the cursor (⌥ for note height). Native listener: React's is
+  // passive, and the browser would zoom the page instead.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect(), z = zoomRef.current;
+      const f = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)); // smooth for trackpads, steps for wheels
+      if (e.altKey) {
+        const py = e.clientY - r.top;
+        anchor.current.y ??= { rows: (py + el.scrollTop) / z.row, py };
+        z.row = Math.max(6, Math.min(28, z.row * f));
+        setRow(z.row);
+      } else {
+        const px = e.clientX - r.left - KEYS_W;
+        anchor.current.x ??= { beat: (px + el.scrollLeft) / z.ppb, px };
+        z.ppb = Math.max(10, Math.min(400, z.ppb * f));
+        setPpb(z.ppb);
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [mode, sel?.clip.id]);
 
   // Key focus: the piano roll owns the keyboard after a click inside it (until a click elsewhere).
   useEffect(() => {
@@ -638,7 +713,7 @@ export default function PianoRoll() {
         <button onClick={() => store.update((p) => { const t = p.tracks.find((x) => x.id === track.id)!; t.clips = t.clips.filter((c) => c.id !== clip.id); })}>Delete clip</button>
         <span className="spacer" />
         <span className="label">Zoom</span>
-        <input type="range" min={10} max={160} value={ppb} onChange={(e) => setPpb(+e.target.value)} />
+        <input type="range" min={10} max={400} value={ppb} onChange={(e) => setPpb(+e.target.value)} data-tip="horizontal zoom · also pinch / ⌘ + wheel · ⌥ + pinch: note height" />
       </div>
       {mode === "tab" ? (
         <Tablature track={track} clip={clip} ppb={ppb} />
@@ -646,7 +721,10 @@ export default function PianoRoll() {
         <>
           <div className="canvas-wrap" ref={wrapRef} onScroll={redraw} onMouseDown={onMouseDown} onMouseMove={onHover} onContextMenu={(e) => e.preventDefault()}>
             <div style={{ position: "absolute", top: 0, left: 0, width: KEYS_W + clip.length * ppb + 100, height: ROWS * ROW, pointerEvents: "none" }} />
-            <canvas ref={cvRef} />
+            <div className="pr-layers">
+              <canvas ref={cvRef} />
+              <canvas ref={ovRef} className="pr-overlay" />
+            </div>
           </div>
           <div className="vel-lane" onMouseDown={onVelDown} data-tip="drag a stem to set velocity · selected notes move together">
             <canvas ref={velRef} />
@@ -659,3 +737,6 @@ export default function PianoRoll() {
     </div>
   );
 }
+
+/** memo: a prop-less panel only re-renders through its own store subscription. */
+export default memo(PianoRoll);

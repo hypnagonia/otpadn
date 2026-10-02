@@ -1,3 +1,8 @@
+import { clipFades } from "../../engine/schedule";
+import type { AudioClip } from "../../model/types";
+import { automatableParams, fromPos, toPos } from "../../engine/automation";
+import { addPoint, deletePoint, movePoint } from "../../edit/automation";
+import { autoBand } from "./drawArrangement";
 import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { midiTrack } from "../../assist/tracks";
 import { engine } from "../../engine/transport";
@@ -44,7 +49,7 @@ function TracksArea() {
     const el = scrollRef.current, cv = baseRef.current, ov = overRef.current;
     if (!el || !cv || !ov) return;
     const { pxPerBeat, trackHeight, selectedTrackId } = store.ui;
-    drawArrangement(cv, store.project, { ppb: pxPerBeat, sx: el.scrollLeft, sy: el.scrollTop, rowH: trackHeight, selClips: selectedClips(), selTrack: selectedTrackId, loopDraft: loopDraft.current, range: store.ui.range, marquee: marquee.current });
+    drawArrangement(cv, store.project, { ppb: pxPerBeat, sx: el.scrollLeft, sy: el.scrollTop, rowH: trackHeight, selClips: selectedClips(), selTrack: selectedTrackId, loopDraft: loopDraft.current, range: store.ui.range, marquee: marquee.current, auto: store.ui.showAutomation });
     drawPlayhead(ov, engine.beat, pxPerBeat, el.scrollLeft);
     if (headersRef.current) headersRef.current.style.transform = `translateY(${-el.scrollTop}px)`;
   }, []);
@@ -104,7 +109,8 @@ function TracksArea() {
         e.preventDefault();
         const r = el.getBoundingClientRect();
         const beat = (e.clientX - r.left + el.scrollLeft) / store.ui.pxPerBeat;
-        const nz = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, store.ui.pxPerBeat * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+        const f = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)); // proportional: smooth trackpad pinch
+        const nz = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, store.ui.pxPerBeat * f));
         store.setUi({ pxPerBeat: nz });
         requestAnimationFrame(() => (el.scrollLeft = beat * nz - (e.clientX - r.left)));
       } else if (e.altKey) {
@@ -141,10 +147,78 @@ function TracksArea() {
   const EDGE_PX = 6;
   const snapped = (b: number, ev: { altKey: boolean }) => (ev.altKey ? b : snapBeat(b, store.ui.snap));
 
+  /** Automation view: click adds a point, drag moves it, ⌥-click deletes it. Returns true if handled. */
+  const autoMouseDown = (e: React.MouseEvent, h: ReturnType<typeof hit>) => {
+    if (!store.ui.showAutomation || !h.track || h.y < TOP_H) return false;
+    const el = scrollRef.current!, r = el.getBoundingClientRect();
+    const t = h.track, i = store.project.tracks.indexOf(t), rowH = store.ui.trackHeight, ppbNow = store.ui.pxPerBeat;
+    const param = t.autoView ?? "volume";
+    const info = automatableParams(t, (id) => store.project.tracks.find((x) => x.id === id)?.name ?? "bus").find((x) => x.param === param);
+    if (!info) return false;
+    const rowTop = TOP_H + i * rowH - el.scrollTop;
+    const { top, bottom } = autoBand(rowTop, rowH);
+    const valAt = (clientY: number) => fromPos(info, (bottom - (clientY - r.top)) / (bottom - top));
+    const pts = t.automation?.find((l) => l.param === param)?.points ?? [];
+    const near = pts.findIndex((pt) => Math.abs(pt.beat * ppbNow - el.scrollLeft - (e.clientX - r.left)) <= 6 && Math.abs(bottom - toPos(info, pt.value) * (bottom - top) - (e.clientY - r.top)) <= 6);
+    if (near >= 0 && e.altKey) {
+      deletePoint(t.id, param, near);
+      return true;
+    }
+    let idx = near;
+    if (idx < 0) {
+      // First point on an empty lane: also pin the static value at the song start, so what was
+      // there before the click stays (Logic-like).
+      if (!pts.length && h.beat > 0.01) addPoint(t.id, param, 0, info.def);
+      idx = addPoint(t.id, param, snapped(h.beat, e), valAt(e.clientY));
+    }
+    store.checkpoint();
+    drag((ev) => {
+      const b = snapped((ev.clientX - r.left + el.scrollLeft) / store.ui.pxPerBeat, ev);
+      movePoint(t.id, param, idx, b, valAt(ev.clientY));
+    });
+    return true;
+  };
+
+  /** Fade handle under the cursor (small square at an audio region's top edge), if any. */
+  const fadeHandleAt = (e: { clientX: number; clientY: number }, h: ReturnType<typeof hit>): { c: AudioClip; side: "in" | "out" } | null => {
+    if (!h.clip || h.clip.kind !== "audio" || !h.track || store.ui.tool !== "pointer" || store.ui.showAutomation) return null;
+    const el = scrollRef.current!, r = el.getBoundingClientRect(), rowH = store.ui.trackHeight, ppbNow = store.ui.pxPerBeat;
+    if (rowH < 30) return null;
+    const i = store.project.tracks.indexOf(h.track), spb = 60 / store.project.bpm;
+    const ftop = TOP_H + i * rowH - el.scrollTop + 3 + (rowH >= 40 ? 13 : 0);
+    const my = e.clientY - r.top, mx = e.clientX - r.left + el.scrollLeft;
+    if (my < ftop - 3 || my > ftop + 9) return null;
+    const ac = h.track.clips.filter((x): x is AudioClip => x.kind === "audio").sort((a, b) => a.start - b.start);
+    const k = ac.indexOf(h.clip);
+    const { fi, fo } = clipFades(h.clip, ac[k - 1], ac[k + 1], spb);
+    const x0 = h.clip.start * ppbNow, x1 = (h.clip.start + h.clip.duration / spb) * ppbNow;
+    if (Math.abs(mx - (x0 + (fi / spb) * ppbNow)) <= 7) return { c: h.clip, side: "in" };
+    if (Math.abs(mx - (x1 - (fo / spb) * ppbNow)) <= 7) return { c: h.clip, side: "out" };
+    return null;
+  };
+
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     store.ui.contextMenu && store.setUi({ contextMenu: null });
     const h = hit(e);
+    if (autoMouseDown(e, h)) return;
+    const fh = fadeHandleAt(e, h);
+    if (fh) {
+      // Drag a fade length (Pro Tools-style corner handle).
+      store.checkpoint();
+      const id = fh.c.id;
+      drag((ev) => {
+        const spb = 60 / store.project.bpm, b = hit(ev).beat;
+        store.update((p) => {
+          const c = p.tracks.flatMap((t) => t.clips).find((x) => x.id === id);
+          if (!c || c.kind !== "audio") return;
+          const end = c.start + c.duration / spb;
+          if (fh.side === "in") c.fadeIn = Math.max(0, Math.min(c.duration - (c.fadeOut ?? 0), (b - c.start) * spb));
+          else c.fadeOut = Math.max(0, Math.min(c.duration - (c.fadeIn ?? 0), (end - b) * spb));
+        });
+      });
+      return;
+    }
     if (h.y < RULER_H) {
       if (e.shiftKey) {
         const start = Math.round(h.beat / 4) * 4;
@@ -284,6 +358,7 @@ function TracksArea() {
     let cursor = "default";
     if (h.y < RULER_H) cursor = "text";
     else if (store.ui.tool === "range" && h.track) cursor = "text";
+    else if (fadeHandleAt(e, h)) cursor = "col-resize";
     else if (h.clip) {
       const tool = store.ui.tool;
       const x0 = h.clip.start * store.ui.pxPerBeat, x1 = clipEnd(h.clip) * store.ui.pxPerBeat, xm = h.beat * store.ui.pxPerBeat;
