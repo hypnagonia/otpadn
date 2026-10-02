@@ -66,8 +66,25 @@ function on(fn: (m: Record<string, unknown>) => void) {
   return () => listeners.delete(fn);
 }
 
+/**
+ * Load with retries: a dropped connection (Wi-Fi blip, "Failed to fetch") must not fail the whole
+ * conversion — download/network errors are retried up to 3 times, other errors surface at once.
+ */
+async function ensureLoaded(model: MuscriptorModel, onProgress: (p: MuscriptorProgress) => void): Promise<string> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await ensureLoadedOnce(model, onProgress);
+    } catch (e) {
+      const msg = String((e as Error).message);
+      if (attempt >= 3 || !/fetch|download|network|socket|HTTP 5/i.test(msg)) throw e;
+      onProgress({ phase: "download", progress: null, detail: `connection dropped — retrying (${attempt}/2)…` });
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+}
+
 /** Load (download once, then cached) and upload weights to the GPU. Resolves with the GPU name. */
-function ensureLoaded(model: MuscriptorModel, onProgress: (p: MuscriptorProgress) => void): Promise<string> {
+function ensureLoadedOnce(model: MuscriptorModel, onProgress: (p: MuscriptorProgress) => void): Promise<string> {
   if (loaded?.model === model) return loaded.promise;
   if (!("gpu" in navigator)) return Promise.reject(new Error("Audio → MIDI needs WebGPU (Chrome 116+, Edge, or Safari 26+)."));
   const w = getWorker();
