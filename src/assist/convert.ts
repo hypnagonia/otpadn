@@ -7,9 +7,11 @@ import type { Grid } from "../analysis/grid";
 import { notesToBeats } from "../analysis/notes";
 import { muscriptorGpu, to16kMono, transcribeMuscriptor, type MuscriptorModel, type TranscribedNote } from "../ml/muscriptor";
 import { store } from "../model/store";
-import { uid, type MidiClip, type Role, type Track } from "../model/types";
+import { uid, type AudioClip, type MidiClip, type Role, type Track } from "../model/types";
 import { audioSource } from "./separate";
-import { midiTrack } from "./tracks";
+import { audioTrack, midiTrack, registerBuffer } from "./tracks";
+import { bufferSources } from "../model/store";
+import { savePcm } from "../io/persist";
 
 /** MuScriptor instrument group → Otpadn role + default sound. */
 const GROUPS: Record<string, { role: Role; sound: string; label: string }> = {
@@ -51,9 +53,15 @@ const GROUPS: Record<string, { role: Role; sound: string; label: string }> = {
 };
 
 /** What a stem's role should restrict MuScriptor to (null = everything). */
+/**
+ * What the model listens for on a stem. Exactly ONE instrument where the stem is one: asked for
+ * several related classes at once (electric / acoustic bass / contrabass) the model reports the
+ * same line once per class, at different octaves — a bass stem came back doubled and polyphonic.
+ * Guitar / piano stems really vary, so the family is asked and the dominant class is kept.
+ */
 const RESTRICT: Partial<Record<Role, string[]>> = {
   drums: ["drums"],
-  bass: ["electric_bass", "acoustic_bass", "contrabass"],
+  bass: ["electric_bass"],
   vocals: ["voice"],
   guitar: ["acoustic_guitar", "clean_electric_guitar", "distorted_electric_guitar"],
   piano: ["acoustic_piano", "electric_piano"],
@@ -79,7 +87,7 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
   const vocals = opts.vocals ?? (instruments === null || track.role === "vocals");
   const t0 = performance.now();
 
-  const label = (detail?: string) => `Audio → MIDI: ${track.name}${muscriptorGpu ? ` (${muscriptorGpu})` : ""}${detail ? " · " + detail : ""}`;
+  const label = (detail?: string) => `Audio → MIDI · input: "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`})${muscriptorGpu ? ` · ${muscriptorGpu}` : ""}${detail ? " · " + detail : ""}`;
   const thorough = opts.thorough ?? true;
   const passes = thorough ? 2 : 1;
   const samples = await to16kMono(buffer);
@@ -97,9 +105,19 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
   const raw: TranscribedNote[] = [...first, ...extra].filter((n) => audible(env, n));
   const gated = first.length + extra.length - raw.length;
 
-  // One MIDI track per instrument, in a stable musical order.
+  // One MIDI track per instrument, in a stable musical order. A stem is ONE instrument: the model
+  // may split a bass line across electric / acoustic / contrabass — merge into a single track
+  // (same pitch overlapping → one note), named after the stem.
   const byInst = new Map<string, TranscribedNote[]>();
-  for (const n of raw) {
+  // Family-conditioned stems (guitar / piano): keep the instrument the model heard most.
+  let merged = raw;
+  if (restrict && instruments && instruments.length > 1 && raw.length) {
+    const dur = new Map<string, number>();
+    for (const n of raw) dur.set(n.instrument, (dur.get(n.instrument) ?? 0) + (n.end - n.start));
+    const top = [...dur.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    merged = raw.filter((n) => n.instrument === top);
+  }
+  for (const n of merged) {
     const arr = byInst.get(n.instrument);
     if (arr) arr.push(n);
     else byInst.set(n.instrument, [n]);
@@ -125,10 +143,25 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
     store.log(`Audio → MIDI found no notes in ${track.name}`);
     return;
   }
+  // Transparency: the exact audio the model transcribed (16 kHz mono, as passed in), as a muted
+  // track under the source — solo it to hear precisely what was converted.
+  const heard = new AudioBuffer({ numberOfChannels: 1, length: samples.length, sampleRate: 16000 });
+  heard.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
+  const heardId = await registerBuffer(heard);
+  bufferSources.set(heardId, { type: "recorded" });
+  void savePcm(heardId, heard);
+  const inputTrack = audioTrack(`${track.name} · model input`, "other", heardId, 0);
+  inputTrack.clips[0] = { ...(inputTrack.clips[0] as AudioClip), start: clip.start, offset: clip.offset, duration: Math.min(heard.duration - clip.offset, clip.duration) };
+  inputTrack.ch.mute = true;
+  inputTrack.color = "#6c6f76";
+  let pk = 0, ss = 0;
+  for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > pk) pk = a; ss += samples[i] * samples[i]; }
+  const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
   store.update((pp) => {
     const i = pp.tracks.findIndex((x) => x.id === track.id);
-    pp.tracks.splice(i + 1, 0, ...tracks);
+    pp.tracks.splice(i + 1, 0, inputTrack, ...tracks);
   });
+  store.log(`Audio → MIDI ${inputInfo} — solo the "${inputTrack.name}" track to hear exactly what was transcribed`);
   store.setUi({ selectedTrackId: tracks[0].id, selectedClipId: tracks[0].clips[0].id });
   store.log(
     `Audio → MIDI: ${track.name} → ${tracks.map((t) => `${t.name} (${(t.clips[0] as MidiClip).notes.length})`).join(", ")} in ${((performance.now() - t0) / 1000).toFixed(1)} s [${muscriptorGpu}]` +
@@ -138,6 +171,7 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
 }
 
 /* ── quality filters ─────────────────────────────────────────────────────── */
+
 
 const ENV_HOP = 160; // 10 ms at 16 kHz
 
@@ -178,7 +212,14 @@ function missingFrom(a: TranscribedNote[], b: TranscribedNote[]): TranscribedNot
     if (arr) arr.push(n);
     else idx.set(k, [n]);
   }
+  // The shifted pass exists to catch notes that straddle pass 1's 5 s chunk boundaries — only fill
+  // there, and only where pass 1 of that instrument is silent (mid-chunk it adds octave mistakes
+  // and doubled notes on top of a pass that was already right).
+  const CHUNK = 5, NEAR = 0.75;
+  const nearBoundary = (t: number) => { const r = t % CHUNK; return r < NEAR || r > CHUNK - NEAR; };
+  const busy = (n: TranscribedNote) => a.some((m) => m.instrument === n.instrument && n.start < m.end - 0.02 && m.start < n.end - 0.02);
   return b.filter((n) => {
+    if (!nearBoundary(n.start) || busy(n)) return false;
     const same = idx.get(`${n.instrument}|${n.pitch}`);
     if (!same) return true;
     return !same.some((m) => Math.abs(m.start - n.start) < 0.08 || (n.start < m.end && m.start < n.end));
