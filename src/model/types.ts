@@ -99,6 +99,8 @@ export interface Track {
   dp?: { sessionId: string; output: Output };
   /** Track produced by a Part Producer session. */
   pp?: { sessionId: string };
+  /** Instrument id whose pro-mix chain (model/chains.ts) this channel was set up for. */
+  chain?: string;
 }
 
 export interface Section {

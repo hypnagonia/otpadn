@@ -6,6 +6,8 @@ import { deleteClip, deleteTrack, duplicateClip, duplicateTrack, findClip, split
 import { engine } from "../../engine/transport";
 import { store, useStore } from "../../model/store";
 import { runTask } from "../common/runTask";
+import { applyProMix, chainFor } from "../../model/chains";
+import { isMultiKit } from "../../instruments/multikit";
 
 /** Right-click menu for regions and tracks (Logic / Ableton conventions). */
 export default function ContextMenu() {
@@ -76,6 +78,11 @@ export default function ContextMenu() {
             </>
           )}
           {track.kind === "midi" && <button onClick={act(() => store.setUi({ showLibrary: true }))}>choose instrument… <kbd>Y</kbd></button>}
+          {track.kind === "midi" && !track.pp && (chainFor(track.instrument) || isMultiKit(track.instrument)) && (
+            <button onClick={act(() => { store.update((pp) => void applyProMix(pp, track.id)); store.log(`Pro mix applied to "${track.name}"${isMultiKit(track.instrument) ? " (all mic channels + drum bus)" : ""}`); })}>
+              reset to pro mix<small>{isMultiKit(track.instrument) ? "mic eq · comp · drum bus" : "eq · comp · saturation"}</small>
+            </button>
+          )}
           <button onClick={act(() => store.setUi({ showEditor: true, editorTab: "eq" }))}>channel eq</button>
           <button onClick={act(() => duplicateTrack(track.id))}>duplicate track</button>
           <button onClick={act(() => deleteTrack(track.id))}>delete track</button>

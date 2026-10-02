@@ -40,6 +40,7 @@ const snapBytes = (s: Snap) => s.json.length * 2; // UTF-16
 import type { Tool } from "../edit/ops";
 import { memory } from "../system/memory";
 import { syncAuxTracks } from "./auxTracks";
+import { syncChains } from "./chains";
 
 export type EditorTab = "mixer" | "eq" | "plugin" | "piano" | "drums" | "parts" | "console";
 
@@ -195,6 +196,7 @@ class Store {
   }
   private projectChanged() {
     syncAuxTracks(this.project);
+    syncChains(this.project);
     this.project.lengthBeats = computeLength(this.project);
     this.projectVersion++;
     gcBuffers(this.project, this.historyBuffers());

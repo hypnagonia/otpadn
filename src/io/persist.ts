@@ -5,6 +5,7 @@
  * Stems are not stored: they are re-split from their parent on restore (deterministic, ~2 s).
  */
 import { dspPool } from "../dsp/pool";
+import { migrateChains } from "../model/chains";
 import { memory } from "../system/memory";
 import { bufferSources, emptyProject, pendingBuffers, store, type BufferSource, type UiState } from "../model/store";
 import { defaultChannel, type Project } from "../model/types";
@@ -195,6 +196,7 @@ function migrate(p: Project) {
     const d = defaultChannel();
     for (const k of Object.keys(d) as (keyof typeof d)[]) if (t.ch[k] === undefined) (t.ch as unknown as Record<string, unknown>)[k] = d[k];
   }
+  migrateChains(p);
 }
 
 let timer: number | undefined;

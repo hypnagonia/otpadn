@@ -3,6 +3,7 @@ import { midiTrack } from "../assist/tracks";
 import { store } from "../model/store";
 import { defaultChannel, ROLE_COLORS, uid, type Note, type Role, type Track } from "../model/types";
 import { defaultParams, type Insert } from "../plugins/defs";
+import { chainFor } from "../model/chains";
 import { defaultPartSession, modeForRole } from "./defaults";
 import type { PartInput } from "./pipeline";
 import type { Mode, PartSession, PEvent, PipelineResult, Proc } from "./types";
@@ -134,8 +135,14 @@ function procInto(t: Track, proc: Proc, keyBase: string) {
   ch.volumeDb = proc.level;
   ch.reverbSend = proc.send.on ? proc.send.amount : 0;
   const own = (t.inserts ?? []).filter((i) => !i.id.startsWith("pp-"));
+  // An instrument with a pro-mix chain (e.g. the sampled bass) brings its own EQ + dynamics;
+  // the part's level, delay and send still apply on top.
+  const chain = chainFor(t.instrument);
+  if (chain && proc.eq.on) {
+    Object.assign(ch, { hpf: 0, eqLow: 0, eqHigh: 0, lpf: 0, ...chain.ch, volumeDb: proc.level });
+  }
   const ins: Insert[] = [
-    { id: `pp-comp-${keyBase}`, type: "compressor", on: proc.comp.on, params: { ...defaultParams("compressor"), threshold: proc.comp.threshold, ratio: proc.comp.ratio, attack: proc.comp.attack, release: 150 } },
+    ...(chain ? chain.inserts().map((i, k) => ({ ...i, id: `pp-chain${k}-${keyBase}` })) : [{ id: `pp-comp-${keyBase}`, type: "compressor" as const, on: proc.comp.on, params: { ...defaultParams("compressor"), threshold: proc.comp.threshold, ratio: proc.comp.ratio, attack: proc.comp.attack, release: 150 } }]),
     { id: `pp-delay-${keyBase}`, type: "delay", on: proc.delay.on, params: { ...defaultParams("delay"), div: proc.delay.div, feedback: proc.delay.feedback, mix: proc.delay.mix } },
   ];
   t.inserts = [...ins, ...own];

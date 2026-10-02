@@ -4,6 +4,7 @@ import { dspPool } from "../dsp/pool";
 import { store } from "../model/store";
 import { uid, type ChannelSettings, type Project, type Role, type Track } from "../model/types";
 import { defaultParams } from "../plugins/defs";
+import { hasChain } from "../model/chains";
 
 /** Track loudness target relative to a -18 LUFS reference, plus tone/space per role. */
 interface RoleMix {
@@ -59,6 +60,12 @@ function busiestWindow(p: Project, t: Track): [number, number] {
 
 async function measureTrack(p: Project, t: Track): Promise<number> {
   const [a, b] = busiestWindow(p, t);
+  if (hasChain(t)) {
+    // Pro-mix chains (kit mics + drum bus, sampled bass) are part of the sound: measure through
+    // the whole strip, at a 0 dB fader.
+    const buf = await renderProject(p, { fromBeat: a, toBeat: b, onlyTracks: [t.id], bypassMaster: true });
+    return (await dspPool.lufs(buf)) - t.ch.volumeDb;
+  }
   const buf = await renderProject(p, { fromBeat: a, toBeat: b, rawTracks: [t.id] });
   return dspPool.lufs(buf);
 }
@@ -112,10 +119,12 @@ export async function autoMix() {
       const L = measured[i];
       const target = REF_LUFS + rm.rel + layerOffset(t);
       const gain = Number.isFinite(L) ? Math.max(-24, Math.min(18, target - L)) : 0;
-      tr.ch = { ...tr.ch, ...rm.ch, volumeDb: Math.round(gain * 10) / 10, pan: panFor(t), compOn: false };
+      // A pro-mix chain keeps its own EQ / dynamics: the mix only sets the fader and pan.
+      const chained = hasChain(t);
+      tr.ch = chained ? { ...tr.ch, volumeDb: Math.round(gain * 10) / 10, pan: panFor(t) } : { ...tr.ch, ...rm.ch, volumeDb: Math.round(gain * 10) / 10, pan: panFor(t), compOn: false };
       // Role compression becomes a real compressor insert (re-used if one exists).
       tr.inserts ??= [];
-      if (rm.ch.compOn) {
+      if (rm.ch.compOn && !chained) {
         let c = tr.inserts.find((i) => i.type === "compressor");
         if (!c) tr.inserts.push((c = { id: uid("ins"), type: "compressor", on: true, params: defaultParams("compressor") }));
         Object.assign(c.params, {
