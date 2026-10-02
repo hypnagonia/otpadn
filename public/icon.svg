@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Otpadn: three track lanes with regions, a waveform, and the playhead -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34363c"/>
+      <stop offset="1" stop-color="#1f2023"/>
+    </linearGradient>
+    <clipPath id="r1"><rect x="72" y="120" width="250" height="78" rx="10"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#bg)"/>
+  <rect x="8" y="8" width="496" height="496" rx="98" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="4"/>
+  <!-- lane 1: blue audio region with waveform -->
+  <rect x="72" y="120" width="250" height="78" rx="10" fill="#4aa3df"/>
+  <g clip-path="url(#r1)" fill="#0d2233" fill-opacity="0.7">
+    <path d="M84 159 h6 v-10 h6 v24 h6 v-34 h6 v44 h6 v-28 h6 v18 h6 v-40 h6 v52 h6 v-30 h6 v14 h6 v-22 h6 v30 h6 v-46 h6 v56 h6 v-36 h6 v22 h6 v-14 h6 v8 h6 v-26 h6 v36 h6 v-44 h6 v50 h6 v-30 h6 v20 h6 v-10 h6 v4 h6 v-18 h6 v28 h6 v-38 h6 v46 h6 v-24 h6 v12 h6 v-6 h6 v4 H84 z"/>
+  </g>
+  <!-- lane 2: orange midi region with note bricks -->
+  <rect x="150" y="222" width="290" height="78" rx="10" fill="#e0a43a"/>
+  <g fill="#2e1f05" fill-opacity="0.75">
+    <rect x="168" y="270" width="40" height="10" rx="2"/>
+    <rect x="214" y="254" width="30" height="10" rx="2"/>
+    <rect x="252" y="240" width="54" height="10" rx="2"/>
+    <rect x="314" y="262" width="34" height="10" rx="2"/>
+    <rect x="356" y="246" width="62" height="10" rx="2"/>
+  </g>
+  <!-- lane 3: green region -->
+  <rect x="72" y="324" width="190" height="78" rx="10" fill="#57b26a"/>
+  <rect x="276" y="324" width="164" height="78" rx="10" fill="#57b26a" fill-opacity="0.55"/>
+  <!-- playhead -->
+  <rect x="290" y="92" width="10" height="336" rx="3" fill="#ffffff"/>
+  <path d="M270 82 h50 l-25 26 z" fill="#ffffff"/>
+</svg>

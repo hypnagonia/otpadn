@@ -1,0 +1,9 @@
+CrocellKit — Creative Commons Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/)
+
+Sampled and engineered for DrumGizmo by Lars Muldjord (drumgizmo.org).
+Drumkit setup: Andreas / Crocell (crocell.dk). Mic setup: Jacob Olsen, JBOSound (jbosound.com).
+
+Changes made for Otpadn: a subset of hits (8 velocity layers per piece, one kick, snare, three toms,
+hi-hat, crash, ride) was selected; the 15 microphone channels were summed into 7 tracks
+(kick, snare, toms, hihat, ride, overheads, room); levels scaled by one global gain; the toms track keeps only tom hits (no bleed); tails trimmed;
+encoded as AAC. Build script: tools/build_crocell_kit.py.
