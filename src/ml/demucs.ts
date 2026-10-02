@@ -11,7 +11,8 @@ export let demucsBackend = "";
 const SR = 44100;
 const N = Math.floor(7.8 * SR);
 const STRIDE = N - Math.floor(N / 4);
-const EP_KEY = "otpadn-demucs-ep";
+// v2: browsers locked to "cpu" by the old WebGPU loader bug retry the GPU once.
+const EP_KEY = "otpadn-demucs-ep-v2";
 const GPU_INIT_TIMEOUT_MS = 90_000;
 
 import { est, memory } from "../system/memory";
@@ -143,9 +144,9 @@ async function demucsInner(buf: AudioBuffer, onProgress: (p: DemucsProgress) => 
       w.onerror = (e) => reject(new Error(e.message || "worker crashed"));
       w.postMessage({ type: "prepare", jobId: 1, modelUrl: DEMUCS_MODEL_URL });
     }).finally(() => prep.terminate());
-    const n = Math.min(wasmWorkers(base), nChunks);
+    const per = Math.ceil(nChunks / Math.min(wasmWorkers(base), nChunks));
+    const n = Math.ceil(nChunks / per); // never a worker with an empty chunk range (short audio)
     memory.track("demucs:sessions", n * est.demucsSession, "model", `HTDemucs ×${n}`);
-    const per = Math.ceil(nChunks / n);
     const done = new Array(n).fill(0);
     const workers = Array.from({ length: n }, spawn);
     try {

@@ -8,7 +8,9 @@ import type * as OrtNS from "onnxruntime-web";
 // WASM binaries served from our own origin by Vite (hashed, version-locked to the npm package).
 // The JSEP build is only valid with the WebGPU EP: used CPU-only it calls uninitialised WebGPU hooks
 // and the session never resolves. CPU inference therefore uses the plain WASM build.
-import jsepWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm?url";
+// onnxruntime-web ≥ 1.2x: the WebGPU EP runs on the asyncify build (JSEP is legacy). Handing it the
+// JSEP wasm crashed every WebGPU session ("reading 'Xe'") → silent fallback to the slow CPU path.
+import gpuWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url";
 import plainWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
 import { patchDoublesToFloat } from "./onnxPatch";
 
@@ -26,7 +28,7 @@ let ort: typeof OrtNS;
 async function loadOrt(ep: "webgpu" | "wasm") {
   if (ort) return ort;
   ort = ep === "webgpu" ? ((await import("onnxruntime-web/webgpu")) as unknown as typeof OrtNS) : ((await import("onnxruntime-web/wasm")) as unknown as typeof OrtNS);
-  ort.env.wasm.wasmPaths = { wasm: new URL(ep === "webgpu" ? jsepWasmUrl : plainWasmUrl, self.location.href).href };
+  ort.env.wasm.wasmPaths = { wasm: new URL(ep === "webgpu" ? gpuWasmUrl : plainWasmUrl, self.location.href).href };
   // No COOP/COEP headers → no SharedArrayBuffer; WASM runs single-threaded per worker.
   ort.env.wasm.numThreads = 1;
   return ort;
