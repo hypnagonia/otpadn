@@ -81,6 +81,92 @@ export function splitClip(id: string, atBeat: number) {
   store.setUi({ selectedClipId: right.id });
 }
 
+/* ── multi-region selection: the group is ui.selectedClipIds while it contains the primary
+   ui.selectedClipId (editors open the primary); code that sets only selectedClipId gets a single
+   selection automatically. ── */
+
+/** Ids of the selected regions (group or single), existing ones only. */
+export function selectedClips(): string[] {
+  const { selectedClipId: primary, selectedClipIds: ids } = store.ui;
+  if (!primary) return [];
+  const all = ids.includes(primary) ? ids : [primary];
+  return all.filter((id) => findClip(id));
+}
+
+export function selectClips(ids: string[], primary: string | null = ids[ids.length - 1] ?? null) {
+  store.setUi({ selectedClipIds: ids, selectedClipId: primary });
+}
+
+/** Shift/⌘-click: add the region to the group, or take it out. */
+export function toggleClipSelection(id: string) {
+  const cur = selectedClips();
+  if (cur.includes(id)) {
+    const rest = cur.filter((x) => x !== id);
+    selectClips(rest, rest[rest.length - 1] ?? null);
+  } else selectClips([...cur, id], id);
+}
+
+export function selectAllClips() {
+  const ids = store.project.tracks.flatMap((t) => t.clips.map((c) => c.id));
+  selectClips(ids, ids[0] ?? null);
+}
+
+export function deleteClips(ids: string[]) {
+  const set = new Set(ids);
+  store.checkpoint(); // a command is its own undo step, never merged with a preceding drag/nudge
+  store.update((p) => p.tracks.forEach((t) => (t.clips = t.clips.filter((c) => !set.has(c.id)))));
+  selectClips([], null);
+}
+
+/** Move a group by the same offset (kept ≥ 0 for every region); `from` = start beats at grab time. */
+export function moveClips(from: Map<string, number>, delta: number) {
+  const d = Math.max(delta, -Math.min(...from.values()));
+  store.update((p) => {
+    for (const t of p.tracks) for (const c of t.clips) if (from.has(c.id)) c.start = from.get(c.id)! + d;
+  });
+}
+
+/** ⌘D on a group: one copy of the whole block, right after it (bar-aligned), selected. */
+export function duplicateClips(ids: string[]) {
+  const hits = ids.map(findClip).filter((h): h is NonNullable<ReturnType<typeof findClip>> => !!h);
+  if (!hits.length) return;
+  const a = Math.min(...hits.map((h) => h.clip.start)), b = Math.max(...hits.map((h) => clipEnd(h.clip)));
+  const off = Math.ceil((b - a) / 4 - 1e-9) * 4 || 4;
+  const copies: string[] = [];
+  store.checkpoint();
+  store.update((p) => {
+    for (const h of hits) {
+      const t = p.tracks.find((x) => x.id === h.track.id);
+      if (!t) continue;
+      const copy = structuredClone(h.clip);
+      copy.id = uid("clip");
+      copy.start = h.clip.start + off;
+      t.clips.push(copy);
+      copies.push(copy.id);
+    }
+  });
+  selectClips(copies, copies[0]);
+}
+
+/** Split every region of the group that spans the beat; both halves stay selected. */
+export function splitClips(ids: string[], atBeat: number) {
+  const out: string[] = [];
+  store.checkpoint();
+  for (const id of ids) {
+    const prev = store.ui.selectedClipId;
+    splitClip(id, atBeat);
+    out.push(id);
+    const right = store.ui.selectedClipId; // splitClip selects the new right half
+    if (right && right !== prev && right !== id) out.push(right);
+  }
+  selectClips(out, out[0] ?? null);
+}
+
+/** Trim the same edge of every region in the group by the same amount. */
+export function trimClips(from: Map<string, number>, edge: "start" | "end", delta: number) {
+  for (const [id, at] of from) trimClip(id, edge, at + delta);
+}
+
 /** Trim a region edge (Pro Tools trim tool). Audio can't extend past its buffer. */
 export function trimClip(id: string, edge: "start" | "end", toBeat: number) {
   const hit = findClip(id);

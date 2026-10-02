@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { convertToMidi } from "../../assist/convert";
 import { splitStems } from "../../assist/separate";
 import { cleanAudio } from "../../assist/clean";
-import { deleteClip, deleteTrack, duplicateClip, duplicateTrack, findClip, splitClip, editRange, insertSilence } from "../../edit/ops";
+import { deleteClip, deleteClips, deleteTrack, duplicateClip, duplicateClips, duplicateTrack, findClip, selectedClips, splitClip, splitClips, editRange, insertSilence } from "../../edit/ops";
 import { engine } from "../../engine/transport";
 import { store, useStore } from "../../model/store";
 import { runTask } from "../common/runTask";
@@ -27,6 +27,7 @@ export default function ContextMenu() {
   if (!m) return null;
   const track = s.project.tracks.find((t) => t.id === m.trackId);
   const clip = m.clipId ? findClip(m.clipId)?.clip : undefined;
+  const group = clip ? selectedClips() : [];
   const busy = !!s.ui.busy;
   const range = s.ui.range;
   const loop = s.project.loop;
@@ -49,7 +50,16 @@ export default function ContextMenu() {
           <div className="menu-sep" />
         </>
       )}
-      {clip && (
+      {clip && group.length > 1 && (
+        <>
+          <div className="menu-title">{group.length} regions selected</div>
+          <button onClick={act(() => splitClips(group, engine.beat))}>split all at playhead <kbd>⌘T</kbd></button>
+          <button onClick={act(() => duplicateClips(group))}>duplicate group <kbd>⌘D</kbd></button>
+          <button onClick={act(() => deleteClips(group))}>delete group <kbd>⌫</kbd></button>
+          <div className="menu-sep" />
+        </>
+      )}
+      {clip && group.length <= 1 && (
         <>
           <div className="menu-title">region</div>
           {clip.kind === "midi" && (

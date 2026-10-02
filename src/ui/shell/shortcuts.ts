@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { importAudio } from "../../assist/import";
-import { duplicateClip, editRange, splitClip, TOOLS } from "../../edit/ops";
+import { deleteClips, duplicateClips, editRange, moveClips, selectAllClips, selectClips, selectedClips, splitClips, findClip, TOOLS } from "../../edit/ops";
 import { engine } from "../../engine/transport";
 import { isRecording, stopRecording, toggleRecording } from "../../engine/recorder";
 import { exportWav } from "../../io/export";
@@ -53,7 +53,7 @@ export function useShortcuts(openFile: () => void) {
         case "KeyT":
           if (mod) {
             if (ui.range) editRange(ui.range, "split");
-            else if (ui.selectedClipId) splitClip(ui.selectedClipId, engine.beat);
+            else if (ui.selectedClipId) splitClips(selectedClips(), engine.beat);
           } else {
             const i = TOOLS.findIndex((t) => t.id === ui.tool);
             store.setUi({ tool: TOOLS[(i + 1) % TOOLS.length].id });
@@ -72,7 +72,9 @@ export function useShortcuts(openFile: () => void) {
           store.setUi({ showLibrary: !ui.showLibrary });
           break;
         case "Escape":
-          store.setUi(ui.range ? { range: null, contextMenu: null } : { tool: "pointer", contextMenu: null });
+          if (ui.range) store.setUi({ range: null, contextMenu: null });
+          else if (selectedClips().length > 1) selectClips([], null);
+          else store.setUi({ tool: "pointer", contextMenu: null });
           break;
         case "KeyR":
           if (mod) handled = false;
@@ -111,15 +113,30 @@ export function useShortcuts(openFile: () => void) {
             // range tool: ⌫ = delete the slice (gap stays), ⇧⌫ = delete and close the gap
             editRange(ui.range, e.shiftKey ? "ripple" : "delete");
             store.setUi({ range: null });
-          } else if (ui.selectedClipId) {
-            const id = ui.selectedClipId;
-            store.update((p) => p.tracks.forEach((t) => (t.clips = t.clips.filter((c) => c.id !== id))));
-            store.setUi({ selectedClipId: null });
-          } else handled = false;
+          } else if (ui.selectedClipId) deleteClips(selectedClips());
+          else handled = false;
           break;
         case "KeyD":
-          if (mod && ui.selectedClipId) duplicateClip(ui.selectedClipId);
+          if (mod && ui.selectedClipId) duplicateClips(selectedClips());
           else handled = false;
+          break;
+        case "KeyA":
+          if (mod) selectAllClips();
+          else handled = false;
+          break;
+        case "ArrowLeft":
+        case "ArrowRight": {
+          // nudge the selected regions by the snap value (a beat when snap is off)
+          const ids = selectedClips();
+          if (!ids.length) {
+            handled = false;
+            break;
+          }
+          const step = (ui.snap > 0 ? ui.snap : 1) * (e.code === "ArrowLeft" ? -1 : 1);
+          store.checkpoint();
+          moveClips(new Map(ids.map((id) => [id, findClip(id)!.clip.start] as [string, number])), step);
+          break;
+        }
           break;
         case "ArrowUp":
         case "ArrowDown": {

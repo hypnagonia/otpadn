@@ -9,7 +9,10 @@ export interface View {
   sx: number;
   sy: number;
   rowH: number;
-  selClip: string | null;
+  /** Selected regions (group or single). */
+  selClips: string[];
+  /** Rubber-band selection box being dragged, in canvas px. */
+  marquee?: { x0: number; y0: number; x1: number; y1: number } | null;
   selTrack: string | null;
   loopDraft: [number, number] | null;
   /** Range-tool selection (time slice on some tracks). */
@@ -18,7 +21,8 @@ export interface View {
 
 /** Static layer: lanes, grid, clips (waveforms / note thumbnails), ruler, markers, cycle range. */
 export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
-  const { ppb, sx, sy, rowH: ROW_H, selClip, loopDraft } = v;
+  const { ppb, sx, sy, rowH: ROW_H, loopDraft } = v;
+  const sel = new Set(v.selClips);
   const dpr = devicePixelRatio || 1;
   const W = cv.width / dpr, H = cv.height / dpr;
   const g = cv.getContext("2d")!;
@@ -123,7 +127,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
       }
       g.restore();
       g.globalAlpha = 1;
-      if (c.id === selClip) {
+      if (sel.has(c.id)) {
         g.strokeStyle = T.ink;
         g.lineWidth = 2;
         g.strokeRect(x0 + 1, cy + 1, x1 - x0 - 2, ch - 2);
@@ -145,6 +149,17 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
       g.strokeStyle = "#ffffff";
       g.strokeRect(Math.round(x0) + 0.5, y + 1.5, Math.round(x1 - x0), ROW_H - 3);
     });
+  }
+
+  if (v.marquee) {
+    const { x0, y0, x1, y1 } = v.marquee;
+    const x = Math.min(x0, x1), y = Math.max(TOP_H, Math.min(y0, y1));
+    g.fillStyle = "rgba(255,255,255,0.08)";
+    g.fillRect(x, y, Math.abs(x1 - x0), Math.max(y0, y1) - y);
+    g.strokeStyle = "rgba(255,255,255,0.75)";
+    g.setLineDash([4, 3]);
+    g.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(Math.abs(x1 - x0)), Math.round(Math.max(y0, y1) - y));
+    g.setLineDash([]);
   }
 
   // Ruler + sections (fixed on top)

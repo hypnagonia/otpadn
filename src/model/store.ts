@@ -47,6 +47,8 @@ export type EditorTab = "mixer" | "eq" | "plugin" | "piano" | "drums" | "parts" 
 export interface UiState {
   selectedTrackId: string | null;
   selectedClipId: string | null;
+  /** Multi-region selection on the arrangement; only valid while it contains selectedClipId (see edit/ops selectedClips). */
+  selectedClipIds: string[];
   /** Panels, Logic-style: Inspector (I), Library (Y), Editor pane (E) with Mixer (X) / Piano Roll (P). */
   showInspector: boolean;
   showLibrary: boolean;
@@ -77,6 +79,7 @@ class Store {
   ui: UiState = {
     selectedTrackId: null,
     selectedClipId: null,
+    selectedClipIds: [],
     showInspector: true,
     showLibrary: false,
     showEditor: true,

@@ -4,7 +4,7 @@ import { engine } from "../../engine/transport";
 import { DEFAULT_INSTRUMENT } from "../../instruments/catalog";
 import { store, useStoreQuiet } from "../../model/store";
 import { type Role } from "../../model/types";
-import { clipEnd, createMidiClip, deleteClip, deleteTrack, SNAPS, snapBeat, splitClip, TOOLS, trimClip } from "../../edit/ops";
+import { clipEnd, createMidiClip, deleteClip, deleteTrack, findClip, moveClips, selectClips, selectedClips, SNAPS, snapBeat, splitClip, splitClips, toggleClipSelection, TOOLS, trimClip, trimClips } from "../../edit/ops";
 import { drawArrangement, drawPlayhead } from "./drawArrangement";
 import { clipLenBeats, RULER_H, TOP_H } from "./geometry";
 import TrackHeader from "./TrackHeader";
@@ -35,6 +35,7 @@ function TracksArea() {
   const headersRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 400 });
   const loopDraft = useRef<[number, number] | null>(null);
+  const marquee = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
 
   const totalW = p.lengthBeats * ppb + 400;
   const totalH = TOP_H + p.tracks.length * rowH + 120;
@@ -42,8 +43,8 @@ function TracksArea() {
   const redraw = useCallback(() => {
     const el = scrollRef.current, cv = baseRef.current, ov = overRef.current;
     if (!el || !cv || !ov) return;
-    const { pxPerBeat, trackHeight, selectedClipId, selectedTrackId } = store.ui;
-    drawArrangement(cv, store.project, { ppb: pxPerBeat, sx: el.scrollLeft, sy: el.scrollTop, rowH: trackHeight, selClip: selectedClipId, selTrack: selectedTrackId, loopDraft: loopDraft.current, range: store.ui.range });
+    const { pxPerBeat, trackHeight, selectedTrackId } = store.ui;
+    drawArrangement(cv, store.project, { ppb: pxPerBeat, sx: el.scrollLeft, sy: el.scrollTop, rowH: trackHeight, selClips: selectedClips(), selTrack: selectedTrackId, loopDraft: loopDraft.current, range: store.ui.range, marquee: marquee.current });
     drawPlayhead(ov, engine.beat, pxPerBeat, el.scrollLeft);
     if (headersRef.current) headersRef.current.style.transform = `translateY(${-el.scrollTop}px)`;
   }, []);
@@ -197,10 +198,22 @@ function TracksArea() {
       return;
     }
     if (store.ui.range) store.setUi({ range: null });
-    store.setUi({ selectedTrackId: h.track.id, selectedClipId: h.clip?.id ?? null });
+    const group = selectedClips();
+    const inGroup = !!h.clip && group.length > 1 && group.includes(h.clip.id);
+    // Shift / ⌘-click a region: add it to the selection or take it out (no drag).
+    if (tool === "pointer" && h.clip && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+      store.setUi({ selectedTrackId: h.track.id });
+      return toggleClipSelection(h.clip.id);
+    }
+    // Clicking a region of the group keeps the group (so it can be dragged as one).
+    if (inGroup) store.setUi({ selectedTrackId: h.track.id, selectedClipId: h.clip!.id });
+    else if (h.clip || !(tool === "pointer")) {
+      store.setUi({ selectedTrackId: h.track.id });
+      selectClips(h.clip ? [h.clip.id] : [], h.clip?.id ?? null);
+    }
 
     if (tool === "eraser") return h.clip && deleteClip(h.clip.id);
-    if (tool === "scissors") return h.clip && splitClip(h.clip.id, snapped(h.beat, e));
+    if (tool === "scissors") return h.clip && (inGroup ? splitClips(group, snapped(h.beat, e)) : splitClip(h.clip.id, snapped(h.beat, e)));
     if (tool === "pencil") {
       if (h.clip) return store.setUi({ showEditor: true, editorTab: h.clip.kind === "midi" ? "piano" : store.ui.editorTab });
       if (h.track.kind !== "midi") return;
@@ -209,20 +222,59 @@ function TracksArea() {
       drag((ev) => trimClip(c.id, "end", Math.max(start + 1, snapBeat(hit(ev).beat, store.ui.snap || 1))));
       return;
     }
-    if (!h.clip) return;
-
-    // Pointer: trim edges (Pro Tools trim) or move.
-    const clip = h.clip;
-    const x0 = clip.start * store.ui.pxPerBeat, x1 = clipEnd(clip) * store.ui.pxPerBeat, xm = h.beat * store.ui.pxPerBeat;
-    if (x1 - xm < EDGE_PX || xm - x0 < EDGE_PX) {
-      const edge = x1 - xm < EDGE_PX ? "end" : "start";
-      drag((ev) => trimClip(clip.id, edge, snapped(hit(ev).beat, ev)));
+    if (!h.clip) {
+      // Pointer on empty lane space: rubber-band select regions (shift adds); a plain click deselects.
+      store.setUi({ selectedTrackId: h.track.id });
+      const el = scrollRef.current!, r = el.getBoundingClientRect();
+      const base = e.shiftKey ? selectedClips() : [];
+      const x0 = e.clientX - r.left, y0 = e.clientY - r.top;
+      const sx0 = el.scrollLeft, sy0 = el.scrollTop;
+      let moved = false;
+      drag((ev) => {
+        const x1 = ev.clientX - r.left, y1 = ev.clientY - r.top;
+        if (!moved && Math.hypot(x1 - x0, y1 - y0) < 4) return;
+        moved = true;
+        // box in content coordinates, so it stays put while the view scrolls
+        const ppb = store.ui.pxPerBeat, rh = store.ui.trackHeight;
+        const ax = x0 + sx0, bx = x1 + el.scrollLeft, ay = y0 + sy0, by = y1 + el.scrollTop;
+        const b0 = Math.min(ax, bx) / ppb, b1 = Math.max(ax, bx) / ppb;
+        const r0 = Math.floor((Math.min(ay, by) - TOP_H) / rh), r1 = Math.floor((Math.max(ay, by) - TOP_H) / rh);
+        const spb = 60 / store.project.bpm;
+        const ids = [...base];
+        store.project.tracks.forEach((t, i) => {
+          if (i < r0 || i > r1) return;
+          for (const c of t.clips) if (c.start < b1 && c.start + clipLenBeats(c, spb) > b0 && !ids.includes(c.id)) ids.push(c.id);
+        });
+        marquee.current = { x0: ax - el.scrollLeft, y0: ay - el.scrollTop, x1, y1 };
+        selectClips(ids, ids[ids.length - 1] ?? null);
+        redraw();
+      }, () => {
+        marquee.current = null;
+        if (!moved && !e.shiftKey) selectClips([], null);
+        redraw();
+      });
       return;
     }
+
+    // Pointer: trim edges (Pro Tools trim) or move — the whole group when the region is part of one.
+    const clip = h.clip;
+    const ids = inGroup ? group : [clip.id];
+    const x0 = clip.start * store.ui.pxPerBeat, x1 = clipEnd(clip) * store.ui.pxPerBeat, xm = h.beat * store.ui.pxPerBeat;
+    store.checkpoint(); // one undo step per gesture
+    if (x1 - xm < EDGE_PX || xm - x0 < EDGE_PX) {
+      const edge = x1 - xm < EDGE_PX ? "end" : "start";
+      if (ids.length === 1) return drag((ev) => trimClip(clip.id, edge, snapped(hit(ev).beat, ev)));
+      const from = new Map(ids.map((id) => { const c = findClip(id)!.clip; return [id, edge === "end" ? clipEnd(c) : c.start] as [string, number]; }));
+      const ref = from.get(clip.id)!;
+      drag((ev) => trimClips(from, edge, snapped(hit(ev).beat, ev) - ref));
+      return;
+    }
+    const from = new Map(ids.map((id) => [id, findClip(id)!.clip.start] as [string, number]));
     const startBeat = clip.start, grab = h.beat;
+    let last = 0;
     drag((ev) => {
-      const next = Math.max(0, snapped(startBeat + hit(ev).beat - grab, ev));
-      if (next !== clip.start) store.update(() => (clip.start = next));
+      const d = Math.max(0, snapped(startBeat + hit(ev).beat - grab, ev)) - startBeat;
+      if (d !== last) moveClips(from, (last = d));
     });
   };
 
