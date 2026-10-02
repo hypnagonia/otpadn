@@ -142,6 +142,8 @@ export interface Track {
   frozen?: { bufferId: string; sig: string };
   /** Channel group id (project.groups). */
   group?: string;
+  /** The project's reverb return (a bus): every channel's "verb" knob sends here. */
+  reverbReturn?: boolean;
   /** Automation lanes (engine/automation.ts). */
   automation?: AutoLane[];
   /** Which lane the arrange view shows/edits in automation view. */
@@ -174,6 +176,8 @@ export interface Project {
   sections: Section[];
   chords: ChordSpan[];
   tracks: Track[];
+  /** The user deleted the reverb return: don't recreate it (verb knobs use the built-in reverb). */
+  noReverbReturn?: boolean;
   /** Channel groups (edit/groups.ts). */
   groups?: ChannelGroup[];
   masterDb: number;

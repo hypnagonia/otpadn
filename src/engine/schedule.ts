@@ -28,7 +28,7 @@ export const isAudible = (p: Project, t: Track): boolean => {
   if (t.ch.solo) return true;
   if (t.kind === "aux") return !!p.tracks.find((o) => o.id === t.auxOf)?.ch.solo;
   // An FX bus stays open while anything audible sends to it (a soloed vocal keeps its reverb).
-  if (t.kind === "bus") return p.tracks.some((x) => x.kind !== "bus" && x.ch.sends?.some((sd) => sd.bus === t.id) && isAudible(p, x));
+  if (t.kind === "bus") return p.tracks.some((x) => x.kind !== "bus" && (x.ch.sends?.some((sd) => sd.bus === t.id) || (t.reverbReturn && x.ch.reverbSend > 0)) && isAudible(p, x));
   return p.tracks.some((a) => a.kind === "aux" && a.auxOf === t.id && a.ch.solo);
 };
 

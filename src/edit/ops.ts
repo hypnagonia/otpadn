@@ -211,7 +211,10 @@ export function deleteTrack(id: string) {
     store.log("That track is one of a kit's outputs: change or remove the kit's main track instead (or just mute it).");
     return;
   }
-  store.update((p) => (p.tracks = p.tracks.filter((t) => t.id !== id)));
+  store.update((p) => {
+    if (t?.reverbReturn) p.noReverbReturn = true; // deleted on purpose: verb knobs use the built-in reverb
+    p.tracks = p.tracks.filter((x) => x.id !== id);
+  });
   if (store.ui.selectedTrackId === id) store.setUi({ selectedTrackId: null, selectedClipId: null });
 }
 

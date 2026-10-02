@@ -77,7 +77,7 @@ export async function renderProject(p: Project, opts: RenderOptions = {}): Promi
   }
   // Inserts (sidechains need every strip) and sends; bus tracks render whenever something sends to them.
   if (!raw) {
-    const buses = p.tracks.filter((b) => b.kind === "bus" && !strips.has(b.id) && isAudible(p, b) && withAux.some((t) => t.ch.sends?.some((sd) => sd.bus === b.id)));
+    const buses = p.tracks.filter((b) => b.kind === "bus" && !strips.has(b.id) && isAudible(p, b) && withAux.some((t) => t.ch.sends?.some((sd) => sd.bus === b.id) || (b.reverbReturn && t.ch.reverbSend > 0)));
     for (const b of buses) {
       const st = createStrip(ctx, master.input, master.reverbIn);
       st.setAutomated(new Set(lanesOf(b).filter((l) => !isPluginLane(l.param)).map((l) => l.param)));
@@ -85,6 +85,10 @@ export async function renderProject(p: Project, opts: RenderOptions = {}): Promi
       strips.set(b.id, st);
     }
     const all = [...withAux, ...buses];
+    // Verb knobs → the reverb return (when it renders), else the built-in reverb.
+    const rr = all.find((t) => t.reverbReturn);
+    const rrIn = rr ? strips.get(rr.id)?.input : undefined;
+    for (const [id, st] of strips) st.setReverbTarget(rrIn && id !== rr!.id ? rrIn : master.reverbIn);
     for (const t of all) {
       const st = strips.get(t.id)!;
       wiring.push(st.setInserts(isFrozen(p, t) ? [] : t.inserts ?? [], p.bpm, (id) => strips.get(id)?.postFader));

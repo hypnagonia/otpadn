@@ -23,6 +23,8 @@ export interface Strip {
   setAutomated(params: Set<string>): void;
   /** Frozen track: input goes straight to the fader (EQ + inserts are baked into the audio). */
   setFrozen(on: boolean): void;
+  /** Where the verb knob sends (the reverb return channel, or the built-in reverb). */
+  setReverbTarget(node: AudioNode): void;
   dispose(): void;
 }
 
@@ -105,6 +107,7 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
   pan.connect(analyser);
   pan.connect(meter);
   autoVol.connect(send).connect(reverbIn); // post-fader taps sit after the volume automation
+  let verbTarget: AudioNode = reverbIn;
 
   const set = (p: AudioParam, v: number) => {
     if (ctx instanceof AudioContext) p.setTargetAtTime(v, ctx.currentTime, 0.015);
@@ -193,6 +196,12 @@ export function createStrip(ctx: BaseAudioContext, out: AudioNode, reverbIn: Aud
     },
     setAutomated(params) {
       automated = params;
+    },
+    setReverbTarget(node) {
+      if (node === verbTarget) return;
+      send.disconnect();
+      send.connect(node);
+      verbTarget = node;
     },
     setFrozen(on) {
       if (on === frozen) return;

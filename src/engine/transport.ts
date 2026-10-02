@@ -165,6 +165,10 @@ export class Engine {
       }
       s.setSends(t.kind === "bus" ? [] : t.ch.sends, busInput, audibleOf.get(t.id) ?? true);
     }
+    // Verb knobs → the reverb return channel (if the project has one), else the built-in reverb.
+    const rr = all.find((t) => t.reverbReturn);
+    const rrIn = rr ? this.strips.get(rr.id)?.input : undefined;
+    for (const [id, s] of this.strips) s.setReverbTarget(rrIn && id !== rr!.id ? rrIn : this.master.reverbIn);
     // Multi-out instruments → their aux tracks' strips.
     for (const t of all) {
       const inst = this.insts.get(t.id)?.p;
