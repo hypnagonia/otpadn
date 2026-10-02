@@ -91,7 +91,9 @@ function estimateKey(p: Project, mel: Ev[], others: { ev: Ev; w: number }[]): Ke
       if (r > best.r) best = { tonic, minor, r };
     }
   // The analysed key stays only if the notes agree with it (or there are too few notes to tell).
-  if (p.key && (mel.length < 12 || corr(h, p.key.minor ? KS_MIN : KS_MAJ, p.key.tonic) >= best.r - 0.05)) return p.key;
+  // (Counting ALL notes: the part generator passes no melody, and "melody < 12 notes" kept a wrong
+  // analysed key every time — F# major over a B♭ / G minor song.)
+  if (p.key && (mel.length + others.length < 12 || corr(h, p.key.minor ? KS_MIN : KS_MAJ, p.key.tonic) >= best.r - 0.05)) return p.key;
   return { tonic: best.tonic, minor: best.minor };
 }
 
@@ -127,8 +129,24 @@ function chordsFor(p: Project, mel: Ev[], others: { ev: Ev; w: number }[], key: 
       for (const { ev, w } of others) { const ov = Math.min(b + 2, ev.start + ev.dur) - Math.max(b, ev.start); if (ov > 0) h[pcOf(ev.pitch)] += ov * w; }
       for (const e of mel) { const ov = Math.min(b + 2, e.start + e.dur) - Math.max(b, e.start); if (ov > 0) h[pcOf(e.pitch)] += ov * 0.5; }
       if (h.some((v) => v > 0)) {
+        // the bass's main note in this window (lowest-register parts, weighted by time)
+        const bh = new Array(12).fill(0);
+        for (const { ev, w } of others) { if (w < 2) continue; const ov = Math.min(b + 2, ev.start + ev.dur) - Math.max(b, ev.start); if (ov > 0) bh[pcOf(ev.pitch)] += ov; }
+        const btot = bh.reduce((a, v) => a + v, 0);
+        const broot = btot > 0 ? bh.indexOf(Math.max(...bh)) : -1;
         let bs = -Infinity;
-        for (const tri of triads) { const s = tri.reduce((a, pc, i) => a + h[pc] * (i === 0 ? 1.3 : 1), 0) - 0.35 * h.reduce((a, v, pc) => a + (tri.includes(pc) ? 0 : v), 0); if (s > bs) { bs = s; tones = tri; } }
+        for (const tri of triads) {
+          const s = tri.reduce((a, pc, i) => a + h[pc] * (i === 0 ? 1.3 : 1), 0) - 0.35 * h.reduce((a, v, pc) => a + (tri.includes(pc) ? 0 : v), 0) + (tri[0] === broot ? 0.6 * btot * 2 : 0);
+          if (s > bs) { bs = s; tones = tri; }
+        }
+        if (broot >= 0 && bh[broot] > btot * 0.5 && tones && tones[0] !== broot) {
+          // the bass clearly sits on a note no diatonic triad has as its root (♭II, a chromatic
+          // riff note…): build the chord on it — a key 3rd when there is one, else root + 5th
+          const sc = (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12);
+          const m3 = (broot + 3) % 12, M3 = (broot + 4) % 12;
+          const third = h[m3] > h[M3] ? m3 : h[M3] > h[m3] ? M3 : sc.includes(m3) ? m3 : sc.includes(M3) ? M3 : -1;
+          tones = third >= 0 ? [broot, third, (broot + 7) % 12] : [broot, (broot + 7) % 12];
+        }
       }
     }
     if (!tones && p.chords.length) {

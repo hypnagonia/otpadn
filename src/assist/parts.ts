@@ -57,10 +57,14 @@ function context(p: Project): Ctx {
   for (const cs of p.chords) end = Math.max(end, cs.start + cs.length);
   end = Math.max(4, Math.ceil(end / 4) * 4);
   const { key, chords } = songContext(p, end);
-  const ch: ChordAt[] = chords.filter((c) => c.tones.length).map((c) => ({ start: c.start, end: Math.min(c.end, end), root: c.tones[0], minor: pcOf(c.tones[1] - c.tones[0]) === 3, tones: c.tones }));
+  const ch: ChordAt[] = chords.filter((c) => c.tones.length).map((c) => ({ start: c.start, end: Math.min(c.end, end), root: c.tones[0], minor: c.tones.length > 2 && pcOf(c.tones[1] - c.tones[0]) === 3, tones: c.tones }));
   // kick hits from drum MIDI (GM 35/36), absolute beats
   const kicks: number[] = [];
   for (const t of p.tracks) if (t.kind === "midi" && t.role === "drums") for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if ((n.pitch === 35 || n.pitch === 36) && n.start < c.length) kicks.push(c.start + n.start);
+  if (kicks.length < 8) {
+    kicks.length = 0;
+    for (const t of p.tracks) if (t.kind === "midi" && t.role === "bass" && !t.name.startsWith("Gen ·")) for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) kicks.push(Math.round((c.start + n.start) * 4) / 4);
+  }
   kicks.sort((a, b) => a - b);
   const sections = p.sections.length ? p.sections : [{ start: 0, length: end, label: "Song", group: "A", energy: 2 } as Section];
   // the melody (vocal / lead MIDI, absolute beats): accompaniment must not rub against it
@@ -260,7 +264,9 @@ function genMetal(c: Ctx, seed: number): Note[] {
     });
     // phrase-end pickup (every 4th bar, loud sections): phrygian ♭2 or ♭5 — the menace notes
     if (bar % 4 === 3 && sec.energy >= 2) {
-      const t = rootLow(c.key.tonic), pick = r() < 0.5 ? [t + 1, t] : [t + 6, t + 7];
+      const t = rootLow(c.key.tonic);
+      const deg = (n: number) => { const i = c.scale.indexOf(c.key.tonic); return t + pcOf(c.scale[(i + n + 7) % 7] - c.key.tonic); };
+      const pick = r() < 0.5 ? [deg(1), t] : [deg(5) - 12 >= t ? deg(5) - 12 : deg(5), deg(4)]; // 2→1, or 6→5
       out.push({ pitch: pick[0] + 12, start: b0 + 3.5, dur: 0.22, vel: velFor(sec, 112) }, { pitch: pick[1] + 12, start: b0 + 3.75, dur: 0.22, vel: velFor(sec, 112) });
     }
   }
@@ -318,9 +324,9 @@ function genBass(c: Ctx, seed: number): Note[] {
       const nc = nextChange(h);
       if (e >= 2 && nc && nc.start <= nx + 1e-6 && nc.start - h <= 1 && i > 0) {
         const target = rootNear(nc.root);
-        const steps = c.scale.map((s) => s).sort((a, b) => a - b);
-        const below = [target - 1, target - 2].find((p) => steps.includes(pcOf(p)) || p === target - 1);
-        pitch = r() < 0.5 && below !== undefined ? below : target + 1 <= 43 && r() < 0.3 ? target + 1 : pitch;
+        const below = [target - 1, target - 2].find((p) => c.scale.includes(pcOf(p)));
+        const above = [target + 1, target + 2].find((p) => c.scale.includes(pcOf(p)) && p <= 43);
+        pitch = r() < 0.5 && below !== undefined ? below : above !== undefined && r() < 0.3 ? above : pitch;
       }
       const dur = e <= 1 ? Math.max(0.5, nx - h - 0.05) : e >= 3 ? Math.min(0.42, nx - h - 0.03) : Math.max(0.2, Math.min(0.9, nx - h - 0.04));
       out.push({ pitch, start: h, dur, vel: velFor(sec, Math.abs(h - Math.round(h)) < 1e-6 ? 104 : 92) });
