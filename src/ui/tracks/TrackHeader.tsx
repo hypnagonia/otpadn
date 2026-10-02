@@ -42,8 +42,8 @@ export default function TrackHeader({ t, index, selected, height }: { t: Track; 
           {t.kind === "audio" && (
             <button className={`ms r ${store.ui.armedTrackId === t.id ? "on" : ""}`} data-tip="arm for recording" onClick={() => store.setUi({ armedTrackId: store.ui.armedTrackId === t.id ? null : t.id })}>r</button>
           )}
-          <button className={`ms m ${t.ch.mute ? "on" : ""}`} data-tip="mute" onClick={() => set((x) => (x.ch.mute = !x.ch.mute))}>m</button>
           <button className={`ms s ${t.ch.solo ? "on" : ""}`} data-tip="solo" onClick={() => set((x) => (x.ch.solo = !x.ch.solo))}>s</button>
+          <button className={`ms m ${t.ch.mute ? "on" : ""}`} data-tip="mute" onClick={() => set((x) => (x.ch.mute = !x.ch.mute))}>m</button>
         </div>
         {height >= 44 && (
           <div className="row">

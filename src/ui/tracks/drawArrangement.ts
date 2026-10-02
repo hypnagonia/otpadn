@@ -65,16 +65,19 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
       const col = dim ? "#6a6d73" : t.color;
       const nameH = ROW_H >= 40 ? 13 : 0;
       g.globalAlpha = dim ? 0.55 : 1;
-      g.fillStyle = col + "c8";
+      g.fillStyle = col + "b4";
       g.fillRect(x0, cy, x1 - x0, ch);
       if (nameH) {
+        // name bar along the bottom edge of the region
         g.fillStyle = col;
-        g.fillRect(x0, cy, x1 - x0, nameH);
+        g.fillRect(x0, cy + ch - nameH, x1 - x0, nameH);
+        g.fillStyle = "rgba(0,0,0,0.35)";
+        g.fillRect(x0, cy + ch - nameH, x1 - x0, 1);
         if (x1 - x0 > 30) {
           g.fillStyle = T.regionText;
-          g.font = `bold 10px ${T.font}`;
+          g.font = `600 10px ${T.font}`;
           g.textBaseline = "middle";
-          g.fillText(t.name, Math.max(x0, 0) + 4, cy + nameH / 2 + 0.5);
+          g.fillText(t.name, Math.max(x0, 0) + 4, cy + ch - nameH / 2 + 0.5);
         }
       }
       g.strokeStyle = "rgba(0,0,0,0.5)";
@@ -87,7 +90,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
         const pk = peaksCache.get(c.bufferId);
         const buf = buffers.get(c.bufferId);
         if (pk && buf) {
-          const top = cy + nameH, hh = ch - nameH;
+          const top = cy, hh = ch - nameH;
           const mid = top + hh / 2, amp = hh / 2 - 2;
           g.fillStyle = T.regionInk;
           const secPerPx = spb / ppb;
@@ -110,7 +113,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
           hi = Math.max(hi, n.pitch);
         }
         const range = Math.max(12, hi - lo + 1);
-        const top = cy + nameH + 3, hh = ch - nameH - 6;
+        const top = cy + 3, hh = ch - nameH - 6;
         const nh = Math.max(1.5, Math.min(5, hh / range));
         g.fillStyle = T.regionInk;
         for (const n of c.notes) {
@@ -159,6 +162,8 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
   }
   g.font = `11px ${T.font}`;
   g.textBaseline = "middle";
+  g.fillStyle = T.hairline; // ruler / markers divider
+  g.fillRect(0, RULER_H - 1, W, 1);
   const tickBeats = Math.max(4, gridBeats);
   for (let b = Math.floor(b0 / tickBeats) * tickBeats; b <= b1; b += tickBeats) {
     const bar = b / 4;
@@ -170,7 +175,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
     g.lineTo(x, RULER_H);
     g.stroke();
     if (major) {
-      g.fillStyle = T.muted;
+      g.fillStyle = T.body;
       g.fillText(String(bar + 1), x + 3, 10);
     }
   }
@@ -180,7 +185,7 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
     g.fillStyle = SECTION_COLORS[sec.label] ?? T.gridStrong;
     g.fillRect(x0 + 1, RULER_H + 2, x1 - x0 - 2, MARKER_H - 4);
     g.fillStyle = "#ffffff";
-    g.font = `bold 12px ${T.font}`;
+    g.font = `600 11px ${T.font}`;
     g.fillText(`${sec.label} ${sec.group}`, Math.max(x0, 0) + 6, RULER_H + MARKER_H / 2);
     g.fillStyle = "rgba(255,255,255,0.6)";
     for (let e = 0; e < sec.energy; e++) g.fillRect(x1 - 8 - e * 5, RULER_H + 8, 3, 8);

@@ -294,8 +294,8 @@ function TracksArea() {
       <div className="tracks-area">
         <div className="headers">
           <div className="headers-top">
-            <span className="global-label">ruler</span>
-            <span className="global-label">markers</span>
+            <span className="global-label">Bars | Beats</span>
+            <span className="global-label">Markers</span>
           </div>
           <div className="headers-list" onContextMenu={(e) => { e.preventDefault(); const t = store.project.tracks[Math.floor((e.clientY - e.currentTarget.getBoundingClientRect().top + (scrollRef.current?.scrollTop ?? 0)) / store.ui.trackHeight)]; if (t) store.setUi({ selectedTrackId: t.id, contextMenu: { x: e.clientX, y: e.clientY, trackId: t.id, clipId: null, beat: engine.beat } }); }}>
             <div className="headers-inner" ref={headersRef}>
