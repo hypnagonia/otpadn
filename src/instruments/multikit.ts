@@ -203,6 +203,7 @@ function hash01(note: number, time: number) {
 const LAYER_SLOT: Record<string, string> = { KDrumR: "kick", Snare: "snare" };
 /** Drum pieces (vs cymbals) and the mic groups that are meant for cymbals. */
 const DRUM_PIECES = new Set(["KDrumR", "Snare", "Tom1", "Tom2", "FTom1"]);
+const CYMBAL_PIECES = new Set(["HihatClosed", "HihatOpen", "HihatPedal", "CrashL", "RideR", "RideRBell"]);
 const CYMBAL_MICS = new Set<KitGroup>(["hihat", "ride", "overheads"]);
 
 export class MultiKit implements Playable {
@@ -282,14 +283,20 @@ export class MultiKit implements Playable {
     const layer = piece.layers[li];
     // Fine level within the layer so the whole velocity range is continuous.
     const center = (want + 0.5) / L;
-    let level = Math.max(0.6, Math.min(1.25, Math.pow(v / center, 0.4)));
+    // Cymbals (hats, ride, bell, crash) are played far more dynamically than drums: a wide,
+    // velocity-following level inside the layer (≈ −14…+3.5 dB); drums keep a tighter response.
+    const cym = CYMBAL_PIECES.has(piece.name);
+    let level = cym ? Math.max(0.2, Math.min(1.5, Math.pow(v / center, 0.9))) : Math.max(0.6, Math.min(1.25, Math.pow(v / center, 0.4)));
     // Played a different layer than the velocity asked for: match its loudness. Layer "power" is
     // energy-like (measured: RMS² ∝ power), so amplitude scales with √power.
     if (li !== want) level *= Math.max(0.5, Math.min(2, Math.sqrt(piece.layers[want].power / layer.power)));
     // Per-hit micro variation, identical on every mic of this hit (keeps the multitrack image coherent).
     const h2 = hash01(note + 128, time), h3 = hash01(note + 256, time);
     const rate = 1 + (h2 - 0.5) * 0.012; // ±0.6 % ≈ ±10 cents
-    level *= 1 + (h3 - 0.5) * 0.1; // ±0.4 dB
+    level *= 1 + (h3 - 0.5) * (cym ? 0.3 : 0.1); // ±0.4 dB drums, ±1.2 dB cymbals (no two strokes alike)
+    // The kit's cymbal layers are recorded close in loudness: an overall curve on top, so a soft
+    // hat / ride stroke really is soft (velocity 30 ≈ −10 dB more), the hardest hits unchanged.
+    if (cym) level *= Math.pow(v / 0.85, 0.75); // anchored at velocity ≈ 108: typical playing keeps its level
     if (piece.choke)
       for (const r of this.ringing.get(piece.choke) ?? []) {
         if (r.t >= time) continue; // only hats that started earlier (notes may be scheduled out of order)
