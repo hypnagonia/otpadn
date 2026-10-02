@@ -18,14 +18,16 @@ import { store } from "../model/store";
 import { uid } from "../model/types";
 import { midiTrack } from "./tracks";
 import { songContext } from "./harmony";
+import { applySlides } from "./slides";
 
-export type PartKind = "pad" | "arp" | "strum" | "metal" | "power";
+export type PartKind = "pad" | "arp" | "strum" | "metal" | "power" | "bass";
 export const PART_KINDS: { id: PartKind; label: string; hint: string; role: Role; instrument: string }[] = [
   { id: "pad", label: "pad · chords", hint: "voice-led sustained chords", role: "pad", instrument: "synth:string-pad" },
   { id: "arp", label: "arpeggio", hint: "broken chords · 8ths / 16ths by section", role: "keys", instrument: "synth:glass-pad" },
   { id: "strum", label: "acoustic strum", hint: "guitar shapes · down/up strokes", role: "guitar", instrument: "sampled:acoustic-martin" },
   { id: "metal", label: "metal riff · double-tracked", hint: "drop tuning · chugs on the kick · power chords", role: "guitar", instrument: "sampled:egtr-highgain" },
   { id: "power", label: "rock power chords", hint: "driving 8ths", role: "guitar", instrument: "sampled:egtr-highgain" },
+  { id: "bass", label: "bass guitar", hint: "roots on the kick · approach notes · natural slides", role: "bass", instrument: "sampled:bass-fingered" },
 ];
 
 interface ChordAt { start: number; end: number; root: number; minor: boolean; tones: number[] }
@@ -231,6 +233,58 @@ function genPower(c: Ctx): Note[] {
   return out;
 }
 
+/**
+ * Bass: roots in E1–E2 (octave nearest the previous note), rhythm by section energy — whole
+ * notes / half notes on root + 5th / 8ths on the kick with approach notes into chord changes /
+ * a root pedal on every kick with octave pops (metal: doubling the guitar chugs).
+ */
+function genBass(c: Ctx, seed: number): Note[] {
+  const out: Note[] = [], r = rng(seed);
+  let prev = 33;
+  const rootNear = (pc: number) => {
+    let best = 28 + pcOf(pc - 28);
+    for (const p of [best, best + 12]) if (p <= 43 && Math.abs(p - prev) < Math.abs(best - prev)) best = p;
+    return best;
+  };
+  const chordAt = (b: number) => c.chords.find((x) => b >= x.start - 1e-6 && b < x.end) ?? c.chords[0];
+  const nextChange = (b: number) => c.chords.find((x) => x.start > b + 1e-6);
+  for (let bar = 0; bar * 4 < c.end; bar++) {
+    const b0 = bar * 4, sec = sectionAt(c, b0), e = Math.round(sec.energy);
+    let hits: number[];
+    if (e <= 0) hits = [b0];
+    else if (e === 1) hits = [b0, b0 + 2];
+    else {
+      const k = c.kicks.filter((x) => x >= b0 && x < b0 + 4).map((x) => Math.round(x * 4) / 4);
+      hits = k.length >= 2 ? k : e >= 3 ? [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((x) => b0 + x) : [0, 1, 1.5, 2.5, 3, 3.5].map((x) => b0 + x);
+      if (e === 2 && !hits.includes(b0)) hits.unshift(b0);
+    }
+    hits = [...new Set(hits)].sort((a, b) => a - b);
+    hits.forEach((h, i) => {
+      const ch = chordAt(h), nx = hits[i + 1] ?? b0 + 4;
+      let pitch = rootNear(ch.root);
+      if (i === 0) prev = pitch;
+      // half-note feel: the 5th on beat 3 now and then
+      if (e === 1 && i === 1 && r() < 0.5) pitch = pitch + 7 > 43 ? pitch - 5 : pitch + 7;
+      // octave pop in loud bars (beat 3 / last 8th), on the root
+      if (e >= 3 && Math.abs(h - (b0 + 2.5)) < 1e-6 && r() < 0.4) pitch += 12;
+      // approach note: the last hit before a chord change walks into the next root
+      const nc = nextChange(h);
+      if (e >= 2 && nc && nc.start <= nx + 1e-6 && nc.start - h <= 1 && i > 0) {
+        const target = rootNear(nc.root);
+        const steps = c.scale.map((s) => s).sort((a, b) => a - b);
+        const below = [target - 1, target - 2].find((p) => steps.includes(pcOf(p)) || p === target - 1);
+        pitch = r() < 0.5 && below !== undefined ? below : target + 1 <= 43 && r() < 0.3 ? target + 1 : pitch;
+      }
+      const dur = e <= 1 ? Math.max(0.5, nx - h - 0.05) : e >= 3 ? Math.min(0.42, nx - h - 0.03) : Math.max(0.2, Math.min(0.9, nx - h - 0.04));
+      out.push({ pitch, start: h, dur, vel: velFor(sec, Math.abs(h - Math.round(h)) < 1e-6 ? 104 : 92) });
+      prev = pitch;
+    });
+  }
+  const line = out.filter((n) => n.start < c.end).sort((a, b) => a.start - b.start);
+  applySlides(line.map((n) => ({ n, abs: n.start })), 60 / c.bpm, seed + 3);
+  return line;
+}
+
 /** Slight timing / velocity differences between double-tracked takes (seeded). */
 function humanize(notes: Note[], seed: number, spb: number): Note[] {
   const r = rng(seed);
@@ -249,6 +303,7 @@ export function generatePart(kind: PartKind) {
     : kind === "arp" ? [{ name: "Gen · Arpeggio", notes: genArp(c, seed), pan: 0.2 }]
     : kind === "strum" ? [{ name: "Gen · Acoustic", notes: genStrum(c, seed), pan: -0.3 }]
     : kind === "power" ? [{ name: "Gen · Power chords", notes: genPower(c), pan: 0 }]
+    : kind === "bass" ? [{ name: "Gen · Bass", notes: genBass(c, seed), pan: 0 }]
     : (() => {
         const riff = genMetal(c, seed);
         return [{ name: "Gen · Riff L", notes: humanize(riff, seed + 1, spb), pan: -0.85 }, { name: "Gen · Riff R", notes: humanize(riff, seed + 2, spb), pan: 0.85 }];
@@ -260,7 +315,7 @@ export function generatePart(kind: PartKind) {
       const clip: MidiClip = { id: uid("clip"), kind: "midi", start: 0, length: end, notes: tk.notes, anchored: false };
       const t: Track = midiTrack(tk.name, def.role, [clip], def.instrument);
       t.ch.pan = tk.pan;
-      t.ch.volumeDb = kind === "pad" ? -6 : -3;
+      t.ch.volumeDb = kind === "pad" ? -6 : kind === "bass" ? 0 : -3;
       p.tracks.push(t);
     }
   });
