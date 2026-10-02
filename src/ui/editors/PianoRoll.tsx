@@ -8,6 +8,7 @@ import Select from "../common/Select";
 import NumberField from "../common/NumberField";
 
 const KEYS_W = 46;
+const RULER = 16; // click / drag here to set the playhead
 const ROW = 10;
 const LO = 21, HI = 108;
 const ROWS = HI - LO + 1;
@@ -128,6 +129,23 @@ export default function PianoRoll() {
     // End-of-clip shade.
     g.fillStyle = "rgba(0,0,0,0.5)";
     g.fillRect(X(clip.length), 0, W, H);
+    // Ruler (bar numbers, beat ticks): click or drag it to set the playhead.
+    g.fillStyle = T.header;
+    g.fillRect(KEYS_W, 0, W - KEYS_W, RULER);
+    g.font = `10px ${T.font}`;
+    g.textBaseline = "middle";
+    for (let b = Math.max(0, Math.floor((sx / ppb) )); b <= clip.length; b += 1) {
+      const x = Math.round(X(b)) + 0.5;
+      if (x < KEYS_W || x > W) continue;
+      const abs = clip.start + b;
+      const bar = abs % 4 === 0;
+      g.fillStyle = bar ? T.muted : T.tick;
+      g.fillRect(x, bar ? 2 : RULER - 5, 1, bar ? RULER - 2 : 5);
+      if (bar && ppb * 4 >= 28) g.fillText(String(abs / 4 + 1), x + 3, RULER / 2);
+    }
+    g.textBaseline = "alphabetic";
+    g.fillStyle = T.hairline;
+    g.fillRect(KEYS_W, RULER - 1, W - KEYS_W, 1);
     // Playhead
     const ph = X(engine.beat - clip.start);
     if (ph >= KEYS_W && ph <= W) {
@@ -372,7 +390,7 @@ export default function PianoRoll() {
     const el = wrapRef.current!;
     const r = el.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    return { x, beat: (x - KEYS_W + el.scrollLeft) / ppb, pitch: HI - Math.floor((y + el.scrollTop) / ROW) };
+    return { x, y, beat: (x - KEYS_W + el.scrollLeft) / ppb, pitch: HI - Math.floor((y + el.scrollTop) / ROW) };
   };
   const noteAt = (beat: number, pitch: number) => {
     // topmost (last drawn) wins
@@ -394,6 +412,19 @@ export default function PianoRoll() {
   const onMouseDown = (e: React.MouseEvent) => {
     store.checkpoint(); // every gesture is its own undo step
     const p0 = pos(e);
+    if (p0.y < RULER && p0.x >= KEYS_W) {
+      // ruler: set the playhead, drag to scrub
+      const seek = (beat: number) => engine.seek(Math.max(0, clip.start + Math.max(0, beat)));
+      seek(p0.beat);
+      const mv = (ev: MouseEvent) => seek(pos(ev).beat);
+      const done = () => {
+        window.removeEventListener("mousemove", mv);
+        window.removeEventListener("mouseup", done);
+      };
+      window.addEventListener("mousemove", mv);
+      window.addEventListener("mouseup", done);
+      return;
+    }
     if (p0.x < KEYS_W) {
       engine.previewNote(track.id, p0.pitch);
       return;
@@ -522,6 +553,10 @@ export default function PianoRoll() {
   const onHover = (e: React.MouseEvent) => {
     if (drag.current || !wrapRef.current) return;
     const p = pos(e);
+    if (p.y < RULER && p.x >= KEYS_W) {
+      wrapRef.current.style.cursor = "text";
+      return;
+    }
     const hit = p.x >= KEYS_W ? noteAt(p.beat, p.pitch) : null;
     const k = hit ? edgeOf(hit, p.x) : null;
     wrapRef.current.style.cursor = !hit ? (p.x < KEYS_W ? "pointer" : "default") : k === "move" ? "grab" : "ew-resize";
@@ -617,7 +652,7 @@ export default function PianoRoll() {
             <canvas ref={velRef} />
           </div>
           <div className="roll-help">
-            dbl-click: new note · click/⇧-click: select · drag empty: box select · drag: move (⌥ copy, ⌘ no snap) · edges: resize · ⌫ delete · ↑↓ pitch (⇧ octave) · ←→ move (⇧ bar, ⌥ length) · ⌘A ⌘C ⌘X ⌘V ⌘D · Q quantize · right-click: delete
+            ruler: set playhead · dbl-click: new note · click/⇧-click: select · drag empty: box select · drag: move (⌥ copy, ⌘ no snap) · edges: resize · ⌫ delete · ↑↓ pitch (⇧ octave) · ←→ move (⇧ bar, ⌥ length) · ⌘A ⌘C ⌘X ⌘V ⌘D · Q quantize · right-click: delete
           </div>
         </>
       )}
