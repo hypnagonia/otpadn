@@ -4,19 +4,20 @@
  * parameters, seeds, locks); results are re-derived deterministically in a worker.
  */
 
-export const PP_ALGO_VERSION = "pp-1.0.0";
+export const PP_ALGO_VERSION = "pp-1.1.0";
 
 export type Mode = "keys" | "line" | "guitar" | "bass";
 export const MODE_LABEL: Record<Mode, string> = { keys: "keys", line: "vocal / lead line", guitar: "guitar", bass: "bass" };
 
-export type KeysStyle = "comp" | "stabs" | "pad" | "arp";
+export type KeysStyle = "chart" | "comp" | "stabs" | "pad" | "arp";
 export type LineStyle = "faithful" | "tight" | "hook";
-export type GuitarStyle = "faithful" | "strum" | "fingerpick" | "power";
+export type GuitarStyle = "chart" | "faithful" | "strum" | "fingerpick" | "power";
 export type BassStyle = "faithful" | "roots" | "kick" | "octaves";
 export type Style = KeysStyle | LineStyle | GuitarStyle | BassStyle;
 
 export const STYLES_FOR: Record<Mode, { id: Style; label: string; desc: string }[]> = {
   keys: [
+    { id: "chart", label: "song chart", desc: "clean progression played in real keyboard patterns per song section (left-hand bass + right-hand chords) — no transcription notes used" },
     { id: "comp", label: "comp", desc: "your rhythm, re-voiced chords with smooth voice leading" },
     { id: "stabs", label: "house stabs", desc: "short syncopated 7th/9th stabs, offbeat pushes" },
     { id: "pad", label: "pad", desc: "sustained voice-led chords, one per chord change" },
@@ -28,6 +29,7 @@ export const STYLES_FOR: Record<Mode, { id: Style; label: string; desc: string }
     { id: "hook", label: "hook", desc: "simplified: ornaments merged, repeats unified, held notes" },
   ],
   guitar: [
+    { id: "chart", label: "song chart", desc: "clean progression strummed in real patterns per song section, turnarounds into the next section — no transcription notes used" },
     { id: "faithful", label: "faithful", desc: "your part, made playable on six strings" },
     { id: "strum", label: "strum", desc: "strummed shapes, down/up strokes with real string spread" },
     { id: "fingerpick", label: "fingerpick", desc: "alternating bass + treble picking (Travis-style)" },
@@ -41,7 +43,7 @@ export const STYLES_FOR: Record<Mode, { id: Style; label: string; desc: string }
   ],
 };
 
-export const DEFAULT_STYLE: Record<Mode, Style> = { keys: "comp", line: "tight", guitar: "strum", bass: "faithful" };
+export const DEFAULT_STYLE: Record<Mode, Style> = { keys: "chart", line: "tight", guitar: "chart", bass: "faithful" };
 
 export type Quality = "maj" | "min" | "7" | "maj7" | "m7" | "sus2" | "sus4" | "dim";
 export const QUALITY_IV: Record<Quality, number[]> = {
@@ -105,6 +107,8 @@ export interface PartSession {
     source: "auto" | "project" | "notes";
     key: { tonic: number; minor: boolean } | null; // null = detect
     chordOverrides: Record<string, { root: number; q: Quality }>; // key = start beat
+    /** Rebuild the chord lane as a clean progression (key chords, bar-line changes, consistent loops). Default: on for keys / guitar. */
+    tidy?: boolean;
   };
   clean: { on: boolean; strength: number; grid: GridChoice; decisions: Record<string, boolean> };
   rework: { on: boolean; style: Style; preserve: number; variant: 0 | 1 | 2; length: "source" | 8 | 16 };
@@ -158,6 +162,8 @@ export interface Analysis {
   polyphony: number; // mean simultaneous notes at onsets
   /** Guitar: how the source is played (strummed share, directions, spread). */
   strum?: { strummed: number; down: number; up: number; spreadMs: number; hits: number };
+  /** Tidy progression: harmonic rhythm and detected loop length. */
+  progression?: { rhythm: string; loopBars: number | null; sections: number };
   warnings: string[];
 }
 

@@ -50,6 +50,51 @@ export const POWER: { name: string; steps: string }[] = [
   { name: "chug 16ths", steps: "Ppppp.ppPpppp.pp" },
 ];
 
+/**
+ * "Song chart" patterns by section energy (low = intro/verse/break, mid = verse/build, high =
+ * chorus). Keys: right-hand chord rhythm (left hand adds the bass, see rework). Guitar: strokes.
+ * TURN = the last bar of a section going into a different one: the final hit pushes the next chord.
+ */
+export type Tier = "low" | "mid" | "high";
+export const CHART_KEYS: Record<Tier, KeysPattern[]> = {
+  low: [
+    { name: "whole notes", steps: "X---------------" },
+    { name: "half notes", steps: "X-------x-------" },
+    { name: "dotted half + push", steps: "X-----------x---" },
+  ],
+  mid: [
+    { name: "pop quarters", steps: "X---x---x---x---" },
+    { name: "charleston", steps: "X--x--------x---" },
+    { name: "push 4", steps: "X-------x-----x-" },
+    { name: "and-of-2", steps: "X-----x-x-------" },
+  ],
+  high: [
+    { name: "driving 8ths", steps: "X-x-x-x-X-x-x-x-" },
+    { name: "pop dotted", steps: "X--x--x-X--x--x-" },
+    { name: "8ths push", steps: "X-x-x-x-x-x-x-X-" },
+  ],
+};
+export const TURN_KEYS: KeysPattern = { name: "turnaround", steps: "X-------x-----X-" };
+export const CHART_STRUMS: Record<Tier, StrumPattern[]> = {
+  low: [
+    { name: "whole", steps: "D..............." },
+    { name: "half notes", steps: "D.......D......." },
+    { name: "ballad", steps: "D.......D...U.U." },
+  ],
+  mid: [
+    { name: "pop 8ths", steps: "D...D.U...U.D.U." },
+    { name: "folk", steps: "D...D.U.D.U.D.U." },
+    { name: "island", steps: "..x.D.U...x.D.U." },
+  ],
+  high: [
+    { name: "driving 8ths", steps: "D.U.D.U.D.U.D.U." },
+    { name: "push 8ths", steps: "D.U.D.UUD.U.D.U." },
+    { name: "16th folk", steps: "D.DUD.DUD.DUD.DU" },
+  ],
+};
+export const TURN_STRUM: StrumPattern = { name: "turnaround", steps: "D...D.U.D.U.D.UD" };
+export const tierOf = (energy: number): Tier => (energy >= 3 ? "high" : energy >= 2 ? "mid" : "low");
+
 export const WEIGHT: Record<string, number> = { X: 1, x: 0.82, o: 0.62, D: 1, U: 0.72, d: 0.6, u: 0.5, x_: 0.3, P: 1, p: 0.62 };
 
 /** Hit steps of a 16-step string (any non-rest, non-hold char). */

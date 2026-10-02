@@ -27,6 +27,10 @@ export function partInput(s: PartSession): PartInput {
     mode: s.mode, source: s.source, harmony: s.harmony, clean: s.clean, rework: s.rework, groove: s.groove, seed: s.seed, layerSeeds: s.layerSeeds, locks: s.locks,
     bpm: p.bpm, projectKey: p.key, projectChords: p.chords ?? [],
     kicks: s.mode === "bass" ? kickBeats(s.source.start, s.source.length) : [],
+    sections: (p.sections ?? [])
+      .map((x) => ({ start: Math.max(0, x.start - s.source.start), end: Math.min(s.source.length, x.start + x.length - s.source.start), label: x.label, group: x.group, energy: x.energy }))
+      .filter((x) => x.end > x.start + 1e-6)
+      .map((x) => ({ start: x.start, length: x.end - x.start, label: x.label, group: x.group, energy: x.energy })),
     openShapes: !/distortion|power/.test(inst ?? "") && s.rework.style !== "power",
   };
 }

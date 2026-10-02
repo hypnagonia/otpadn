@@ -8,8 +8,8 @@
  * by "preserve"; every random choice is keyed on its layer seed (rhythm / voicing / phrase).
  */
 import { rand, pick } from "../drumproducer/rng";
-import { chordAt, chordPcs, scalePcs } from "./harmony";
-import { ARPS, COMP, hitSteps, PICKS, POWER, STABS, STRUMS, WEIGHT } from "./patterns";
+import { chordAt, chordPcs, scalePcs, type PartSection } from "./harmony";
+import { ARPS, CHART_KEYS, CHART_STRUMS, COMP, hitSteps, PICKS, POWER, STABS, STRUMS, tierOf, TURN_KEYS, TURN_STRUM, WEIGHT, type Tier } from "./patterns";
 import { guitarShapes, keyVoicings, pickShape, pickVoicing, powerShape, TUNING, type KeyOpts, type Shape } from "./voicing";
 import type { Chord, Mode, PEvent, Style, Variant } from "./types";
 import { detectStrums, type StrumDir } from "./strum";
@@ -37,6 +37,8 @@ export interface ReworkIn {
   openShapes: boolean;
   /** Bass: kick-drum onsets in the region (beats). */
   kicks?: number[];
+  /** Song sections (relative beats) — the "song chart" styles pick patterns per section. */
+  sections?: PartSection[];
 }
 
 interface Hit { start: number; dur: number; vel: number; src?: PEvent[]; c?: string; dir?: StrumDir; spreadMs?: number }
@@ -93,6 +95,7 @@ function choose<T extends { name: string; steps?: string }>(list: T[], occ: Floa
 }
 
 const KEY_OPTS: Record<string, KeyOpts & { center: number }> = {
+  chart: { lo: 55, hi: 79, color: "plain", maxSpan: 14, center: 66 }, // right hand; the left hand plays the bass
   comp: { lo: 48, hi: 79, color: "plain", maxSpan: 16, center: 62 },
   stabs: { lo: 55, hi: 84, color: "rootless9", maxSpan: 13, center: 69 },
   pad: { lo: 48, hi: 79, color: "add9", maxSpan: 24, double: true, center: 62 },
@@ -131,6 +134,27 @@ export function reworkPart(inp: ReworkIn): Variant[] {
         }
       return hs;
     };
+    /**
+     * Song chart: one pattern per section energy tier — chosen to resemble the source's rhythm —
+     * identical across repeats ("close": one per tier for the whole part; "moderate"/"free": per
+     * section group; "free" also varies every 4th bar). The last bar of a section that leads into
+     * a different one plays a turnaround whose final hit pushes the next chord.
+     */
+    const secs: PartSection[] = inp.sections?.length ? inp.sections : [{ start: 0, length: inp.length, label: "part", group: "A", energy: 2 }];
+    const secAt = (beat: number) => secs.find((x) => beat >= x.start - 1e-9 && beat < x.start + x.length - 1e-9) ?? secs[secs.length - 1];
+    const chartBars = <T extends { name: string; steps: string }>(lib: Record<Tier, T[]>, turn: T) => {
+      const memo = new Map<string, T>();
+      return (b: number) => {
+        const at = b * 4, sec = secAt(at), tier = tierOf(sec.energy);
+        const key = k === 0 ? tier : `${tier}:${sec.group}`;
+        let p = memo.get(key) ?? memo.set(key, choose(lib[tier], occ, conf.alpha, conf.jitter, inp.seeds.rhythm, k, `chart:${key}`)).get(key)!;
+        const inSec = Math.floor((at - sec.start) / 4 + 1e-9);
+        if (k === 2 && inSec % 4 === 3) p = lib[tier][(lib[tier].indexOf(p) + 1) % lib[tier].length];
+        const end = sec.start + sec.length, next = secs.find((x) => Math.abs(x.start - end) < 1e-6);
+        if (k >= 1 && next && (next.group !== sec.group || next.energy !== sec.energy) && at < end - 1e-6 && at + 4 >= end - 1e-6) p = turn;
+        return { p, scale: 0.82 + 0.07 * Math.min(3, sec.energy), first: Math.abs(at - sec.start) < 1e-6 };
+      };
+    };
     const anchors = (hits: Hit[], need: number) => srcHits.filter((h) => hitScore(h) + 0.1 * rand(inp.seeds.rhythm, k, "a", h.start) >= need && !hits.some((x) => Math.abs(x.start - h.start) < 0.13));
 
     /* ───── keys ───── */
@@ -141,6 +165,31 @@ export function reworkPart(inp: ReworkIn): Variant[] {
         pattern = style === "pad" ? "sustained" : undefined;
         hits = [];
         for (const c of chords) for (let a = c.start; a < c.start + c.length - 1e-9; a += 8) hits.push({ start: a, dur: Math.min(8, c.start + c.length - a) - 0.03, vel: 92 });
+      } else if (style === "chart") {
+        const plan = chartBars(CHART_KEYS, TURN_KEYS);
+        const names = new Set<string>();
+        hits = [];
+        for (let b = 0; b < bars; b++) {
+          const { p, scale, first } = plan(b);
+          names.add(p.name);
+          for (const s of hitSteps(p.steps)) {
+            const at = b * 4 + s * STEP;
+            if (at >= inp.length - 1e-9) continue;
+            let hold = 1;
+            while (p.steps[s + hold] === "-") hold++;
+            const dur = p.steps[s + 1] === "-" ? hold * STEP - 0.03 : 0.9;
+            hits.push({ start: at, dur, vel: Math.round(Math.min(124, 108 * (WEIGHT[p.steps[s]] ?? 0.8) * scale + (first && s === 0 ? 8 : 0))), c: p.steps[s] });
+          }
+        }
+        // A held chord never rings over a chord change: it's re-struck (softer) on the change.
+        for (const c of chords) {
+          const h = hits.find((x) => x.start < c.start - 1e-6 && x.start + x.dur > c.start + 0.05);
+          if (h && !hits.some((x) => Math.abs(x.start - c.start) < 1e-6)) {
+            hits.push({ start: c.start, dur: h.start + h.dur - c.start, vel: Math.round(h.vel * 0.88), c: "x" });
+            h.dur = c.start - h.start - 0.03;
+          }
+        }
+        pattern = [...names].join(" / ");
       } else if (srcHits.length && ((style === "comp" && k < 2) || (style === "stabs" && k === 0))) {
         // comp keeps your rhythm (close + moderate); stabs "close" = your rhythm, played as short stabs
         hits = srcHits.map((h) => ({ ...h, dur: style === "stabs" ? Math.min(h.dur, 0.3) : h.dur }));
@@ -154,13 +203,13 @@ export function reworkPart(inp: ReworkIn): Variant[] {
       }
       hits.sort((a, b) => a.start - b.start);
       // comp: durations run to the next hit (legato hands), clipped
-      if (style === "comp") hits.forEach((h, i) => { const n = hits[i + 1]; if (n) h.dur = Math.min(h.dur, n.start - h.start - 0.03); });
+      if (style === "comp" || style === "chart") hits.forEach((h, i) => { const n = hits[i + 1]; if (n) h.dur = Math.min(h.dur, n.start - h.start - 0.03); });
       let prev: number[] | null = null;
       for (const h of hits) {
         // Off-beat hits within half a beat before a chord change anticipate the next chord (house push).
         const next = chordAt(chords, h.start + 0.5);
         const cur = chordAt(chords, h.start);
-        const c = next && cur && next !== cur && h.start % 1 >= 0.5 - 1e-9 && (style === "stabs" || style === "comp") ? next : cur;
+        const c = next && cur && next !== cur && h.start % 1 >= 0.5 - 1e-9 && (style === "stabs" || style === "comp" || style === "chart") ? next : cur;
         if (!c) continue;
         if (style === "arp") {
           const vk = `arp:${c.root}:${c.q}`;
@@ -196,6 +245,27 @@ export function reworkPart(inp: ReworkIn): Variant[] {
         if (!v) continue;
         prev = v;
         v.forEach((p, i) => out.push({ id: `g:${Math.round(h.start * 48)}:${p}`, pitch: p, start: h.start, micro: 0, dur: Math.max(0.1, h.dur), vel: Math.max(1, Math.min(127, h.vel + (i === v.length - 1 ? 4 : -6))), origin: h.src ? "edited" : "generated", tags: h.src ? ["re-voiced"] : undefined }));
+      }
+      // Song chart: the left hand plays the root low (bar 1, plus beat 3 in busier sections, and on
+      // every chord change), held until the next bass note.
+      if (style === "chart") {
+        const plan = chartBars(CHART_KEYS, TURN_KEYS);
+        const at: number[] = [];
+        for (let b = 0; b < bars; b++) {
+          const tier = tierOf(secAt(b * 4).energy);
+          at.push(b * 4);
+          if (tier !== "low") at.push(b * 4 + 2);
+        }
+        for (const c of chords) at.push(c.start);
+        const ts = [...new Set(at.map((x) => Math.round(x * 1000) / 1000))].filter((x) => x < inp.length - 1e-9).sort((a, b) => a - b);
+        ts.forEach((t, i) => {
+          const c = chordAt(chords, t);
+          if (!c) return;
+          const end = Math.min(ts[i + 1] ?? inp.length, inp.length);
+          const pitch = 36 + ((c.root - 36 + 120) % 12);
+          const { scale } = plan(Math.floor(t / 4 + 1e-9));
+          out.push({ id: `g:${Math.round(t * 48)}:${pitch}`, pitch, start: t, micro: 0, dur: Math.max(0.1, end - t - 0.05), vel: Math.round((t % 4 === 0 ? 92 : 80) * scale), origin: "generated", tags: ["left hand"] });
+        });
       }
     }
 
@@ -237,7 +307,9 @@ export function reworkPart(inp: ReworkIn): Variant[] {
           out.push(...placed);
         }
       } else {
-        const list = style === "power" ? POWER : style === "strum" ? STRUMS : PICKS.map((p) => ({ name: p.name, steps: p.roles.split("").map((c) => c + ".").join("") }));
+        const list = style === "power" ? POWER : style === "strum" || style === "chart" ? STRUMS : PICKS.map((p) => ({ name: p.name, steps: p.roles.split("").map((c) => c + ".").join("") }));
+        const plan = style === "chart" ? chartBars(CHART_STRUMS, TURN_STRUM) : null;
+        const chartNames = new Set<string>();
         const pat = choose(list as { name: string; steps: string }[], occ, conf.alpha, conf.jitter, inp.seeds.rhythm, k, style);
         pattern = pat.name;
         let prevShape: Shape | null = null;
@@ -255,16 +327,23 @@ export function reworkPart(inp: ReworkIn): Variant[] {
             out.push({ id: `g:${Math.round(start * 48)}:${s}`, pitch: p, start, micro: spread(gapMs * i), dur, vel: Math.max(1, Math.min(127, Math.round(vel * (1 - i * 0.03)))), origin: "generated", string: s, tags: [tag] });
           });
         const sounding = (sh: Shape) => sh.pitches.map((p, i) => (p === null ? -1 : i)).filter((i) => i >= 0);
-        const anchorHits = style === "fingerpick" ? [] : anchors([], 1 - P + 0.3).filter((h) => !hitSteps(pat.steps).includes(stepIn(h.start)));
+        const anchorHits = style === "fingerpick" || plan ? [] : anchors([], 1 - P + 0.3).filter((h) => !hitSteps(pat.steps).includes(stepIn(h.start)));
         // "close" strum/power follows your rhythm: strokes on your onsets (down on 8ths, up between; accents by velocity)
-        const own = k === 0 && style !== "fingerpick" && srcHits.length > 0;
+        const own = k === 0 && style !== "fingerpick" && !plan && srcHits.length > 0;
         if (own) pattern = "your rhythm";
+        if (plan) {
+          for (let b = 0; b < bars; b++) chartNames.add(plan(b).p.name);
+          pattern = [...chartNames].join(" / ");
+        }
         const medV = srcHits.length ? [...srcHits].map((h) => h.vel).sort((a, b) => a - b)[Math.floor(srcHits.length / 2)] : 90;
         for (let b = 0; b < bars; b++) {
-          const evs: { at: number; c: string; spread?: number }[] = [];
+          const evs: { at: number; c: string; spread?: number; scale?: number }[] = [];
           if (own) {
             // your strokes: the detected direction (or beat position when the source is a block chord)
             for (const h of srcHits) if (Math.floor(h.start / 4 + 1e-9) === b) evs.push({ at: h.start, c: style === "power" ? (h.vel > medV ? "P" : "p") : h.dir === "up" ? "U" : h.dir === "down" ? (h.vel >= medV * 0.8 ? "D" : "d") : stepIn(h.start) % 2 === 0 ? (h.vel >= medV * 0.8 ? "D" : "d") : "U", spread: h.spreadMs });
+          } else if (plan) {
+            const { p, scale, first } = plan(b);
+            for (const s of hitSteps(p.steps)) evs.push({ at: b * 4 + s * STEP, c: p.steps[s], scale: scale + (first && s === 0 ? 0.08 : 0) });
           } else {
             for (const s of hitSteps(pat.steps)) evs.push({ at: b * 4 + s * STEP, c: pat.steps[s] });
             for (const h of anchorHits) if (Math.floor(h.start / 4 + 1e-9) === b) evs.push({ at: h.start, c: style === "power" ? "p" : "d" });
@@ -272,13 +351,15 @@ export function reworkPart(inp: ReworkIn): Variant[] {
           evs.sort((a, b2) => a.at - b2.at);
           evs.forEach((e, i) => {
             if (e.at >= inp.length - 1e-9) return;
-            const sh = shapeAt(e.at);
+            // Song chart: an off-beat stroke just before a chord change already plays the next chord (push).
+            const push = plan && e.at % 1 >= 0.5 - 1e-9 && chordAt(chords, e.at + 0.5) !== chordAt(chords, e.at);
+            const sh = shapeAt(push ? e.at + 0.5 : e.at);
             if (!sh) return;
             const nextAt = evs[i + 1]?.at ?? Math.min(inp.length, b * 4 + 4);
             const ss = sounding(sh);
-            const v = Math.round(105 * (WEIGHT[e.c] ?? 0.7));
+            const v = Math.round(Math.min(124, 105 * (WEIGHT[e.c] ?? 0.7) * (e.scale ?? 1)));
             if (style === "power") emit(e.at, ss, sh, e.c === "P" ? Math.min(0.45, nextAt - e.at - 0.02) : 0.14, e.c === "P" ? 112 : 74, 3, e.c === "P" ? "open" : "palm-mute");
-            else if (style === "strum") {
+            else if (style === "strum" || style === "chart") {
               const ring = Math.max(0.1, nextAt - e.at - 0.02);
               if (e.c === "x") emit(e.at, ss.slice(1, 4), sh, 0.06, 38, 4, "mute");
               // per-string gap: your measured spread when known, else harder = faster
@@ -393,7 +474,8 @@ export function reworkPart(inp: ReworkIn): Variant[] {
     /* ───── phrase development (keys / guitar): bounded, never on every repeat ───── */
     let fills = 0;
     const phraseLen = completeOut >= 8 ? 8 : completeOut >= 4 ? 4 : 0;
-    if (phraseLen && mode !== "line" && mode !== "bass" && !(mode === "guitar" && style === "faithful") && !(mode === "keys" && k === 0 && style === "comp")) {
+    // (song chart: its turnarounds are the development; random fills would break identical repeats)
+    if (phraseLen && mode !== "line" && mode !== "bass" && style !== "chart" && !(mode === "guitar" && style === "faithful") && !(mode === "keys" && k === 0 && style === "comp")) {
       let prevHad = false;
       for (let b = phraseLen - 1; b < completeOut - 1; b += phraseLen) {
         let p = inp.variation * conf.fill;

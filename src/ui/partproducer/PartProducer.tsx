@@ -210,6 +210,20 @@ function Session({ s }: { s: PartSession }) {
             <div className="dp-row"><span className="k">key</span><Select<string> value={keyValue} width={140} options={KEYS} onChange={(v) => up((x) => { x.harmony.key = v === "auto" ? null : { tonic: +v.split(":")[0], minor: v.endsWith("m") }; })} /></div>
             <div className="dp-row"><span className="k">chords</span><Seg<PartSession["harmony"]["source"]> value={s.harmony.source} onChange={(v) => up((x) => { x.harmony.source = v; x.harmony.chordOverrides = {}; })} options={[{ value: "auto", label: "auto", tip: "the project's chord track when it covers the region, else the notes" }, { value: "project", label: "project", tip: "chord track from the song analysis" }, { value: "notes", label: "from notes" }]} /></div>
             {r && <div className="dp-note">{r.chords.map((c) => chordName(c.root, c.q)).join(" · ") || "no chords"}</div>}
+            {(s.mode === "keys" || s.mode === "guitar") && (
+              <>
+                <div className="dp-row">
+                  <label className="dp-check" data-tip="rebuild the chord lane from the key's chords: changes on bar lines (half bars only when the notes really change), repeated sections play the identical progression">
+                    <input type="checkbox" checked={s.harmony.tidy ?? true} onChange={(e) => up((x) => { x.harmony.tidy = e.target.checked; x.harmony.chordOverrides = {}; })} /> tidy progression
+                  </label>
+                </div>
+                {a?.progression && (
+                  <div className="dp-note">
+                    progression: <b>{a.progression.rhythm}</b>{a.progression.loopBars ? <> · repeats every <b>{a.progression.loopBars} bars</b></> : " · no repeating loop"} · {a.progression.sections ? `${a.progression.sections} song section${a.progression.sections > 1 ? "s" : ""}` : "no song sections (split stems to analyse the song) — 8-bar phrases by density"}
+                  </div>
+                )}
+              </>
+            )}
             <div className="dp-note">click a chord above the notes to cycle alternatives{Object.keys(s.harmony.chordOverrides).length > 0 && <> · <button className="link" onClick={() => up((x) => { x.harmony.chordOverrides = {}; })}>reset chord edits</button></>}</div>
           </details>
 

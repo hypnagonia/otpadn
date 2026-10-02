@@ -1,5 +1,5 @@
 /** Pure pipeline: source → harmony → clean → rework (3 variants) → groove → sound pick. Runs in the worker. */
-import { applyOverrides, chordsFromBass, chordsFromNotes, chordsFromProject, keyFromNotes } from "./harmony";
+import { applyOverrides, chordsFromBass, chordsFromNotes, chordsFromProject, keyFromNotes, tidyProgression, type PartSection } from "./harmony";
 import { cleanPart } from "./clean";
 import { groovePart } from "./groove";
 import { reworkPart } from "./rework";
@@ -15,7 +15,32 @@ export type PartInput = Pick<PartSession, "mode" | "source" | "harmony" | "clean
   /** Bass mode: kick-drum onsets in the region (beats), from the project's drum tracks. */
   kicks: number[];
   openShapes: boolean;
+  /** Song sections overlapping the region, relative to its start (from the project's analysis). */
+  sections?: PartSection[];
 };
+
+/**
+ * Sections for the chart: the project's, or (no analysis) 8-bar phrases whose energy comes from the
+ * part's own density — busier phrases get busier patterns.
+ */
+function sectionsFor(inp: PartInput, events: PEvent[], len: number): PartSection[] {
+  if (inp.sections?.length) return inp.sections;
+  const out: PartSection[] = [];
+  const dens: number[] = [];
+  for (let a = 0; a < len - 1e-9; a += 32) {
+    const b = Math.min(len, a + 32);
+    out.push({ start: a, length: b - a, label: "phrase", group: "A", energy: 2 });
+    dens.push(new Set(events.filter((e) => e.start >= a && e.start < b).map((e) => Math.round(e.start * 4))).size / ((b - a) / 4));
+  }
+  const hi = Math.max(...dens, 0), lo = Math.min(...dens, Infinity);
+  if (dens.length > 1 && hi > lo * 1.25)
+    out.forEach((s, i) => (s.energy = dens[i] >= hi * 0.88 ? 3 : dens[i] <= lo * 1.12 ? 1 : 2)); // relative to the busiest / calmest phrase
+  else if (dens.length) {
+    const d = dens.reduce((x, y) => x + y, 0) / dens.length; // onsets per bar
+    out.forEach((s) => (s.energy = d >= 6 ? 3 : d >= 3 ? 2 : 1));
+  }
+  return out;
+}
 
 export function sourceEvents(inp: Pick<PartInput, "source" | "locks">): PEvent[] {
   const locked = new Set(inp.locks.events.map((e) => e.id));
@@ -59,6 +84,13 @@ export function runPart(inp: PartInput): PipelineResult {
   if (inp.mode === "line" && !useProject) warnings.push("chords guessed from the melody alone — check them, or analyse the song for a chord track");
   if (inp.mode === "bass" && !useProject) warnings.push("chord roots taken from the bass line, qualities from the key — click a chord to change it");
   if (inp.mode === "bass" && inp.rework.on && inp.rework.style === "kick" && !inp.kicks.length) warnings.push("no kick drum found in this region — 'lock to kick' uses your bass rhythm instead");
+  // Tidy progression (keys / guitar default): key chords, bar-line changes, identical repeats.
+  const sections = sectionsFor(inp, events, len);
+  let progression: { rhythm: string; loopBars: number | null; sections: number } | undefined;
+  if ((inp.harmony.tidy ?? (inp.mode === "keys" || inp.mode === "guitar")) && inp.mode !== "line" && inp.mode !== "bass") {
+    const t = tidyProgression(chords, events.filter((e) => e.dur * spb >= 0.06), key, len, sections, useProject);
+    if (t.chords.length) { chords = t.chords; progression = { rhythm: t.rhythm, loopBars: t.loopBars, sections: inp.sections?.length ?? 0 }; }
+  }
   chords = applyOverrides(chords, inp.harmony.chordOverrides);
 
   // clean
@@ -79,7 +111,7 @@ export function runPart(inp: PartInput): PipelineResult {
   let lengthBeats = len;
   let variants: Variant[];
   if (inp.rework.on && cleaned.length + inp.locks.events.length > 0) {
-    let base = cleaned, ch = chords;
+    let base = cleaned, ch = chords, secs = sections;
     const out = inp.rework.length === "source" ? len : inp.rework.length * 4;
     if (out > len + 1e-9) {
       const period = completeBars ? completeBars * 4 : len;
@@ -88,12 +120,14 @@ export function runPart(inp: PartInput): PipelineResult {
         for (const e of cleaned) if (e.start < period && e.start + r * period < out) base.push(r ? { ...e, id: `${e.id}@${r}`, start: e.start + r * period, tags: [...(e.tags ?? []), "tiled"] } : e);
         for (const c of chords) if (c.start < period && c.start + r * period < out) ch.push({ ...c, start: c.start + r * period, length: Math.min(c.length, period - c.start, out - c.start - r * period) });
       }
+      secs = [];
+      for (let r = 0; r * period < out; r++) for (const sc of sections) if (sc.start < period && sc.start + r * period < out) secs.push({ ...sc, start: sc.start + r * period, length: Math.min(sc.length, period - sc.start, out - sc.start - r * period) });
     } else if (out < len) {
       base = cleaned.filter((e) => e.start < out);
       ch = chords.filter((c) => c.start < out);
     }
     lengthBeats = out;
-    variants = reworkPart({ base, mode: inp.mode, style: inp.rework.style, preserve: inp.rework.preserve, chords: ch, key, length: out, completeBars, seeds: inp.layerSeeds, variation: inp.groove.variation, locks: inp.locks.events, spb, openShapes: inp.openShapes, kicks: inp.kicks });
+    variants = reworkPart({ base, mode: inp.mode, style: inp.rework.style, preserve: inp.rework.preserve, chords: ch, key, length: out, completeBars, seeds: inp.layerSeeds, variation: inp.groove.variation, locks: inp.locks.events, spb, openShapes: inp.openShapes, kicks: inp.kicks, sections: secs });
     if (out > len) chords = ch;
   } else {
     variants = [{ name: inp.clean.on ? "cleaned" : "source", events: cleaned, dropped: cleanedDropped, stats: { notes: cleaned.length, kept: cleaned.filter((e) => e.origin === "source" || e.origin === "moved").length, generated: 0, changed: cleaned.filter((e) => e.origin === "edited").length } }];
@@ -117,7 +151,7 @@ export function runPart(inp: PartInput): PipelineResult {
     analysis: {
       bars: Math.ceil(len / 4 - 1e-9), completeBars, partialBeats: Math.round((len - completeBars * 4) * 1000) / 1000,
       key, keyFrom, chordsFrom: chords.length ? (useProject ? "project" : "notes") : "none", grid,
-      range: pitches.length ? [Math.min(...pitches), Math.max(...pitches)] : [60, 60], polyphony: Math.round(poly * 100) / 100, warnings, strum,
+      range: pitches.length ? [Math.min(...pitches), Math.max(...pitches)] : [60, 60], polyphony: Math.round(poly * 100) / 100, warnings, strum, progression,
     },
     chords, sourceEvents: events, proposals, cleaned, cleanedDropped, variants, chosen, final, lengthBeats,
     sound: autoSound(inp.mode, inp.rework.style, final, inp.bpm, inp.source.instrument),
