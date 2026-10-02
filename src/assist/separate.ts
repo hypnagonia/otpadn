@@ -47,6 +47,11 @@ export function toAudioBuffer(ch: [Float32Array, Float32Array], sr: number): Aud
 /** The audio track a command should act on: explicit id → selection → the original mix. */
 export function audioSource(trackId?: string | null): { track: Track; clip: AudioClip; buffer: AudioBuffer } {
   const p = store.project;
+  // An explicit track is used as given — never silently swapped for another (e.g. the full mix).
+  if (trackId) {
+    const t = p.tracks.find((x) => x.id === trackId);
+    if (!t || t.kind !== "audio") throw new Error("That track isn't an audio track — select the audio (stem) track to process");
+  }
   const track =
     p.tracks.find((t) => t.id === trackId && t.kind === "audio") ??
     p.tracks.find((t) => t.id === store.ui.selectedTrackId && t.kind === "audio") ??

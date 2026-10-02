@@ -47,6 +47,9 @@ function Lcd() {
 
 type Menu = "file" | "midi" | "clean" | "produce" | "arrange" | null;
 
+/** Last audio track the user selected (module scope: survives re-renders, not reloads). */
+let lastAudioId: string | null = null;
+
 export default function ControlBar() {
   const s = useStore();
   const p = s.project;
@@ -55,7 +58,14 @@ export default function ControlBar() {
   const [style, setStyle] = useState<ArrangeStyle>("remix");
   const hasAudio = p.tracks.some((t) => t.role === "mix");
   const sel = p.tracks.find((t) => t.id === s.ui.selectedTrackId);
-  const audioSel = sel?.kind === "audio" ? sel : p.tracks.find((t) => t.role === "mix");
+  // The audio track the assist buttons work on: the selected one, else the audio track selected
+  // last (so after "to midi" selects the new MIDI track, midi ▾ still means that stem). The full
+  // mix is only the default before there are stems — never a silent fallback.
+  if (sel?.kind === "audio") lastAudioId = sel.id;
+  const hasStemTracks = p.tracks.some((t) => t.kind === "audio" && t.role !== "mix");
+  // stems: the selected audio track, else the full mix (you split the song, not the last stem)
+  const splitSel = sel?.kind === "audio" ? sel : p.tracks.find((t) => t.role === "mix");
+  const audioSel = sel?.kind === "audio" ? sel : p.tracks.find((t) => t.id === lastAudioId && t.kind === "audio") ?? (hasStemTracks ? undefined : p.tracks.find((t) => t.role === "mix"));
   const hasStems = p.tracks.some((t) => t.kind === "audio" && t.role !== "mix");
   const analyzed = p.sections.length > 0;
   const midiClip = sel?.clips.find((c) => c.id === s.ui.selectedClipId && c.kind === "midi");
@@ -95,7 +105,7 @@ export default function ControlBar() {
         <button className="icon" disabled={!s.canUndo} onClick={() => s.undo()} data-tip="undo (⌘Z)">↶</button>
         <button className="icon" disabled={!s.canRedo} onClick={() => s.redo()} data-tip="redo (⇧⌘Z)">↷</button>
         <div className="cb-group" data-label="assist">
-          <button className={hasAudio && !hasStems ? "primary" : ""} disabled={!audioSel || busy} onClick={() => audioSel && runTask(() => splitStems(audioSel.id, "ai"))} data-tip={`1 · split ${audioSel ? `"${audioSel.name}"` : "the selected audio track"} into 6 stems (demucs ai · drums · bass · vocals · guitar · piano · other · gpu · ${DEMUCS_MODEL_MB} mb once)${audioSel?.role === "mix" && !analyzed ? " · also finds tempo, key, sections, chords" : ""}`}>stems</button>
+          <button className={hasAudio && !hasStems ? "primary" : ""} disabled={!splitSel || busy} onClick={() => splitSel && runTask(() => splitStems(splitSel.id, "ai"))} data-tip={`1 · split ${splitSel ? `"${splitSel.name}"` : "the selected audio track"} into 6 stems (demucs ai · drums · bass · vocals · guitar · piano · other · gpu · ${DEMUCS_MODEL_MB} mb once)${splitSel?.role === "mix" && !analyzed ? " · also finds tempo, key, sections, chords" : ""}`}>stems</button>
           <div className="rel">
             <button disabled={!audioSel || busy} onClick={() => toggle("clean")} data-tip="2 · remove noise and room from the selected audio track (one-time, undoable)">clean ▾</button>
             {menu === "clean" && audioSel && (
@@ -114,7 +124,7 @@ export default function ControlBar() {
             <button disabled={!audioSel || busy} onClick={() => toggle("midi")} data-tip="3 · transcribe the selected audio track to midi (gpu)">midi ▾</button>
             {menu === "midi" && audioSel && (
               <div className="popover menu">
-                <div className="menu-title">“{audioSel.name}” → one midi track per instrument</div>
+                <div className="menu-title">“{audioSel.name}”{audioSel.role !== "mix" ? ` (${audioSel.role} stem)` : " (full mix)"} → {audioSel.role !== "mix" ? `midi · ${audioSel.role} instruments only` : "one midi track per instrument"}</div>
                 {(Object.keys(MUSCRIPTOR_SIZES) as MuscriptorModel[]).map((m) => (
                   <button key={m} onClick={() => { setMenu(null); runTask(() => convertToMidi(audioSel.id, { model: m })); }}>
                     <span>{MUSCRIPTOR_SIZES[m].label} model{m === "small" ? " ★" : ""}</span>

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { convertToMidi } from "../../assist/convert";
 import { splitStems } from "../../assist/separate";
 import { cleanAudio } from "../../assist/clean";
@@ -18,6 +18,17 @@ import { groupMembers, groupOf, groupTracks, removeFromGroup, renameGroupDialog,
 export default function ContextMenu() {
   const s = useStore();
   const m = s.ui.contextMenu;
+  // Fit the menu on screen: measure its real height, move it up just enough, scroll if taller.
+  const ref = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{ top: number; maxH: number } | null>(null);
+  useLayoutEffect(() => {
+    setFit(null);
+  }, [m]);
+  useLayoutEffect(() => {
+    if (!m || fit || !ref.current) return;
+    const h = ref.current.offsetHeight, maxH = window.innerHeight - 16; // offsetHeight: incl. border + padding
+    setFit({ top: Math.max(8, Math.min(m.y, window.innerHeight - 8 - Math.min(h, maxH))), maxH });
+  });
   useEffect(() => {
     if (!m) return;
     const close = (e: MouseEvent) => !(e.target as HTMLElement).closest(".ctx") && store.setUi({ contextMenu: null });
@@ -41,10 +52,10 @@ export default function ContextMenu() {
     store.setUi({ contextMenu: null });
     fn();
   };
-  const left = Math.min(m.x, window.innerWidth - 280), top = Math.max(8, Math.min(m.y, window.innerHeight - 520));
+  const left = Math.min(m.x, window.innerWidth - 280), top = fit ? fit.top : m.y;
 
   return (
-    <div className="ctx popover menu" style={{ position: "fixed", left, top }}>
+    <div ref={ref} className="ctx popover menu" style={{ position: "fixed", left, top, maxHeight: fit?.maxH ?? window.innerHeight - 16, overflowY: "auto", visibility: fit ? "visible" : "hidden" }}>
       {range && (
         <>
           <div className="menu-title">selection · {fmtBars(range.start, range.end)} · {range.trackIds.length} track{range.trackIds.length > 1 ? "s" : ""}</div>
