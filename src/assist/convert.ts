@@ -158,7 +158,7 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
   inputTrack.color = "#6c6f76";
   let pk = 0, ss = 0;
   for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > pk) pk = a; ss += samples[i] * samples[i]; }
-  const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · gated level −12 dBFS · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
+  const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · brought up to ≥ −12 dBFS gated · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
   store.update((pp) => {
     const i = pp.tracks.findIndex((x) => x.id === track.id);
     pp.tracks.splice(i + 1, 0, inputTrack, ...tracks);
