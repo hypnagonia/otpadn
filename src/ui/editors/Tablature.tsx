@@ -1,3 +1,4 @@
+import { songHarmony } from "../../model/songHarmony";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { defaultTuningFor, layoutTab, TUNINGS, type TabNote } from "../../analysis/tab";
 import { engine } from "../../engine/transport";
@@ -51,10 +52,10 @@ export default function Tablature({ track, clip, ppb }: { track: Track; clip: Mi
     }
     // chord names
     g.fillStyle = T.cycle;
-    for (const ch of store.project.chords) {
+    for (const ch of songHarmony()?.chords ?? []) {
       const rel = ch.start - clip.start;
-      if (rel < 0 || rel > clip.length) continue;
-      g.fillText(`${NOTE_NAMES[ch.root]}${ch.minor ? "m" : ""}`, X(rel) + 3, TOP - 8);
+      if (ch.silent || rel < 0 || rel > clip.length) continue;
+      g.fillText(ch.name, X(rel) + 3, TOP - 8);
     }
     // strings
     tuning.strings.forEach((p, s) => {

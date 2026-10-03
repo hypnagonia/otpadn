@@ -229,6 +229,7 @@ export async function startPersistence(decode: (b: ArrayBuffer) => Promise<Audio
       store.setProject(s.project);
       pendingBuffers.clear();
       store.log(`Restored session "${s.project.name}" from ${new Date(s.savedAt).toLocaleString()}`);
+      void import("../assist/separate").then((m) => m.ensureHarmonyAudio());
     }
   } catch (e) {
     restoreFailedAt = store.projectVersion; // don't let autosave replace the stored session with an empty one
@@ -352,6 +353,7 @@ export async function importProjectFile(file: File, decode: (b: ArrayBuffer) => 
     pendingBuffers.clear();
     restoreFailedAt = null;
     await saveSession();
+    void import("../assist/separate").then((m) => m.ensureHarmonyAudio());
     store.log(`Opened project "${p.name}" (saved ${new Date(header.savedAt).toLocaleString()})${failed.size ? ` — ${failed.size} audio source(s) couldn't be restored` : ""}`);
   } finally {
     store.busy(null);

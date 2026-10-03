@@ -1,3 +1,4 @@
+import { songHarmony } from "../../model/songHarmony";
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { engine } from "../../engine/transport";
 import { store, useStoreQuiet } from "../../model/store";
@@ -92,13 +93,13 @@ function PianoRoll() {
       g.lineTo(x, H);
       g.stroke();
     }
-    // Chord labels from analysis, for reference.
+    // Chord names from the harmony layer, for reference.
     g.font = `11px ${T.font}`;
-    for (const ch of store.project.chords) {
+    for (const ch of songHarmony()?.chords ?? []) {
       const rel = ch.start - clip.start;
-      if (rel + ch.length < 0 || rel > clip.length) continue;
+      if (ch.silent || rel + (ch.end - ch.start) < 0 || rel > clip.length) continue;
       g.fillStyle = T.cycle;
-      g.fillText(`${NOTE_NAMES[ch.root]}${ch.minor ? "m" : ""}`, X(rel) + 3, 11);
+      g.fillText(ch.name, X(Math.max(0, rel)) + 3, 11);
     }
     const selSet = selRef.current;
     for (const n of clip.notes) {

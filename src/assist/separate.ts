@@ -163,3 +163,34 @@ function cellChroma(f: NonNullable<Awaited<ReturnType<typeof dspPool.separate>>[
     }
   return { startSec, cellSec, chroma, bass };
 }
+
+let harmonyAudioJob: Promise<void> | null = null;
+/**
+ * Sessions from before the harmony layer have no `harmonyAudio`: compute it from the original mix
+ * (DSP features only, in the workers — a few seconds) so unconverted parts count in the chords.
+ * Safe to call any time; does nothing when it's there or there's no mix.
+ */
+export function ensureHarmonyAudio(): Promise<void> {
+  if (store.project.harmonyAudio) return Promise.resolve();
+  harmonyAudioJob ??= (async () => {
+    const p = store.project;
+    const mix = p.tracks.find((t) => t.kind === "audio" && t.role === "mix" && t.clips.some((c) => c.kind === "audio" && buffers.has(c.bufferId)));
+    const clip = mix?.clips.find((c): c is AudioClip => c.kind === "audio" && buffers.has(c.bufferId));
+    if (!clip) return;
+    const buf = buffers.get(clip.bufferId)!;
+    const t0 = performance.now();
+    const { features } = await dspPool.separate(buf, () => {}, true);
+    if (!features || store.project.harmonyAudio) return;
+    const spb = 60 / store.project.bpm;
+    const ha = cellChroma(features, clip.start * spb - clip.offset);
+    store.update((pp) => {
+      pp.harmonyAudio = ha;
+    });
+    store.log(`Harmony: analysed the mix for the chord lane / producers in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+  })()
+    .catch((e) => store.log(`Error: harmony analysis of the mix failed: ${(e as Error).message}`))
+    .finally(() => {
+      harmonyAudioJob = null;
+    });
+  return harmonyAudioJob;
+}

@@ -66,8 +66,8 @@ const QUALITIES: { q: Quality; iv: number[]; w: number[]; penalty: number; suffi
   { q: "maj", iv: [0, 4, 7], w: [1, 1, 0.8], penalty: 0, suffix: "" },
   { q: "min", iv: [0, 3, 7], w: [1, 1, 0.8], penalty: 0, suffix: "m" },
   { q: "5", iv: [0, 7], w: [1, 0.9], penalty: 0.03, suffix: "5" },
-  { q: "sus2", iv: [0, 2, 7], w: [1, 0.8, 0.8], penalty: 0.1, suffix: "sus2" },
-  { q: "sus4", iv: [0, 5, 7], w: [1, 0.8, 0.8], penalty: 0.1, suffix: "sus4" },
+  { q: "sus2", iv: [0, 2, 7], w: [1, 0.8, 0.8], penalty: 0.14, suffix: "sus2" },
+  { q: "sus4", iv: [0, 5, 7], w: [1, 0.8, 0.8], penalty: 0.14, suffix: "sus4" },
   { q: "dim", iv: [0, 3, 6], w: [1, 1, 0.9], penalty: 0.1, suffix: "dim" },
   { q: "7", iv: [0, 4, 7, 10], w: [1, 1, 0.7, 0.8], penalty: 0.06, suffix: "7" },
   { q: "maj7", iv: [0, 4, 7, 11], w: [1, 1, 0.7, 0.8], penalty: 0.07, suffix: "maj7" },
@@ -84,12 +84,14 @@ const MODES: { name: string; iv: number[]; minor: boolean }[] = [
   { name: "minor", iv: [0, 2, 3, 5, 7, 8, 10], minor: true },
   { name: "harmonic minor", iv: HARM_MINOR, minor: true },
 ];
+/** How common a mode is in songs: a close call goes to the common one (lydian / phrygian need clear evidence). */
+const MODE_PRIOR: Record<string, number> = { major: 0.08, minor: 0.08, "harmonic minor": 0.04, dorian: 0.02, mixolydian: 0.02, phrygian: -0.04, lydian: -0.1 };
 // Krumhansl–Kessler tonal profiles (tonic emphasis)
 const KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
 const KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 
 /** Role weights: how much a part says about the harmony. */
-const ROLE_W: Partial<Record<Track["role"], number>> = { bass: 1.3, guitar: 1, keys: 1, piano: 1, pad: 1.1, vocals: 0.55, lead: 0.55, other: 0.8 };
+const ROLE_W: Partial<Record<Track["role"], number>> = { bass: 1.3, guitar: 1, keys: 1, piano: 1, pad: 1.1, vocals: 0.35, lead: 0.35, other: 0.8 }; // melody notes are often not chord tones (held 9ths, suspensions)
 
 export const isGeneratedTrack = (t: Track) => t.name.startsWith("Gen ·") || t.name.includes("· harmony");
 
@@ -140,6 +142,7 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
   const midi = Array.from({ length: B }, () => new Array(12).fill(0));
   const midiBass = Array.from({ length: B }, () => new Array(12).fill(0));
   const hasBassPart = heard.some((h) => h.role === "bass");
+  const upper = new Array(B).fill(0); // non-bass MIDI time per beat → confidence in thirds / colours
   for (const h of heard) {
     const w = (ROLE_W[h.role] ?? 0.8) * (h.e - h.s < 0.2 ? 0.5 : 1); // very short notes: passing
     for (let b = Math.max(0, Math.floor(h.s)); b < Math.min(B, Math.ceil(h.e)); b++) {
@@ -147,6 +150,7 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
       if (ov <= 0) continue;
       midi[b][pcOf(h.p)] += ov * w;
       if (h.role === "bass") midiBass[b][pcOf(h.p)] += ov;
+      else upper[b] += ov;
     }
   }
   if (!hasBassPart) {
@@ -241,7 +245,7 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
       const prof = corr(h, mode.minor ? KS_MIN : KS_MAJ, t);
       // the song's first bass note is very often home; its last one a little less
       const score = prof + 1.2 * (bh[t] / btot) + (fb && fb[t] > 0.4 ? 0.2 : 0) + (lb && lb[t] > 0.4 ? 0.08 : 0)
-        + (mode.name === "major" || mode.name === "minor" ? 0.06 : mode.name === "harmonic minor" ? 0.03 : 0) + (bestSet.cov - top) * 4; // plain modes first on a tie
+        + (MODE_PRIOR[mode.name] ?? 0) + (bestSet.cov - top) * 4; // common modes first on a close call
       if (score > best.score) best = { tonic: t, mode, score, set: bestSet };
     }
     return { tonic: best.tonic, mode: best.mode, pcs: best.set.pcs, coverage: best.set.cov };
@@ -294,6 +298,7 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
   const states: State[] = [];
   for (let r = 0; r < 12; r++) for (const q of QUALITIES) states.push({ root: r, q, pcs: q.iv.map((x) => (x + r) % 12) });
   const S = states.length;
+  const conf = upper.map((u) => Math.min(1, u / 1.5));
   const beatScale = Array.from({ length: B }, (_, b) => scaleAt(b));
   const emit = (b: number, st: State): number => {
     const v = ev[b], bv = bassEv[b];
@@ -312,10 +317,14 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
       else if (st.pcs.includes(bpc)) s += 0.08 * bmax;
       else s -= 0.25 * bmax;
     }
-    // the key: diatonic chords a little likelier, borrowed ones when they're heard
-    const sc = beatScale[b];
-    const diatonic = st.pcs.every((pc) => sc.includes(pc));
-    s += diatonic ? 0.07 : sc.includes(st.root) ? 0.02 : 0;
+    // the key: diatonic chords a little likelier, borrowed ones when they're heard. Where only the
+    // bass / the mix's audio speak (no chord part converted), thirds and colours are guesses: each
+    // out-of-scale tone costs more, and exotic qualities need clearer evidence
+    const sc = beatScale[b], doubt = 1 - conf[b];
+    const outTones = st.pcs.filter((pc) => !sc.includes(pc)).length;
+    s += outTones === 0 ? 0.07 : 0;
+    s -= outTones * (0.03 + 0.07 * doubt);
+    if (st.q.q === "dim" || st.q.q === "maj7" || st.q.q === "sus2" || st.q.q === "sus4") s -= 0.08 * doubt;
     return s;
   };
   const silentBeat = (b: number) => energy[b] < 0.05 || ev[b].every((x) => x === 0);
@@ -368,6 +377,22 @@ export function harmonyOf(p: Project, o: HarmonyOptions = {}): Harmony {
       continue;
     }
     chords.push({ start: b, end: b + 1, root: st.root, quality: (Object.keys(FAMILY) as Quality[]).find((q) => FAMILY[q] === fam[b]) ?? st.q.q, tones: st.pcs, bass: st.root, silent, name: "" });
+  }
+  // a chord lasting a single beat between two others is usually a passing / misheard beat: it joins
+  // the neighbour whose chord explains that beat nearly as well (within 0.15)
+  const stateOf = (c: HChord) => states.find((st) => st.root === c.root && st.q.q === c.quality) ?? states[path[c.start]];
+  for (let i = 0; i < chords.length; i++) {
+    const c = chords[i];
+    if (c.silent || c.end - c.start >= 2) continue;
+    const own = emit(c.start, states[path[c.start]]);
+    const opts = [chords[i - 1], chords[i + 1]].filter((x): x is HChord => !!x && !x.silent);
+    let best: HChord | null = null, bs = -Infinity;
+    for (const n of opts) { const sc = emit(c.start, stateOf(n)); if (sc > bs) { bs = sc; best = n; } }
+    if (best && bs >= own - 0.15 - 0.25 * (1 - conf[c.start])) {
+      if (best === chords[i - 1]) best.end = c.end;
+      else best.start = c.start;
+      chords.splice(i--, 1);
+    }
   }
   // a same-root function change shorter than 2 beats is flicker: back into the previous span
   for (let i = 1; i < chords.length; i++) {

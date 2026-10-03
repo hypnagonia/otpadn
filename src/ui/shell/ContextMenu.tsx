@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { convertToMidi } from "../../assist/convert";
-import { splitStems } from "../../assist/separate";
+import { ensureHarmonyAudio, splitStems } from "../../assist/separate";
 import { cleanAudio } from "../../assist/clean";
 import { copySelection, cutSelection, pasteClipboard, hasClipboard, deleteClip, deleteClips, deleteTrack, duplicateClip, duplicateClips, duplicateTrack, findClip, selectedClips, splitClip, splitClips, editRange, insertSilence } from "../../edit/ops";
 import { engine } from "../../engine/transport";
@@ -147,7 +147,7 @@ export default function ContextMenu() {
               <div className="menu-sep" />
               <div className="menu-title">write harmony<small>chord-aware · C3–C5</small></div>
               {HARMONY_PRESETS.map((h) => (
-                <button key={h.id} onClick={act(() => addHarmonyTracks(track.id, h.id))}>{h.label}</button>
+                <button key={h.id} onClick={act(() => runTask(async () => { await ensureHarmonyAudio(); addHarmonyTracks(track.id, h.id); }))}>{h.label}</button>
               ))}
               <div className="menu-sep" />
             </>

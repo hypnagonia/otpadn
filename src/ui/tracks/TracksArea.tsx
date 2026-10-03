@@ -11,7 +11,7 @@ import { store, useStoreQuiet } from "../../model/store";
 import { type Role } from "../../model/types";
 import { clipEnd, createMidiClip, deleteClip, deleteTrack, findClip, moveClips, selectClips, selectedClips, SNAPS, snapBeat, splitClip, splitClips, toggleClipSelection, TOOLS, trimClip, trimClips } from "../../edit/ops";
 import { drawArrangement, drawPlayhead } from "./drawArrangement";
-import { clipLenBeats, RULER_H, TOP_H } from "./geometry";
+import { clipLenBeats, MARKER_H, RULER_H, TOP_H } from "./geometry";
 import TrackHeader from "./TrackHeader";
 import { createBus } from "../../edit/routing";
 import Select from "../common/Select";
@@ -239,6 +239,11 @@ function TracksArea() {
         engine.seek(Math.max(0, h.beat));
         drag((ev) => engine.seek(Math.max(0, hit(ev).beat)));
       }
+      return;
+    }
+    if (h.y >= RULER_H + MARKER_H && h.y < TOP_H) {
+      // chord lane: click = jump there
+      engine.seek(Math.max(0, h.beat));
       return;
     }
     if (h.y < TOP_H) {

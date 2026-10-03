@@ -166,7 +166,7 @@ button.link { border: 0; background: transparent; padding: 0; border-bottom: 1px
 .global-label { display: block; height: 23px; line-height: 23px; padding-left: 10px; color: var(--faint); font-size: 11px; }
 .tracks-area { flex: 1; display: grid; grid-template-columns: 240px 1fr; min-width: 0; min-height: 0; }
 .headers { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-.headers-top { height: 46px; flex: none; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); }
+.headers-top { height: 64px; flex: none; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); }
 .headers-top button { font-size: 12px; }
 .headers-list { position: relative; flex: 1; overflow: hidden; overflow: clip; } /* clip: hidden tooltips must not make it scrollable (focus would shift headers sideways) */
 .headers-inner { position: absolute; left: 0; right: 0; top: 0; }

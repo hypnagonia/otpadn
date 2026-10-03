@@ -1,3 +1,4 @@
+import { songHarmony } from "../../model/songHarmony";
 import { generatePart, PART_KINDS } from "../../assist/parts";
 import { resetLatch } from "../../edit/automation";
 import { saveProjectToDisk } from "../../io/projectFile";
@@ -6,7 +7,7 @@ import { autoArrange, STYLE_INFO, type ArrangeStyle } from "../../assist/arrange
 import { convertToMidi } from "../../assist/convert";
 import { MUSCRIPTOR_SIZES, type MuscriptorModel } from "../../ml/muscriptor";
 import { autoMix } from "../../assist/mix";
-import { splitStems } from "../../assist/separate";
+import { ensureHarmonyAudio, splitStems } from "../../assist/separate";
 import { cleanAudio } from "../../assist/clean";
 import { DEMUCS_MODEL_MB } from "../../ml/demucs";
 import { live, toggleTyping } from "../../engine/liveInput";
@@ -154,7 +155,7 @@ export default function ControlBar() {
                 )}
                 <div className="menu-title" style={midiClip ? { borderTop: "1px solid var(--line-2)", marginTop: 2 } : undefined}>generate a new part · from the song's chords</div>
                 {PART_KINDS.map((k) => (
-                  <button key={k.id} onClick={() => { setMenu(null); runTask(async () => generatePart(k.id)); }}><span>{k.label}</span><small>{k.hint}</small></button>
+                  <button key={k.id} onClick={() => { setMenu(null); runTask(async () => { await ensureHarmonyAudio(); generatePart(k.id); }); }}><span>{k.label}</span><small>{k.hint}</small></button>
                 ))}
               </div>
             )}
@@ -198,7 +199,12 @@ export default function ControlBar() {
           </div>
           <div className="lcd-cell">
             <span className="lcd-mid">4/4</span>
-            <span className="lcd-small">{p.key ? `${NOTE_NAMES[p.key.tonic]} ${p.key.minor ? "min" : "maj"}` : "key —"}</span>
+            <span className="lcd-small">{(() => {
+              // the harmony layer's key (real parts + the mix), else the audio analysis
+              const hm = songHarmony();
+              if (hm) return `${NOTE_NAMES[hm.key.tonic]} ${hm.mode === "major" ? "maj" : hm.mode === "minor" ? "min" : hm.mode}`;
+              return p.key ? `${NOTE_NAMES[p.key.tonic]} ${p.key.minor ? "min" : "maj"}` : "key —";
+            })()}</span>
           </div>
         </div>
       </div>

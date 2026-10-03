@@ -5,7 +5,8 @@ import { isAudible } from "../../engine/schedule";
 import { buffers, PEAK_BLOCK, peaksCache } from "../../model/store";
 import type { Project } from "../../model/types";
 import { SECTION_COLORS, T } from "../common/theme";
-import { clipLenBeats, MARKER_H, RULER_H, TOP_H } from "./geometry";
+import { CHORD_H, clipLenBeats, MARKER_H, RULER_H, TOP_H } from "./geometry";
+import { songHarmony } from "../../model/songHarmony";
 
 export interface View {
   ppb: number;
@@ -293,6 +294,39 @@ export function drawArrangement(cv: HTMLCanvasElement, p: Project, v: View) {
     g.fillText(`${sec.label} ${sec.group}`, Math.max(x0, 0) + 6, RULER_H + MARKER_H / 2);
     g.fillStyle = "rgba(255,255,255,0.6)";
     for (let e = 0; e < sec.energy; e++) g.fillRect(x1 - 8 - e * 5, RULER_H + 8, 3, 8);
+  }
+  // Chord lane: the harmony layer's chords (real parts + the mix), names with quality / inversion
+  const cy = RULER_H + MARKER_H, hm = songHarmony();
+  g.fillStyle = T.bg;
+  g.fillRect(0, cy, W, CHORD_H);
+  if (hm) {
+    g.font = `11px ${T.font}`;
+    for (const c of hm.chords) {
+      if (c.silent) continue;
+      const x0 = X(c.start), x1 = X(c.end);
+      if (x1 < 0 || x0 > W) continue;
+      g.fillStyle = T.gridStrong;
+      g.fillRect(Math.round(x0) + 1, cy + 2, Math.max(1, Math.round(x1 - x0) - 2), CHORD_H - 4);
+      if (x1 - x0 > 18) {
+        g.save();
+        g.beginPath();
+        g.rect(x0 + 1, cy, x1 - x0 - 2, CHORD_H);
+        g.clip();
+        g.fillStyle = T.ink;
+        g.fillText(c.name, Math.max(x0, 0) + 5, cy + CHORD_H / 2);
+        g.restore();
+      }
+    }
+    if (W > 200) {
+      // the key / mode, right-aligned
+      const label = `${["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"][hm.key.tonic]} ${hm.mode}`;
+      g.font = `10px ${T.font}`;
+      const tw = g.measureText(label).width;
+      g.fillStyle = T.header;
+      g.fillRect(W - tw - 12, cy + 1, tw + 12, CHORD_H - 2);
+      g.fillStyle = T.muted;
+      g.fillText(label, W - tw - 6, cy + CHORD_H / 2);
+    }
   }
   g.strokeStyle = T.hairline;
   g.beginPath();
