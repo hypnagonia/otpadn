@@ -90,7 +90,9 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
   const label = (detail?: string) => `Audio → MIDI · input: "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`})${muscriptorGpu ? ` · ${muscriptorGpu}` : ""}${detail ? " · " + detail : ""}`;
   const thorough = opts.thorough ?? true;
   const passes = thorough ? 2 : 1;
-  const samples = await to16kMono(buffer);
+  // Full level in: the model misses notes on soft input (−20 dB lost ~40 %), so the whole input
+  // is brought up to a mastered level first — this exact signal is the "model input" track.
+  const samples = fullLevel(await to16kMono(buffer));
   const run = (offset: number, pass: number) =>
     transcribeMuscriptor(buffer, { model: opts.model ?? "small", instruments, vocals, samples, offset }, (pr) => {
       if (pr.phase === "download") store.busy(`Downloading the audio → MIDI model (once)${pr.detail ? " · " + pr.detail : ""}`, pr.progress ?? 0);
@@ -156,7 +158,7 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
   inputTrack.color = "#6c6f76";
   let pk = 0, ss = 0;
   for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > pk) pk = a; ss += samples[i] * samples[i]; }
-  const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
+  const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · gated level −12 dBFS · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
   store.update((pp) => {
     const i = pp.tracks.findIndex((x) => x.id === track.id);
     pp.tracks.splice(i + 1, 0, inputTrack, ...tracks);
@@ -171,6 +173,29 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
 }
 
 /* ── quality filters ─────────────────────────────────────────────────────── */
+
+/**
+ * Gated RMS (50 ms frames above −60 dBFS) brought to −12 dBFS, peaks soft-limited above −1 dBFS
+ * (no clipping). Never turns anything down. In place.
+ */
+function fullLevel(x: Float32Array): Float32Array {
+  const frame = 800;
+  let sum = 0, count = 0;
+  for (let f = 0; f + frame <= x.length; f += frame) {
+    let e = 0;
+    for (let i = f; i < f + frame; i++) e += x[i] * x[i];
+    if (e / frame > 1e-6) { sum += e; count += frame; }
+  }
+  if (!count) return x;
+  const gain = Math.min(10 ** (30 / 20), 10 ** (-12 / 20) / Math.sqrt(sum / count));
+  if (gain <= 1) return x;
+  const K = 0.89;
+  for (let i = 0; i < x.length; i++) {
+    const y = x[i] * gain, a = Math.abs(y);
+    x[i] = a <= K ? y : Math.sign(y) * (K + (1 - K) * Math.tanh((a - K) / (1 - K)));
+  }
+  return x;
+}
 
 
 const ENV_HOP = 160; // 10 ms at 16 kHz
