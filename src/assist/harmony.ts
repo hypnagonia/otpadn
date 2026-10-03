@@ -180,7 +180,7 @@ const IV_COST: Record<"smart" | "3rd" | "5th", Record<number, number>> = {
 };
 
 /** Best line for one phrase on one side (+1 above, −1 below) by Viterbi; returns pitches and cost per note. */
-function solve(ph: Ev[], side: 1 | -1, kind: "smart" | "3rd" | "5th", scale: number[], chordAt: (b: number) => number[], key: Key): { line: number[]; cost: number } {
+function solve(ph: Ev[], side: 1 | -1, kind: "smart" | "3rd" | "5th", scale: number[], chordAt: (b: number) => number[], key: Key, band: (pitch: number, e: Ev) => number = () => 0): { line: number[]; cost: number } {
   const lead = (key.tonic + 11) % 12, fourth = (key.tonic + 5) % 12, third = (key.tonic + (key.minor ? 3 : 4)) % 12;
   type St = { pitch: number; cost: number; back: number };
   const layers: St[][] = [];
@@ -191,7 +191,7 @@ function solve(ph: Ev[], side: 1 | -1, kind: "smart" | "3rd" | "5th", scale: num
       const c = e.pitch + side * d, pc = pcOf(c);
       const inChord = chord.includes(pc);
       if (!scale.includes(pc) && !inChord) continue; // never out of key (unless it's a chord tone)
-      let cost = IV_COST[kind][d % 12] ?? 9;
+      let cost = (IV_COST[kind][d % 12] ?? 9) + band(c, e);
       if (!inChord && chord.length) cost += st ? 2.5 : 0.5;
       cost += 0.6 * Math.max(0, LO - c, c - HI);
       if (i === ph.length - 1) cost += (chord.length && !inChord ? 2 : 0) + (d % 12 === 5 || d % 12 === 7 ? 0.3 : 0); // phrase lands on a chord tone, ideally a 3rd/6th
@@ -272,6 +272,18 @@ export function writeHarmony(p: Project, src: Track, voice: HarmonyVoice, keepSi
   const chordAt = (b: number) => chords.find((c) => b >= c.start - 1e-6 && b < c.end)?.tones ?? [];
   const out: Note[] = [];
   const vel = (e: Ev) => Math.max(1, Math.round(e.vel * 0.88));
+  // the rest of the band: a harmony note rubbing (semitone / tritone / major 7th) against what the
+  // guitar, keys or bass play at that moment costs as much as a clash with the melody itself
+  const band = otherNotes(p, src).map((o) => o.ev).sort((a, b) => a.start - b.start);
+  const bandCost = (pitch: number, e: Ev) => {
+    const need = Math.min(0.2, e.dur * 0.4);
+    let c = 0;
+    for (const o of band) {
+      if (o.start >= e.start + e.dur) break;
+      if (Math.min(e.start + e.dur, o.start + o.dur) - Math.max(e.start, o.start) > need && [1, 6, 11].includes(pcOf(pitch - o.pitch))) c = 4;
+    }
+    return c;
+  };
   for (const ph of phrases(mel)) {
     let line: number[];
     if (voice === "oct-up" || voice === "oct-down") line = ph.map((e) => e.pitch + (voice === "oct-up" ? 12 : -12));
@@ -279,7 +291,7 @@ export function writeHarmony(p: Project, src: Track, voice: HarmonyVoice, keepSi
       const kind = voice.startsWith("smart") ? "smart" : voice.startsWith("3rd") ? "3rd" : "5th";
       const side: 1 | -1 = voice.endsWith("up") ? 1 : -1;
       // The asked side, unless the phrase sits so high/low that the other side is clearly better.
-      const a = solve(ph, side, kind, scale, chordAt, key), b = solve(ph, side === 1 ? -1 : 1, kind, scale, chordAt, key);
+      const a = solve(ph, side, kind, scale, chordAt, key, bandCost), b = solve(ph, side === 1 ? -1 : 1, kind, scale, chordAt, key, bandCost);
       line = !keepSide && b.cost + 1.2 < a.cost ? b.line : a.line;
     }
     // Sung, not mirrored: a held harmony note across quick melody notes becomes one longer note.

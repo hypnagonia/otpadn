@@ -31,7 +31,9 @@ export const PART_KINDS: { id: PartKind; label: string; hint: string; role: Role
 ];
 
 interface ChordAt { start: number; end: number; root: number; minor: boolean; tones: number[] }
-interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[]; melody: Note[] }
+/** A note of a real (not generated) pitched part, absolute beats. */
+interface Heard { s: number; e: number; p: number; bass: boolean }
+interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[]; melody: Note[]; heard: Heard[] }
 
 const MAJOR = [0, 2, 4, 5, 7, 9, 11], MINOR = [0, 2, 3, 5, 7, 8, 10];
 const pcOf = (p: number) => ((p % 12) + 12) % 12;
@@ -71,7 +73,64 @@ function context(p: Project): Ctx {
   const melody: Note[] = [];
   for (const t of p.tracks) if (t.kind === "midi" && (t.role === "vocals" || t.role === "lead") && !t.name.startsWith("Gen ·")) for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) melody.push({ ...n, start: c.start + n.start });
   melody.sort((a, b) => a.start - b.start);
-  return { key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12), melody };
+  // everything the real parts play (bass, guitar, keys, vocals…): generated notes must sit with it
+  const heard: Heard[] = [];
+  for (const t of p.tracks) {
+    if (t.kind !== "midi" || t.role === "drums" || t.dp || t.name.startsWith("Gen ·") || t.name.includes("· harmony")) continue;
+    for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) heard.push({ s: c.start + n.start, e: c.start + Math.min(c.length, n.start + n.dur), p: n.pitch, bass: t.role === "bass" });
+  }
+  heard.sort((a, b) => a.s - b.s);
+  return { key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12), melody, heard };
+}
+
+/** Pitch class the real bass plays at a beat (the longest-sounding note there), or null. */
+function bassAt(c: Ctx, b: number): number | null {
+  let best: Heard | null = null;
+  for (const h of c.heard) {
+    if (h.s > b + 0.13) break;
+    if (h.bass && h.e > b + 0.05 && (!best || h.e - h.s > best.e - best.s)) best = h;
+  }
+  return best ? pcOf(best.p) : null;
+}
+
+const BAD = [1, 6, 11]; // semitone, tritone, major 7th (and their octaves)
+/** Real notes overlapping [s, e) by a meaningful amount. */
+function heardDuring(c: Ctx, s: number, e: number): number[] {
+  const out: number[] = [], need = Math.min(0.2, (e - s) * 0.4);
+  for (const h of c.heard) {
+    if (h.s >= e) break;
+    if (Math.min(e, h.e) - Math.max(s, h.s) > need) out.push(h.p);
+  }
+  return out;
+}
+
+/**
+ * Sit with the band: a generated note that rubs (semitone / tritone / major 7th) against a real
+ * part sounding at the same time moves to the nearest key / chord note that doesn't (≤ 2
+ * semitones); a chord voice that can't is dropped (the rest of the chord still sounds); a single
+ * line note that can't keeps its pitch. Notes landing on the same pitch at the same onset merge.
+ */
+function sitWithBand(c: Ctx, notes: Note[], poly: boolean): Note[] {
+  if (!c.heard.length) return notes;
+  const chordAt = (b: number) => c.chords.find((x) => b >= x.start - 1e-6 && b < x.end)?.tones ?? [];
+  const out: Note[] = [];
+  const seen = new Set<string>();
+  for (const n of notes) {
+    const real = heardDuring(c, n.start, n.start + n.dur);
+    const rubs = (p: number) => real.some((m) => BAD.includes(pcOf(p - m)));
+    let pitch = n.pitch;
+    if (rubs(pitch)) {
+      const ok = new Set([...c.scale, ...chordAt(n.start + 0.01), ...real.map(pcOf)]);
+      const alt = [1, -1, 2, -2].map((d) => pitch + d).find((p) => ok.has(pcOf(p)) && !rubs(p));
+      if (alt !== undefined) pitch = alt;
+      else if (poly) continue;
+    }
+    const k = `${pitch}@${n.start.toFixed(3)}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(pitch === n.pitch ? n : { ...n, pitch });
+  }
+  return out;
 }
 
 const sectionAt = (c: Ctx, beat: number) => c.sections.find((s) => beat >= s.start && beat < s.start + s.length) ?? c.sections[c.sections.length - 1];
@@ -231,7 +290,7 @@ function genStrum(c: Ctx, seed: number): Note[] {
 
 /** Drop tuning whose low string is the key's tonic (A1…E2), else drop B. Returns the low string pitch. */
 function dropTuning(tonic: number): number {
-  for (const low of [33, 34, 35, 36, 37, 38, 40]) if (pcOf(low) === tonic) return low;
+  for (const low of [31, 32, 33, 34, 35, 36, 37, 38, 40]) if (pcOf(low) === tonic) return low; // drop G … E
   return 35;
 }
 
@@ -256,7 +315,7 @@ function genMetal(c: Ctx, seed: number): Note[] {
     }
     hits = [...new Set(hits)].sort((a, x) => a - x);
     hits.forEach((h, i) => {
-      const ch = chordAt(h), root = rootLow(ch.root);
+      const ch = chordAt(h), root = rootLow(bassAt(c, h) ?? ch.root);
       const isChange = c.chords.some((x) => Math.abs(x.start - h) < 0.13) || i === 0 && bar % 4 === 0;
       const next = hits[i + 1] ?? b0 + 4;
       if (isChange) {
@@ -278,9 +337,9 @@ function genMetal(c: Ctx, seed: number): Note[] {
 function genPower(c: Ctx): Note[] {
   const out: Note[] = [];
   for (const s of spans(c)) {
-    const root = 40 + pcOf(s.root - 40);
     const step = s.sec.energy >= 2 ? 0.5 : 1;
     for (let b = Math.ceil(s.start / step) * step; b < s.end - 1e-6; b += step) {
+      const root = 40 + pcOf((bassAt(c, b) ?? s.root) - 40);
       const onBeat = Math.abs(b - Math.round(b)) < 1e-6;
       for (const iv of [0, 7, 12]) out.push({ pitch: root + iv, start: b, dur: step * 0.9, vel: velFor(s.sec, onBeat ? 108 : 96) });
     }
@@ -316,7 +375,8 @@ function genBass(c: Ctx, seed: number): Note[] {
     hits = [...new Set(hits)].sort((a, b) => a - b);
     hits.forEach((h, i) => {
       const ch = chordAt(h), nx = hits[i + 1] ?? b0 + 4;
-      let pitch = rootNear(ch.root);
+      const real = bassAt(c, h);
+      let pitch = rootNear(real ?? ch.root);
       if (i === 0) prev = pitch;
       // half-note feel: the 5th on beat 3 now and then
       if (e === 1 && i === 1 && r() < 0.5) pitch = pitch + 7 > 43 ? pitch - 5 : pitch + 7;
@@ -324,7 +384,7 @@ function genBass(c: Ctx, seed: number): Note[] {
       if (e >= 3 && Math.abs(h - (b0 + 2.5)) < 1e-6 && r() < 0.4) pitch += 12;
       // approach note: the last hit before a chord change walks into the next root
       const nc = nextChange(h);
-      if (e >= 2 && nc && nc.start <= nx + 1e-6 && nc.start - h <= 1 && i > 0) {
+      if (real === null && e >= 2 && nc && nc.start <= nx + 1e-6 && nc.start - h <= 1 && i > 0) {
         const target = rootNear(nc.root);
         const below = [target - 1, target - 2].find((p) => c.scale.includes(pcOf(p)));
         const above = [target + 1, target + 2].find((p) => c.scale.includes(pcOf(p)) && p <= 43);
@@ -363,6 +423,7 @@ export function generatePart(kind: PartKind) {
         const riff = genMetal(c, seed);
         return [{ name: "Gen · Riff L", notes: humanize(riff, seed + 1, spb), pan: -0.85 }, { name: "Gen · Riff R", notes: humanize(riff, seed + 2, spb), pan: 0.85 }];
       })();
+  for (const tk of takes) tk.notes = sitWithBand(c, tk.notes, kind !== "bass");
   if (!takes[0].notes.length) throw new Error("nothing to generate (no chords found in the song)");
   store.update((p) => {
     for (const tk of takes) {
