@@ -23,7 +23,7 @@ import { applySlides } from "./slides";
 export type PartKind = "pad" | "arp" | "strum" | "metal" | "power" | "bass";
 export const PART_KINDS: { id: PartKind; label: string; hint: string; role: Role; instrument: string }[] = [
   { id: "pad", label: "pad · chords", hint: "voice-led sustained chords", role: "pad", instrument: "synth:string-pad" },
-  { id: "arp", label: "arpeggio", hint: "broken chords · 8ths / 16ths by section", role: "keys", instrument: "synth:glass-pad" },
+  { id: "arp", label: "arpeggio", hint: "broken chords · 8ths / 16ths by section", role: "keys", instrument: "synth:arp-pluck" },
   { id: "strum", label: "acoustic strum", hint: "guitar shapes · down/up strokes", role: "guitar", instrument: "sampled:acoustic-martin" },
   { id: "metal", label: "metal riff · double-tracked", hint: "drop tuning · chugs on the kick · power chords", role: "guitar", instrument: "sampled:egtr-highgain" },
   { id: "power", label: "rock power chords", hint: "driving 8ths", role: "guitar", instrument: "sampled:egtr-highgain" },
@@ -169,8 +169,9 @@ function genArp(c: Ctx, seed: number): Note[] {
     // stay under the melody (a 3rd below its lowest note in this span), never above C5
     const ml = melodyLow(c, s.start, s.end);
     const hi = Math.min(72, ml !== null ? ml - 3 : 72), lo = Math.min(52, hi - 14);
-    const v = voiceLead(pcs.slice(0, 4), prev, lo, hi, hi - 5);
+    let v = voiceLead(pcs.slice(0, 4), prev, lo, hi, hi - 5);
     prev = v;
+    if (v.length < 3) v = [...v, v[0] + 12]; // power chord (root + 5th): the octave completes the shape
     const step = rateFor(c.bpm, e);
     const shape = e <= 1 ? [...v, v[0] + 12] : e === 2 ? [...v, ...[...v].reverse().slice(1, -1)] : [v[0], v[1], v[2], v[0] + 12, v[2], v[1]];
     let i = 0;
@@ -206,7 +207,8 @@ const STRUMS: Record<number, string[]> = {
 function genStrum(c: Ctx, seed: number): Note[] {
   const out: Note[] = [], r = rng(seed), spb = 60 / c.bpm;
   for (const s of spans(c)) {
-    const shape = guitarShape(s.root, s.minor);
+    // only strings that sound a chord tone (a power chord's shape drops the 3rd)
+    const full = guitarShape(s.root, s.minor), shape = full.filter((p) => s.tones.includes(pcOf(p)));
     // tempo: above ~150 bpm the 8th-note patterns become a blur → one step calmer
     const lvl = Math.max(0, Math.min(3, Math.round(s.sec.energy) - (c.bpm > 150 ? 1 : 0)));
     const pats = STRUMS[lvl];

@@ -71,6 +71,7 @@ export const INSTRUMENTS: InstrumentDef[] = [
   { id: "synth:saw-lead", name: "Saw Lead (synth)", category: "Lead", size: "0" },
   { id: "synth:square-lead", name: "Square Lead (synth)", category: "Lead", size: "0" },
   { id: "synth:pluck", name: "Pluck (synth)", category: "Lead", size: "0" },
+  { id: "synth:arp-pluck", name: "Arp Pluck (synth)", category: "Keys", size: "0" },
   SF("lead_2_sawtooth", "GM Saw Lead", "Lead"),
   SF("flute", "Flute", "Lead"),
   SF("alto_sax", "Alto Sax", "Lead"),
