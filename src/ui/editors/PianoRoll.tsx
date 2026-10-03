@@ -9,7 +9,8 @@ import NumberField from "../common/NumberField";
 
 const KEYS_W = 46;
 const RULER = 16; // click / drag here to set the playhead
-const ROW_DEFAULT = 10; // note height (px); zoomable with ⌥ + pinch / ⌥⌘ + wheel
+const ROW_DEFAULT = 10; // note height (px); zoomable with ⌥ / ⇧ + pinch, pinch over the keys, or the ↕ slider
+const ROW_MIN = 5, ROW_MAX = 48;
 const LO = 21, HI = 108;
 const ROWS = HI - LO + 1;
 const BLACK = new Set([1, 3, 6, 8, 10]);
@@ -345,10 +346,11 @@ function PianoRoll() {
       e.preventDefault();
       const r = el.getBoundingClientRect(), z = zoomRef.current;
       const f = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025)); // smooth for trackpads, steps for wheels
-      if (e.altKey) {
+      // note height: ⌥ / ⇧ + pinch, or pinch over the piano keys
+      if (e.altKey || e.shiftKey || e.clientX - r.left < KEYS_W) {
         const py = e.clientY - r.top;
         anchor.current.y ??= { rows: (py + el.scrollTop) / z.row, py };
-        z.row = Math.max(6, Math.min(28, z.row * f));
+        z.row = Math.max(ROW_MIN, Math.min(ROW_MAX, z.row * f));
         setRow(z.row);
       } else {
         const px = e.clientX - r.left - KEYS_W;
@@ -730,7 +732,19 @@ function PianoRoll() {
         <button onClick={() => store.update((p) => { const t = p.tracks.find((x) => x.id === track.id)!; t.clips = t.clips.filter((c) => c.id !== clip.id); })}>Delete clip</button>
         <span className="spacer" />
         <span className="label">Zoom</span>
-        <input type="range" min={10} max={400} value={ppb} onChange={(e) => setPpb(+e.target.value)} data-tip="horizontal zoom · also pinch / ⌘ + wheel · ⌥ + pinch: note height" />
+        <span className="label">↔</span>
+        <input type="range" min={10} max={400} value={ppb} onChange={(e) => setPpb(+e.target.value)} data-tip="horizontal zoom · also pinch / ⌘ + wheel" />
+        <span className="label">↕</span>
+        <input
+          type="range" min={ROW_MIN} max={ROW_MAX} step={0.5} value={ROW}
+          onChange={(e) => {
+            // keep the middle of the view on the same note
+            const el = wrapRef.current;
+            if (el) anchor.current.y = { rows: (el.scrollTop + el.clientHeight / 2) / ROW, py: el.clientHeight / 2 };
+            setRow(+e.target.value);
+          }}
+          data-tip="note height (vertical zoom) · also ⌥ / ⇧ + pinch, or pinch over the piano keys"
+        />
       </div>
       {mode === "tab" ? (
         <Tablature track={track} clip={clip} ppb={ppb} />
