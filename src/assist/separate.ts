@@ -108,7 +108,7 @@ export async function splitStems(trackId?: string | null, engineKind: SplitEngin
     const sections = estimateSections(features, grid);
     const chords = estimateChords(features, grid, key);
     newOrigin = grid.clipStartBeat;
-    analysis = { bpm: grid.bpm, key, sections, chords, loop: { on: false, start: sections[0]?.start ?? 0, end: (sections[0]?.start ?? 0) + 16 } };
+    analysis = { bpm: grid.bpm, key, sections, chords, harmonyAudio: cellChroma(features, grid.clipStartBeat * grid.spb), loop: { on: false, start: sections[0]?.start ?? 0, end: (sections[0]?.start ?? 0) + 16 } };
     store.log(`Tempo ${tempo.bpm} BPM, first downbeat ${tempo.downbeatSec.toFixed(2)} s · Key ${NOTE_NAMES[key.tonic]} ${key.minor ? "minor" : "major"}`);
     store.log(`Sections: ${sections.map((s) => `${s.label}(${s.length / 4})`).join(" · ")}`);
   }
@@ -137,4 +137,29 @@ export async function splitStems(trackId?: string | null, engineKind: SplitEngin
   });
   pendingBuffers.clear();
   store.setUi({ selectedTrackId: stems.find((t) => t.role === "vocals")?.id ?? stems[0].id, selectedClipId: null });
+}
+
+/** Mix chroma in 0.25 s cells (silent cells zeroed), for the harmony layer. */
+function cellChroma(f: NonNullable<Awaited<ReturnType<typeof dspPool.separate>>["features"]>, startSec: number) {
+  const cellSec = 0.25, per = Math.max(1, Math.round(f.fps * cellSec)), T = f.chroma.length / 12, n = Math.ceil(T / per);
+  const chroma = new Array<number>(n * 12).fill(0), bass = new Array<number>(n * 12).fill(0), sums: number[] = [];
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let t = i * per; t < Math.min(T, (i + 1) * per); t++)
+      for (let k = 0; k < 12; k++) {
+        chroma[i * 12 + k] += f.chroma[t * 12 + k];
+        bass[i * 12 + k] += f.bassChroma[t * 12 + k];
+        s += f.chroma[t * 12 + k];
+      }
+    sums.push(s);
+  }
+  const gate = 0.02 * ([...sums].sort((a, b) => a - b)[Math.floor(n / 2)] || 0);
+  const peak = Math.max(1e-12, ...chroma), bpeak = Math.max(1e-12, ...bass);
+  for (let i = 0; i < n; i++)
+    for (let k = 0; k < 12; k++) {
+      const q = sums[i] > gate;
+      chroma[i * 12 + k] = q ? Math.round((chroma[i * 12 + k] / peak) * 1e4) / 1e4 : 0;
+      bass[i * 12 + k] = q ? Math.round((bass[i * 12 + k] / bpeak) * 1e4) / 1e4 : 0;
+    }
+  return { startSec, cellSec, chroma, bass };
 }

@@ -2,6 +2,7 @@
 import { store } from "../../model/store";
 import type { MidiClip, Note, Project, Role, Section, Track } from "../../model/types";
 import { midiTrack } from "../tracks";
+import { harmonyOf } from "../../analysis/harmonyLayer";
 import { allNotes, audioClipsForSections, mergeAdjacent, midiClipsForSections } from "./clips";
 import { CH, generateBassFromChords, generateDrums, generatePad, generatePianoChords, K, SHAKER } from "./generators";
 
@@ -41,10 +42,18 @@ export function autoArrange(style: ArrangeStyle) {
 
   // Converted drums replace the generated groove when there's enough of them.
   const drums = midi.drums && allNotes(midi.drums).length > 32 ? allNotes(midi.drums) : generateDrums(p.sections);
-  const pad = generatePad(p.chords);
+  // chords from the harmony layer (real parts + the mix), not the rough audio-only chord track
+  const chords = (() => {
+    try {
+      return harmonyOf(p).chords.filter((c) => !c.silent).map((c) => ({ start: c.start, length: c.end - c.start, root: c.root, minor: c.quality === "min" || c.quality === "m7" || c.quality === "dim" }));
+    } catch {
+      return p.chords;
+    }
+  })();
+  const pad = generatePad(chords);
   const transcribedBass = midi.bass ? allNotes(midi.bass) : [];
-  const bassNotes = transcribedBass.length > 16 ? transcribedBass : generateBassFromChords(p.chords, p.sections);
-  const keysNotes = midi.keys && allNotes(midi.keys).length > 16 ? allNotes(midi.keys) : generatePianoChords(p.chords, p.sections);
+  const bassNotes = transcribedBass.length > 16 ? transcribedBass : generateBassFromChords(chords, p.sections);
+  const keysNotes = midi.keys && allNotes(midi.keys).length > 16 ? allNotes(midi.keys) : generatePianoChords(chords, p.sections);
 
   const layers: Layer[] = [];
   if (style === "remix") {
@@ -70,7 +79,7 @@ export function autoArrange(style: ArrangeStyle) {
   } else {
     layers.push(
       { role: "vocals", name: "Vocals (stem)", source: stem.vocals ?? null, rule: always },
-      { role: "keys", name: "Gen Piano", source: null, notes: generatePianoChords(p.chords, p.sections), instrument: "piano:splendid", rule: always },
+      { role: "keys", name: "Gen Piano", source: null, notes: generatePianoChords(chords, p.sections), instrument: "piano:splendid", rule: always },
       { role: "pad", name: "Gen Strings", source: null, notes: pad, instrument: "sf:string_ensemble_1", rule: minE(2) },
       { role: "drums", name: "Gen Perc", source: null, notes: drums.filter((n) => [K, SHAKER, CH].includes(n.pitch)), instrument: "drums:LM-2", rule: labels("Chorus") },
     );

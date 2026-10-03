@@ -178,6 +178,12 @@ export interface Project {
   key: { tonic: number; minor: boolean } | null;
   sections: Section[];
   chords: ChordSpan[];
+  /**
+   * The mix's chroma, kept from the stem split for the harmony layer (analysis/harmonyLayer):
+   * 12 values per cell of `cellSec` seconds from timeline second `startSec` (+ the same for the
+   * bass band). In seconds, so a tempo change doesn't move it.
+   */
+  harmonyAudio?: { startSec: number; cellSec: number; chroma: number[]; bass: number[] };
   tracks: Track[];
   /** The user deleted the reverb return: don't recreate it (verb knobs use the built-in reverb). */
   noReverbReturn?: boolean;

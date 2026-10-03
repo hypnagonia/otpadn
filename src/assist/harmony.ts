@@ -1,9 +1,7 @@
 /**
  * Harmony writer for vocal / lead MIDI lines — a real harmony voice, not parallel intervals.
- *  - key: estimated from the actual notes (Krumhansl); the project's analysed key is kept only
- *    when the notes agree with it (a wrong key was what put harmonies out of key)
- *  - chords: from the other pitched MIDI tracks (bass weighted) + the melody; else the analysed
- *    chord track where the melody agrees with it; else fitted to the melody's strong beats
+ *  - key, mode, chords: the harmony layer (analysis/harmonyLayer — every real part + the mix)
+ *  - the band: a harmony note rubbing against what guitar / keys / bass play right then is out
  *  - the line: per phrase, a Viterbi search over candidate notes — in key (or a tone of the
  *    current chord), chord tones on strong beats / long notes, 3rds & 6ths preferred, 4ths & 5ths
  *    allowed, no 2nds / 7ths / tritones against the melody, smooth voice leading, no parallel
@@ -11,10 +9,11 @@
  *    other side as a whole). So the interval moves with the melody (3rd, 4th, 6th, 5th…).
  * One new track per voice: same rhythm, instrument and role, a little softer, panned apart.
  */
-import type { ChordSpan, MidiClip, Note, Project, Track } from "../model/types";
+import type { MidiClip, Note, Project, Track } from "../model/types";
 import { store } from "../model/store";
 import { midiTrack } from "./tracks";
 import { uid } from "../model/types";
+import { harmonyOf, type Harmony } from "../analysis/harmonyLayer";
 
 export type HarmonyVoice = "smart-up" | "smart-down" | "3rd-up" | "3rd-down" | "5th-up" | "oct-up" | "oct-down";
 export const HARMONY_PRESETS: { id: string; label: string; voices: HarmonyVoice[] }[] = [
@@ -30,9 +29,6 @@ export const HARMONY_PRESETS: { id: string; label: string; voices: HarmonyVoice[
 const VOICE_LABEL: Record<HarmonyVoice, string> = { "smart-up": "↑", "smart-down": "↓", "3rd-up": "3rds ↑", "3rd-down": "3rds ↓", "5th-up": "5ths ↑", "oct-up": "oct ↑", "oct-down": "oct ↓" };
 
 const LO = 48, HI = 72; // C3–C5
-const MAJOR = [0, 2, 4, 5, 7, 9, 11], MINOR = [0, 2, 3, 5, 7, 8, 10];
-const KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-const KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 const pcOf = (p: number) => ((p % 12) + 12) % 12;
 
 interface Ev { start: number; dur: number; pitch: number; vel: number } // absolute beats
@@ -54,123 +50,8 @@ function melodyOf(t: Track): Ev[] {
   return out;
 }
 
-/** Pitched notes of the other tracks (not drums, not earlier harmony tracks, not the source). */
-function otherNotes(p: Project, src: Track): { ev: Ev; w: number }[] {
-  const out: { ev: Ev; w: number }[] = [];
-  for (const t of p.tracks) {
-    if (t.id === src.id || t.kind !== "midi" || t.role === "drums" || t.dp || t.name.includes("· harmony") || t.name.startsWith("Gen ·")) continue;
-    for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) out.push({ ev: { start: c.start + n.start, dur: n.dur, pitch: n.pitch, vel: n.vel }, w: t.role === "bass" ? 2 : 1 });
-  }
-  return out;
-}
-
-const corr = (h: number[], prof: number[], tonic: number) => {
-  const x = prof.map((_, i) => h[(i + tonic) % 12]);
-  const mx = x.reduce((a, b) => a + b, 0) / 12, mp = prof.reduce((a, b) => a + b, 0) / 12;
-  let n = 0, dx = 0, dp = 0;
-  for (let i = 0; i < 12; i++) { n += (x[i] - mx) * (prof[i] - mp); dx += (x[i] - mx) ** 2; dp += (prof[i] - mp) ** 2; }
-  return n / Math.sqrt(dx * dp + 1e-12);
-};
-
-function estimateKey(p: Project, mel: Ev[], others: { ev: Ev; w: number }[]): Key {
-  const h = new Array(12).fill(0);
-  for (const { ev, w } of others) h[pcOf(ev.pitch)] += ev.dur * w;
-  for (const e of mel) h[pcOf(e.pitch)] += e.dur * 1.5;
-  // The tonic is where the song starts and ends: the opening and closing bass notes weigh in
-  // (A–F–C–G alone fits F major as well as A minor).
-  const bass = others.filter((o) => o.w >= 2).map((o) => o.ev).sort((a, b) => a.start - b.start);
-  const total = h.reduce((a, v) => a + v, 0);
-  if (bass.length) {
-    h[pcOf(bass[0].pitch)] += total * 0.15;
-    h[pcOf(bass[bass.length - 1].pitch)] += total * 0.08;
-  }
-  let best = { tonic: 0, minor: false, r: -Infinity };
-  for (let tonic = 0; tonic < 12; tonic++)
-    for (const minor of [false, true]) {
-      const r = corr(h, minor ? KS_MIN : KS_MAJ, tonic);
-      if (r > best.r) best = { tonic, minor, r };
-    }
-  // The analysed key stays only if the notes agree with it (or there are too few notes to tell).
-  // (Counting ALL notes: the part generator passes no melody, and "melody < 12 notes" kept a wrong
-  // analysed key every time — F# major over a B♭ / G minor song.)
-  if (p.key && (mel.length + others.length < 12 || corr(h, p.key.minor ? KS_MIN : KS_MAJ, p.key.tonic) >= best.r - 0.05)) return p.key;
-  return { tonic: best.tonic, minor: best.minor };
-}
-
-/** Diatonic triads of the key (plus the harmonic-minor V), as pitch-class sets. */
-function keyTriads(key: Key): number[][] {
-  const sc = (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12);
-  const tri = sc.map((_, d) => [sc[d], sc[(d + 2) % 7], sc[(d + 4) % 7]]);
-  if (key.minor) tri.push([(key.tonic + 7) % 12, (key.tonic + 11) % 12, (key.tonic + 2) % 12]);
-  return tri.filter((t) => { const a = (t[1] - t[0] + 12) % 12, b = (t[2] - t[0] + 12) % 12; return b === 7 && (a === 3 || a === 4); }); // no diminished
-}
-
 /** Notes the harmony must agree with the chord on: half-bar downbeats and long notes. */
 const strong = (e: Ev) => e.dur >= 1 || Math.abs(e.start / 2 - Math.round(e.start / 2)) < 0.03;
-
-function chordsFor(p: Project, mel: Ev[], others: { ev: Ev; w: number }[], key: Key, end: number): Chord[] {
-  const triads = keyTriads(key);
-  const out: Chord[] = [];
-  const fit = (tones: number[], from: number, to: number) => {
-    // melody notes in the window, weighted by length; the downbeat note counts double
-    const ns = mel.filter((e) => e.start >= from - 0.01 && e.start < to);
-    let w = 0, hit = 0;
-    for (const e of ns) {
-      const k = Math.min(2, e.dur) * (Math.abs(e.start - from) < 0.05 ? 2 : 1);
-      w += k;
-      if (tones.includes(pcOf(e.pitch))) hit += k;
-    }
-    return w ? hit / w : 1;
-  };
-  for (let b = 0; b < end; b += 2) {
-    let tones: number[] | null = null;
-    if (others.length) {
-      const h = new Array(12).fill(0);
-      for (const { ev, w } of others) { const ov = Math.min(b + 2, ev.start + ev.dur) - Math.max(b, ev.start); if (ov > 0) h[pcOf(ev.pitch)] += ov * w; }
-      for (const e of mel) { const ov = Math.min(b + 2, e.start + e.dur) - Math.max(b, e.start); if (ov > 0) h[pcOf(e.pitch)] += ov * 0.5; }
-      if (h.some((v) => v > 0)) {
-        // the bass's main note in this window (lowest-register parts, weighted by time)
-        const bh = new Array(12).fill(0);
-        for (const { ev, w } of others) { if (w < 2) continue; const ov = Math.min(b + 2, ev.start + ev.dur) - Math.max(b, ev.start); if (ov > 0) bh[pcOf(ev.pitch)] += ov; }
-        const btot = bh.reduce((a, v) => a + v, 0);
-        const broot = btot > 0 ? bh.indexOf(Math.max(...bh)) : -1;
-        let bs = -Infinity;
-        for (const tri of triads) {
-          const s = tri.reduce((a, pc, i) => a + h[pc] * (i === 0 ? 1.3 : 1), 0) - 0.35 * h.reduce((a, v, pc) => a + (tri.includes(pc) ? 0 : v), 0) + (tri[0] === broot ? 0.6 * btot * 2 : 0);
-          if (s > bs) { bs = s; tones = tri; }
-        }
-        if (broot >= 0 && bh[broot] > btot * 0.5 && tones && tones[0] !== broot) {
-          // the bass clearly sits on a note no diatonic triad has as its root (♭II, a chromatic
-          // riff note…): build the chord on it — a key 3rd when there is one, else root + 5th
-          const sc = (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12);
-          const m3 = (broot + 3) % 12, M3 = (broot + 4) % 12;
-          const third = h[m3] > h[M3] ? m3 : h[M3] > h[m3] ? M3 : sc.includes(m3) ? m3 : sc.includes(M3) ? M3 : -1;
-          tones = third >= 0 ? [broot, third, (broot + 7) % 12] : [broot, (broot + 7) % 12];
-        }
-      }
-    }
-    if (!tones && p.chords.length) {
-      const c = p.chords.find((x: ChordSpan) => b + 0.5 >= x.start && b + 0.5 < x.start + x.length);
-      const t = c ? [c.root, (c.root + (c.minor ? 3 : 4)) % 12, (c.root + 7) % 12] : null;
-      if (t && fit(t, b, b + 2) >= 0.5) tones = t; // analysed chord, kept where the melody agrees
-    }
-    if (!tones) {
-      // From the melody: the diatonic triad holding the most strong-beat / long notes (stay on the
-      // previous chord on ties, slight preference for I IV V vi).
-      const prev = out[out.length - 1]?.tones;
-      let bs = -Infinity;
-      const common = [0, 5, 7, key.minor ? 3 : 9].map((d) => (d + key.tonic) % 12);
-      for (const tri of triads) {
-        const s = fit(tri, b, b + 2) + (prev && prev.join() === tri.join() ? 0.15 : 0) + (common.includes(tri[0]) ? 0.05 : 0);
-        if (s > bs) { bs = s; tones = tri; }
-      }
-    }
-    const prev = out[out.length - 1];
-    if (prev && prev.tones.join() === tones!.join()) prev.end = b + 2;
-    else out.push({ start: b, end: b + 2, tones: tones! });
-  }
-  return out;
-}
 
 /** Interval preference (semitones between melody and harmony, mod 12) per voice kind. */
 const IV_COST: Record<"smart" | "3rd" | "5th", Record<number, number>> = {
@@ -253,28 +134,25 @@ export interface HarmonyAnalysis { key: Key; chords: Chord[] }
  * generated parts must not feed the next one).
  */
 export function songContext(p: Project, end: number): HarmonyAnalysis {
-  const dummy = { id: "__none__", name: "", kind: "midi" } as Track;
-  const others = otherNotes(p, dummy).filter(() => true);
-  const key = estimateKey(p, [], others);
-  return { key, chords: chordsFor(p, [], others, key, end) };
+  const h = harmonyOf(p, { end });
+  return { key: h.key, chords: h.chords.map((c) => ({ start: c.start, end: c.end, tones: c.tones })) };
 }
 
-export function analyse(p: Project, src: Track): HarmonyAnalysis & { mel: Ev[] } {
-  const mel = melodyOf(src), others = otherNotes(p, src);
-  const key = estimateKey(p, mel, others);
-  const end = Math.max(0, ...mel.map((e) => e.start + e.dur));
-  return { mel, key, chords: chordsFor(p, mel, others, key, end + 2) };
+/** Key + chords for a harmony: the harmony layer (all real parts + the mix), the source line included. */
+export function analyse(p: Project, src: Track): HarmonyAnalysis & { mel: Ev[]; h: Harmony } {
+  const mel = melodyOf(src);
+  const h = harmonyOf(p);
+  return { mel, h, key: h.key, chords: h.chords.map((c) => ({ start: c.start, end: c.end, tones: c.tones })) };
 }
 
 export function writeHarmony(p: Project, src: Track, voice: HarmonyVoice, keepSide = false): Note[] {
-  const { mel, key, chords } = analyse(p, src);
-  const scale = (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12);
-  const chordAt = (b: number) => chords.find((c) => b >= c.start - 1e-6 && b < c.end)?.tones ?? [];
+  const { mel, key, h } = analyse(p, src);
+  const chordAt = (b: number) => h.chordAt(b).tones;
   const out: Note[] = [];
   const vel = (e: Ev) => Math.max(1, Math.round(e.vel * 0.88));
   // the rest of the band: a harmony note rubbing (semitone / tritone / major 7th) against what the
   // guitar, keys or bass play at that moment costs as much as a clash with the melody itself
-  const band = otherNotes(p, src).map((o) => o.ev).sort((a, b) => a.start - b.start);
+  const band = h.heard.filter((x) => x.track !== src.id).map((x) => ({ start: x.s, dur: x.e - x.s, pitch: x.p, vel: 100 }));
   const bandCost = (pitch: number, e: Ev) => {
     const need = Math.min(0.2, e.dur * 0.4);
     let c = 0;
@@ -291,7 +169,8 @@ export function writeHarmony(p: Project, src: Track, voice: HarmonyVoice, keepSi
       const kind = voice.startsWith("smart") ? "smart" : voice.startsWith("3rd") ? "3rd" : "5th";
       const side: 1 | -1 = voice.endsWith("up") ? 1 : -1;
       // The asked side, unless the phrase sits so high/low that the other side is clearly better.
-      const a = solve(ph, side, kind, scale, chordAt, key, bandCost), b = solve(ph, side === 1 ? -1 : 1, kind, scale, chordAt, key, bandCost);
+      const sc = h.scaleAt(ph[0].start); // the section's own scale (modulations)
+      const a = solve(ph, side, kind, sc, chordAt, key, bandCost), b = solve(ph, side === 1 ? -1 : 1, kind, sc, chordAt, key, bandCost);
       line = !keepSide && b.cost + 1.2 < a.cost ? b.line : a.line;
     }
     // Sung, not mirrored: a held harmony note across quick melody notes becomes one longer note.

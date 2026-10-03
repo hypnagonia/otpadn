@@ -1,8 +1,9 @@
 /**
  * Part generator: new pad / arpeggio / acoustic strum / metal riff / power-chord tracks written
- * from what the song already knows — key + chords (assist/harmony.songContext: pitched MIDI
- * tracks, bass weighted, else the analysed chord track), sections (energy, group), and the kick
- * pattern from drum MIDI. Deterministic (seeded), so regenerating gives the same part.
+ * from what the song already knows — key / mode / chords from the harmony layer
+ * (analysis/harmonyLayer: every real part + the mix), sections (energy, group), the kick pattern
+ * (drum MIDI, else the real bass), roots from the real bass, and every note checked against what
+ * the band plays at that moment (`sitWithBand`). Deterministic (seeded).
  *  - pad: 3–4-note voicings, smooth voice leading (least movement), warm register, add9 colour
  *    when the section is loud, velocity follows section energy
  *  - arpeggio: the pad's voice-led shapes broken into 8ths / up-down / 16ths by energy
@@ -17,7 +18,7 @@ import type { MidiClip, Note, Project, Role, Section, Track } from "../model/typ
 import { store } from "../model/store";
 import { uid } from "../model/types";
 import { midiTrack } from "./tracks";
-import { songContext } from "./harmony";
+import { harmonyOf, describeKey, type Harmony } from "../analysis/harmonyLayer";
 import { applySlides } from "./slides";
 
 export type PartKind = "pad" | "arp" | "strum" | "metal" | "power" | "bass";
@@ -30,12 +31,9 @@ export const PART_KINDS: { id: PartKind; label: string; hint: string; role: Role
   { id: "bass", label: "bass guitar", hint: "roots on the kick · approach notes · natural slides", role: "bass", instrument: "sampled:bass-fingered" },
 ];
 
-interface ChordAt { start: number; end: number; root: number; minor: boolean; tones: number[] }
-/** A note of a real (not generated) pitched part, absolute beats. */
-interface Heard { s: number; e: number; p: number; bass: boolean }
-interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[]; melody: Note[]; heard: Heard[] }
+interface ChordAt { start: number; end: number; root: number; minor: boolean; tones: number[]; bass: number; silent: boolean }
+interface Ctx { key: { tonic: number; minor: boolean }; chords: ChordAt[]; sections: Section[]; kicks: number[]; end: number; bpm: number; scale: number[]; melody: Note[]; h: Harmony }
 
-const MAJOR = [0, 2, 4, 5, 7, 9, 11], MINOR = [0, 2, 3, 5, 7, 8, 10];
 const pcOf = (p: number) => ((p % 12) + 12) % 12;
 
 function rng(seed: number) {
@@ -50,80 +48,43 @@ function rng(seed: number) {
 }
 
 function context(p: Project): Ctx {
-  const hasPitched = p.tracks.some((t) => t.kind === "midi" && t.role !== "drums" && !t.dp && t.clips.some((c) => c.kind === "midi" && c.notes.length));
-  if (!hasPitched && !p.chords.length) throw new Error("no chords to follow yet — convert a stem to MIDI (or split stems so the song is analysed) first");
-  // where the music actually ends (the project length carries 8 beats of padding after it)
-  const spb = 60 / p.bpm;
-  let end = 0;
-  for (const t of p.tracks) if (!t.name.startsWith("Gen ·")) for (const cl of t.clips) end = Math.max(end, cl.start + (cl.kind === "midi" ? cl.length : cl.duration / spb));
-  for (const cs of p.chords) end = Math.max(end, cs.start + cs.length);
-  end = Math.max(4, Math.ceil(end / 4) * 4);
-  const { key, chords } = songContext(p, end);
-  const ch: ChordAt[] = chords.filter((c) => c.tones.length).map((c) => ({ start: c.start, end: Math.min(c.end, end), root: c.tones[0], minor: c.tones.length > 2 && pcOf(c.tones[1] - c.tones[0]) === 3, tones: c.tones }));
-  // kick hits from drum MIDI (GM 35/36), absolute beats
+  const h = harmonyOf(p);
+  if (!h.heard.length && !p.harmonyAudio && !p.chords.length) throw new Error("no harmony to follow yet — split stems (the song gets analysed) or convert a part to MIDI first");
+  const end = h.end;
+  const ch: ChordAt[] = h.chords.map((c) => ({ start: c.start, end: c.end, root: c.root, minor: c.quality === "min" || c.quality === "m7" || c.quality === "dim", tones: c.tones, bass: c.bass, silent: c.silent }));
+  // kick hits from drum MIDI (GM 35/36), absolute beats; else the real bass's onsets
   const kicks: number[] = [];
   for (const t of p.tracks) if (t.kind === "midi" && t.role === "drums") for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if ((n.pitch === 35 || n.pitch === 36) && n.start < c.length) kicks.push(c.start + n.start);
   if (kicks.length < 8) {
     kicks.length = 0;
-    for (const t of p.tracks) if (t.kind === "midi" && t.role === "bass" && !t.name.startsWith("Gen ·")) for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) kicks.push(Math.round((c.start + n.start) * 4) / 4);
+    for (const x of h.heard) if (x.role === "bass") kicks.push(Math.round(x.s * 4) / 4);
   }
   kicks.sort((a, b) => a - b);
   const sections = p.sections.length ? p.sections : [{ start: 0, length: end, label: "Song", group: "A", energy: 2 } as Section];
-  // the melody (vocal / lead MIDI, absolute beats): accompaniment must not rub against it
-  const melody: Note[] = [];
-  for (const t of p.tracks) if (t.kind === "midi" && (t.role === "vocals" || t.role === "lead") && !t.name.startsWith("Gen ·")) for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) melody.push({ ...n, start: c.start + n.start });
-  melody.sort((a, b) => a.start - b.start);
-  // everything the real parts play (bass, guitar, keys, vocals…): generated notes must sit with it
-  const heard: Heard[] = [];
-  for (const t of p.tracks) {
-    if (t.kind !== "midi" || t.role === "drums" || t.dp || t.name.startsWith("Gen ·") || t.name.includes("· harmony")) continue;
-    for (const c of t.clips) if (c.kind === "midi") for (const n of c.notes) if (n.start < c.length) heard.push({ s: c.start + n.start, e: c.start + Math.min(c.length, n.start + n.dur), p: n.pitch, bass: t.role === "bass" });
-  }
-  heard.sort((a, b) => a.s - b.s);
-  return { key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: (key.minor ? MINOR : MAJOR).map((s) => (s + key.tonic) % 12), melody, heard };
+  // the melody (vocal / lead MIDI): accompaniment stays under it
+  const melody: Note[] = h.heard.filter((x) => x.role === "vocals" || x.role === "lead").map((x) => ({ pitch: x.p, start: x.s, dur: x.e - x.s, vel: 100 }));
+  return { key: h.key, chords: ch, sections, kicks, end, bpm: p.bpm, scale: h.scale, melody, h };
 }
 
-/** Pitch class the real bass plays at a beat (the longest-sounding note there), or null. */
-function bassAt(c: Ctx, b: number): number | null {
-  let best: Heard | null = null;
-  for (const h of c.heard) {
-    if (h.s > b + 0.13) break;
-    if (h.bass && h.e > b + 0.05 && (!best || h.e - h.s > best.e - best.s)) best = h;
-  }
-  return best ? pcOf(best.p) : null;
-}
-
-const BAD = [1, 6, 11]; // semitone, tritone, major 7th (and their octaves)
-/** Real notes overlapping [s, e) by a meaningful amount. */
-function heardDuring(c: Ctx, s: number, e: number): number[] {
-  const out: number[] = [], need = Math.min(0.2, (e - s) * 0.4);
-  for (const h of c.heard) {
-    if (h.s >= e) break;
-    if (Math.min(e, h.e) - Math.max(s, h.s) > need) out.push(h.p);
-  }
-  return out;
-}
+/** Pitch class the real bass plays at a beat, or null. */
+const bassAt = (c: Ctx, b: number) => c.h.bassAt(b);
 
 /**
- * Sit with the band: a generated note that rubs (semitone / tritone / major 7th) against a real
- * part sounding at the same time moves to the nearest key / chord note that doesn't (≤ 2
- * semitones); a chord voice that can't is dropped (the rest of the chord still sounds); a single
- * line note that can't keeps its pitch. Notes landing on the same pitch at the same onset merge.
+ * Sit with the band (the harmony layer's judgement): every generated note is checked against the
+ * chord, the scale and what the real parts play at that moment; a wrong one moves to the best
+ * pitch within a whole tone, and if nothing there is right, a chord voice is dropped (the rest of
+ * the chord still sounds) while a single line keeps its best try. Same pitch + onset merge.
  */
 function sitWithBand(c: Ctx, notes: Note[], poly: boolean): Note[] {
-  if (!c.heard.length) return notes;
-  const chordAt = (b: number) => c.chords.find((x) => b >= x.start - 1e-6 && b < x.end)?.tones ?? [];
   const out: Note[] = [];
   const seen = new Set<string>();
   for (const n of notes) {
-    const real = heardDuring(c, n.start, n.start + n.dur);
-    const rubs = (p: number) => real.some((m) => BAD.includes(pcOf(p - m)));
     let pitch = n.pitch;
-    if (rubs(pitch)) {
-      const ok = new Set([...c.scale, ...chordAt(n.start + 0.01), ...real.map(pcOf)]);
-      const alt = [1, -1, 2, -2].map((d) => pitch + d).find((p) => ok.has(pcOf(p)) && !rubs(p));
-      if (alt !== undefined) pitch = alt;
+    if (c.h.cost(pitch, n.start, n.start + n.dur) > 0.6) {
+      const f = c.h.fit(pitch, n.start, n.start + n.dur, { maxMove: 2, limit: poly ? 1.2 : 2.5 });
+      if (f !== null) pitch = f;
       else if (poly) continue;
+      else pitch = c.h.fit(pitch, n.start, n.start + n.dur, { maxMove: 2, limit: 99 }) ?? pitch;
     }
     const k = `${pitch}@${n.start.toFixed(3)}`;
     if (seen.has(k)) continue;
@@ -138,10 +99,12 @@ const sectionAt = (c: Ctx, beat: number) => c.sections.find((s) => beat >= s.sta
 function spans(c: Ctx): (ChordAt & { sec: Section })[] {
   const out: (ChordAt & { sec: Section })[] = [];
   for (const ch of c.chords) {
+    if (ch.silent) continue; // nothing sounds there (a break, the tail): generated parts rest too
     let s = ch.start;
     while (s < ch.end - 1e-6) {
       const sec = sectionAt(c, s);
-      const e = Math.min(ch.end, sec.start + sec.length);
+      const secEnd = sec.start + sec.length;
+      const e = secEnd > s + 1e-6 ? Math.min(ch.end, secEnd) : ch.end; // past the last section: the whole chord
       out.push({ ...ch, start: s, end: Math.max(e, s + 0.25), sec });
       s = Math.max(e, s + 0.25);
     }
@@ -291,7 +254,7 @@ function genStrum(c: Ctx, seed: number): Note[] {
 /** Drop tuning whose low string is the key's tonic (A1…E2), else drop B. Returns the low string pitch. */
 function dropTuning(tonic: number): number {
   for (const low of [31, 32, 33, 34, 35, 36, 37, 38, 40]) if (pcOf(low) === tonic) return low; // drop G … E
-  return 35;
+  return 31 + pcOf(tonic + 7 - 31); // F / F#: tuned to the 5th below (drop C / C#), the tonic on the 5th fret
 }
 
 const RIFF_CELLS = ["x.xxx.xxx.xxx.xx", "xxxxx...xxxxx...", "x..x..x.x..x..x.", "x.x.x.x.xxxxx.x.", "xx.xxx.xxx.xxx.x", "x...x...x...xxxx"];
@@ -304,7 +267,8 @@ function genMetal(c: Ctx, seed: number): Note[] {
   const chordAt = (b: number) => c.chords.find((x) => b >= x.start - 1e-6 && b < x.end) ?? c.chords[0];
   for (let bar = 0; bar * 4 < c.end; bar++) {
     const b0 = bar * 4, sec = sectionAt(c, b0);
-    if (sec.energy <= 0) continue; // intros / breakdowns at energy 0: let it breathe
+    if (sec.energy <= 0) continue;
+    if (chordAt(b0 + 0.01).silent && chordAt(b0 + 2).silent) continue; // the song rests here // intros / breakdowns at energy 0: let it breathe
     // rhythm: the kick (if there's drum MIDI in this bar), else the section group's 16th cell
     let hits = c.kicks.filter((k) => k >= b0 && k < b0 + 4).map((k) => Math.round(k * 4) / 4);
     if (hits.length < 2) {
@@ -313,9 +277,9 @@ function genMetal(c: Ctx, seed: number): Note[] {
       hits = [...cell].flatMap((x, i) => (x === "x" ? [b0 + i / 4] : []));
       if (sec.energy <= 1) hits = hits.filter((h) => Math.abs(h - Math.round(h * 2) / 2) < 1e-6); // calmer: 8ths only
     }
-    hits = [...new Set(hits)].sort((a, x) => a - x);
+    hits = [...new Set(hits)].sort((a, x) => a - x).filter((x) => !chordAt(x + 0.01).silent); // rest where the song rests
     hits.forEach((h, i) => {
-      const ch = chordAt(h), root = rootLow(bassAt(c, h) ?? ch.root);
+      const ch = chordAt(h), root = rootLow(bassAt(c, h) ?? ch.bass);
       const isChange = c.chords.some((x) => Math.abs(x.start - h) < 0.13) || i === 0 && bar % 4 === 0;
       const next = hits[i + 1] ?? b0 + 4;
       if (isChange) {
@@ -339,7 +303,7 @@ function genPower(c: Ctx): Note[] {
   for (const s of spans(c)) {
     const step = s.sec.energy >= 2 ? 0.5 : 1;
     for (let b = Math.ceil(s.start / step) * step; b < s.end - 1e-6; b += step) {
-      const root = 40 + pcOf((bassAt(c, b) ?? s.root) - 40);
+      const root = 40 + pcOf((bassAt(c, b) ?? s.bass) - 40);
       const onBeat = Math.abs(b - Math.round(b)) < 1e-6;
       for (const iv of [0, 7, 12]) out.push({ pitch: root + iv, start: b, dur: step * 0.9, vel: velFor(s.sec, onBeat ? 108 : 96) });
     }
@@ -364,6 +328,7 @@ function genBass(c: Ctx, seed: number): Note[] {
   const nextChange = (b: number) => c.chords.find((x) => x.start > b + 1e-6);
   for (let bar = 0; bar * 4 < c.end; bar++) {
     const b0 = bar * 4, sec = sectionAt(c, b0), e = Math.round(sec.energy);
+    if (chordAt(b0 + 0.01).silent && chordAt(b0 + 2).silent) continue; // the song rests here
     let hits: number[];
     if (e <= 0) hits = [b0];
     else if (e === 1) hits = [b0, b0 + 2];
@@ -372,11 +337,11 @@ function genBass(c: Ctx, seed: number): Note[] {
       hits = k.length >= 2 ? k : e >= 3 ? [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((x) => b0 + x) : [0, 1, 1.5, 2.5, 3, 3.5].map((x) => b0 + x);
       if (e === 2 && !hits.includes(b0)) hits.unshift(b0);
     }
-    hits = [...new Set(hits)].sort((a, b) => a - b);
+    hits = [...new Set(hits)].sort((a, b) => a - b).filter((x) => !chordAt(x + 0.01).silent); // rest where the song rests
     hits.forEach((h, i) => {
       const ch = chordAt(h), nx = hits[i + 1] ?? b0 + 4;
       const real = bassAt(c, h);
-      let pitch = rootNear(real ?? ch.root);
+      let pitch = rootNear(real ?? ch.bass);
       if (i === 0) prev = pitch;
       // half-note feel: the 5th on beat 3 now and then
       if (e === 1 && i === 1 && r() < 0.5) pitch = pitch + 7 > 43 ? pitch - 5 : pitch + 7;
@@ -385,9 +350,10 @@ function genBass(c: Ctx, seed: number): Note[] {
       // approach note: the last hit before a chord change walks into the next root
       const nc = nextChange(h);
       if (real === null && e >= 2 && nc && nc.start <= nx + 1e-6 && nc.start - h <= 1 && i > 0) {
-        const target = rootNear(nc.root);
-        const below = [target - 1, target - 2].find((p) => c.scale.includes(pcOf(p)));
-        const above = [target + 1, target + 2].find((p) => c.scale.includes(pcOf(p)) && p <= 43);
+        const target = rootNear(nc.bass);
+        const sc = c.h.scaleAt(h);
+        const below = [target - 1, target - 2].find((p) => sc.includes(pcOf(p)));
+        const above = [target + 1, target + 2].find((p) => sc.includes(pcOf(p)) && p <= 43);
         pitch = r() < 0.5 && below !== undefined ? below : above !== undefined && r() < 0.3 ? above : pitch;
       }
       const dur = e <= 1 ? Math.max(0.5, nx - h - 0.05) : e >= 3 ? Math.min(0.42, nx - h - 0.03) : Math.max(0.2, Math.min(0.9, nx - h - 0.04));
@@ -436,5 +402,6 @@ export function generatePart(kind: PartKind) {
     }
   });
   const tuning = kind === "metal" ? ` · drop ${NAMES[pcOf(dropTuning(c.key.tonic))]} tuning${c.kicks.length ? " · chugs locked to the kick" : ""}` : "";
-  store.log(`Generated ${def.label} in ${NAMES[c.key.tonic]} ${c.key.minor ? "minor" : "major"} from ${c.chords.length} chord changes${tuning}.`);
+  const prog = c.h.chords.filter((x) => !x.silent).slice(0, 8).map((x) => x.name).join(" ");
+  store.log(`Generated ${def.label} in ${describeKey(c.h)} over ${c.h.chords.filter((x) => !x.silent).length} chords (${prog}${c.h.chords.length > 8 ? " …" : ""})${tuning}.`);
 }
