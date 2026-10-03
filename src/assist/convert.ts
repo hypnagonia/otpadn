@@ -7,11 +7,9 @@ import type { Grid } from "../analysis/grid";
 import { notesToBeats } from "../analysis/notes";
 import { muscriptorGpu, to16kMono, transcribeMuscriptor, type MuscriptorModel, type TranscribedNote } from "../ml/muscriptor";
 import { store } from "../model/store";
-import { uid, type AudioClip, type MidiClip, type Role, type Track } from "../model/types";
+import { uid, type MidiClip, type Role, type Track } from "../model/types";
 import { audioSource } from "./separate";
-import { audioTrack, midiTrack, registerBuffer } from "./tracks";
-import { bufferSources } from "../model/store";
-import { savePcm } from "../io/persist";
+import { midiTrack } from "./tracks";
 
 /** MuScriptor instrument group → Otpadn role + default sound. */
 const GROUPS: Record<string, { role: Role; sound: string; label: string }> = {
@@ -145,25 +143,14 @@ export async function convertToMidi(trackId?: string | null, opts: ConvertOption
     store.log(`Audio → MIDI found no notes in ${track.name}`);
     return;
   }
-  // Transparency: the exact audio the model transcribed (16 kHz mono, as passed in), as a muted
-  // track under the source — solo it to hear precisely what was converted.
-  const heard = new AudioBuffer({ numberOfChannels: 1, length: samples.length, sampleRate: 16000 });
-  heard.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
-  const heardId = await registerBuffer(heard);
-  bufferSources.set(heardId, { type: "recorded" });
-  void savePcm(heardId, heard);
-  const inputTrack = audioTrack(`${track.name} · model input`, "other", heardId, 0);
-  inputTrack.clips[0] = { ...(inputTrack.clips[0] as AudioClip), start: clip.start, offset: clip.offset, duration: Math.min(heard.duration - clip.offset, clip.duration) };
-  inputTrack.ch.mute = true;
-  inputTrack.color = "#6c6f76";
   let pk = 0, ss = 0;
   for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > pk) pk = a; ss += samples[i] * samples[i]; }
   const inputInfo = `model input = "${track.name}" (${track.role === "mix" ? "full mix" : `${track.role} stem`}) · ${(samples.length / 16000).toFixed(1)} s · peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS · brought up to ≥ −12 dBFS gated · rms ${(10 * Math.log10(ss / Math.max(1, samples.length) + 1e-12)).toFixed(1)} dBFS · listening for ${instruments ? instruments.join(", ") : "all instruments"}`;
   store.update((pp) => {
     const i = pp.tracks.findIndex((x) => x.id === track.id);
-    pp.tracks.splice(i + 1, 0, inputTrack, ...tracks);
+    pp.tracks.splice(i + 1, 0, ...tracks);
   });
-  store.log(`Audio → MIDI ${inputInfo} — solo the "${inputTrack.name}" track to hear exactly what was transcribed`);
+  store.log(`Audio → MIDI ${inputInfo}`);
   store.setUi({ selectedTrackId: tracks[0].id, selectedClipId: tracks[0].clips[0].id });
   store.log(
     `Audio → MIDI: ${track.name} → ${tracks.map((t) => `${t.name} (${(t.clips[0] as MidiClip).notes.length})`).join(", ")} in ${((performance.now() - t0) / 1000).toFixed(1)} s [${muscriptorGpu}]` +
